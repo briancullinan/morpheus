@@ -360,8 +360,6 @@ void Sys_SetClipboardBitmap( const byte *bitmap, int length )
 }
 
 
-#ifndef __EMSCRIPTEN__
-
 void SDL_GL_SwapWindow(SDL_Window *window) {
   // this probably prevents that flashing when changing mods
 }
@@ -432,7 +430,6 @@ qboolean emscripten_has_asyncify(void) {
 	return qfalse;
 }
 
-#endif
 
 #if 0
 

@@ -5,19 +5,9 @@ morph:             morpheus
 
 morpheus:          morph.program morph.package morph.plugin
 
-morph.program:     morph.wasm q3map2.wasm morph.opt morph.html
+morph.program:     $(BUILD_DIR)/morph.wasm $(BUILD_DIR)/q3map2.wasm $(BUILD_DIR)/morph.opt morph.html
 
 morph.package:     xxx-morph-vms.pk3 xxx-morph-files.pk3
-
-morph.wasm:        sdl.audio musl.min \
-										$(addsuffix .mkdir,$(addprefix $(BUILD_DIR)/,$(ENGINE_WORKDIRS))) \
-										$(addprefix $(BUILD_DIR)/,$(ENGINE_OBJS))
-	$(echo_cmd) "LD $@"
-	$(Q)$(CC) -o $@ $(MORPH_OBJS) $(CLIENT_LDFLAGS)
-
-
-
-q3map2.wasm:       $(Q3MAP2_OBJS)
 
 SDL_OBJS           := SDL.o SDL_assert.o SDL_error.o  SDL_dataqueue.o  SDL_hints.o \
 											audio/SDL_audio.o audio/SDL_mixer.o audio/emscripten/SDL_emscriptenaudio.o \
@@ -41,13 +31,61 @@ MUSL_OBJS          := string/stpcpy.o  string/memset.o  string/memcpy.o    \
 											string/strlen.o  string/strncat.o string/strspn.o    \
 											string/strstr.o  string/strrchr.o string/strnlen.o   \
 											string/strcspn.o string/strpbrk.o string/strdup.o    \
-											string/strlcpy.o string/strcasecmp.o string/strncasecmp.o
+											string/strlcpy.o string/strcasecmp.o string/strncasecmp.o \
+											\
+											stdio/sprintf.o  stdio/fprintf.o   stdio/vsnprintf.o \
+											stdio/vfprintf.o stdio/sscanf.o    stdio/fwrite.o    \
+											stdio/vsscanf.o  stdio/vfscanf.o   stdio/snprintf.o  \
+											stdio/vsprintf.o stdio/setvbuf.o   stdio/__stdio_exit.o \
+											stdio/__toread.o stdio/__towrite.o stdio/ofl.o \
+											stdio/__lockfile.o stdio/__uflow.o          \
+											\
+											internal/shgetc.o internal/floatscan.o internal/intscan.o \
+											\
+											errno/strerror.o errno/__errno_location.o locale/__lctrans.o \
+											\
+											network/ntohs.o  network/htons.o \
+											\
+											math/__signbit.o    math/__signbitf.o    math/__signbitl.o \
+											math/__fpclassify.o math/__fpclassifyf.o math/__fpclassifyl.o \
+											math/frexpl.o       math/scalbn.o        math/copysignl.o \
+											math/scalbnl.o      math/fmodl.o         math/ldexp.o \
+											math/__math_oflowf.o math/__math_uflowf.o \
+											math/__math_invalidf.o math/__math_xflowf.o \
+											\
+											stdlib/atoi.o   stdlib/atof.o   stdlib/strtod.o \
+											stdlib/qsort.o  stdlib/strtol.o stdlib/atol.o \
+											\
+											ctype/tolower.o ctype/isalnum.o  ctype/isspace.o \
+											ctype/isdigit.o ctype/iswdigit.o ctype/isupper.o \
+											ctype/isalpha.o \
+											\
+											multibyte/mbrtowc.o   multibyte/mbstowcs.o multibyte/wctomb.o \
+											multibyte/mbsrtowcs.o multibyte/wcrtomb.o  multibyte/mbsinit.o \
+											multibyte/mbtowc.o    multibyte/btowc.o    multibyte/internal.o \
+											\
+											time/gettimeofday.o
+
+MORPH_OBJS         := $(addprefix $(BUILD_DIR)/sdl/,$(SDL_OBJS)) \
+											$(addprefix $(BUILD_DIR)/musl/,$(MUSL_OBJS)) \
+											$(addprefix $(BUILD_DIR)/,$(ENGINE_OBJS))
+
+
+$(BUILD_DIR)/morph.wasm:        sdl.audio musl.min \
+										$(addsuffix .mkdir,$(addprefix $(BUILD_DIR)/,$(ENGINE_WORKDIRS))) \
+										$(addprefix $(BUILD_DIR)/,$(ENGINE_OBJS))
+	$(echo_cmd) "LD $@"
+	$(Q)$(CC) -o $@ $(MORPH_OBJS) $(CLIENT_LDFLAGS)
+
+
+
+$(BUILD_DIR)/q3map2.wasm:       $(Q3MAP2_OBJS)
 
 # minimal system code needed for Q3
 musl.min:          $(addsuffix .mkdir,$(addprefix $(BUILD_DIR)/,$(MUSL_WORKDIRS))) \
 										$(addprefix $(BUILD_DIR)/musl/,$(MUSL_OBJS))
 
-morph.opt:         morph.wasm
+$(BUILD_DIR)/morph.opt:         $(BUILD_DIR)/morph.wasm
 	$(echo_cmd) "OPT_CC $<"
 	$(Q)$(OPT) -Os --no-validation -o $@ $<
 	$(DO_SAFE_MOVE)
