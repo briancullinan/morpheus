@@ -72,6 +72,12 @@ Automating all of those searches above, these are just regular web searches, wou
 a bit of heartache in the past.
 
 ### Use case 4, Quality assurance
+
+Gameifying Code-Completion
+
+Code-complete is having fully tested every branch of code for correctness by simulating 
+using all possible input values and checking the output against a Matrix of expected results.
+
 This is where things get the most interesting for me, because it's the most technical, and there
 is the most obvious amount of failure here. Just to give a basic outline of software development,
 step 1) someone comes to me and says "I have an idea for an app.", and I usually say "it sounds 
