@@ -1,7 +1,7 @@
 
 # Morpheus
 
-In the movie the Matrix Morpheus prevails by communicating with the right persons.
+In the movie the Matrix, Morpheus prevails by communicating with the right persons.
 Morpheus' purpose is to find The One. The One who shares the same goal.
 That is the purpose of Morpheus.
 

@@ -13,18 +13,19 @@ MORPH_OBJS         := sys_main.o dlmalloc.o sbrk.o sdl_snd.o
 
 morph.wasm:        sdl.audio musl.min $(MORPH_OBJS)
 
-SDL_OBJS           := SDL.o audio/SDL_audio.o SDL_error.o \
-											SDL_assert.o sdl_snd.o SDL_sysmutex.o SDL_atomic.o SDL_events.o \
-											SDL_spinlock.o SDL_audiocvt.o SDL_audiotypecvt.o SDL_dataqueue.o \
-											SDL_thread.o SDL_systimer.o SDL_syssem.o SDL_hints.o \
-											SDL_systhread.o SDL_systls.o SDL_mixer.o SDL_emscriptenaudio.o
+SDL_OBJS           := SDL.o SDL_assert.o SDL_error.o  SDL_dataqueue.o  SDL_hints.o \
+											audio/SDL_audio.o audio/SDL_mixer.o audio/emscripten/SDL_emscriptenaudio.o \
+											audio/SDL_audiotypecvt.o audio/SDL_audiocvt.o \
+											atomic/SDL_atomic.o events/SDL_events.o \
+											atomic/SDL_spinlock.o thread/generic/SDL_sysmutex.o \
+											thread/SDL_thread.o timer/unix/SDL_systimer.o \
+											thread/generic/SDL_syssem.o thread/generic/SDL_systls.o \
+											thread/generic/SDL_systhread.o 
 
 # use emscripten SDL audio interface
 # TODO: upgrade audio
 sdl.audio:         $(addsuffix .mkdir,$(addprefix $(BUILD_DIR)/,$(SDL_WORKDIRS))) \
 										$(addprefix $(BUILD_DIR)/sdl/,$(SDL_OBJS))
-
-
 
 MUSL_OBJS          := string/stpcpy.o  string/memset.o  string/memcpy.o    \
 											string/memmove.o string/memcmp.o  string/memchr.o    \
@@ -37,7 +38,8 @@ MUSL_OBJS          := string/stpcpy.o  string/memset.o  string/memcpy.o    \
 											string/strlcpy.o string/strcasecmp.o string/strncasecmp.o
 
 # minimal system code needed for Q3
-musl.min:          $(MUSL_OBJS)
+musl.min:          $(addsuffix .mkdir,$(addprefix $(BUILD_DIR)/,$(MUSL_WORKDIRS))) \
+										$(addprefix $(BUILD_DIR)/musl/,$(MUSL_OBJS))
 
 morph.opt:         morph.wasm
 	$(echo_cmd) "OPT_CC $<"
