@@ -20,7 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 #include "../qcommon/q_shared.h"
-#include "../renderercommon/tr_public.h"
+#include "../renderer2/tr_public.h"
 
 #ifndef __WASM__
 #include "../qcommon/puff.h"

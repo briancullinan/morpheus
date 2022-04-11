@@ -55,7 +55,7 @@ TODO: make a virtual file-system of files included with page load
 #define INCBIN_SILENCE_BITCODE_WARNING
 #include "../qcommon/incbin.h"
 #include "incbin.h"
-INCBIN(_bigchars, "../renderercommon/bigchars.png");
+INCBIN(_bigchars, "../renderer2/bigchars.png");
 #else // is __WASM__
 Q_EXPORT int g_bigcharsSize = 0;
 Q_EXPORT char *g_bigcharsData = NULL;

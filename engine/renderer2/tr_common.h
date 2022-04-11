@@ -23,7 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define TR_COMMON_H
 
 #include "../qcommon/q_shared.h"
-#include "../renderercommon/tr_public.h"
+#include "../renderer2/tr_public.h"
 #include "qgl.h"
 #ifndef __WASM__
 #include <math.h>

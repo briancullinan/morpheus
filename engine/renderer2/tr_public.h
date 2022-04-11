@@ -23,7 +23,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define __TR_PUBLIC_H
 
 #include "tr_types.h"
+#ifndef __WASM__
 #include "vulkan/vulkan.h"
+#endif
 
 #define	REF_API_VERSION		8
 
@@ -259,11 +261,13 @@ typedef struct {
 
 	void*	(*GL_GetProcAddress)( const char *name );
 
+#ifndef __WASM__
 	// Vulkan
 	void	(*VKimp_Init)( glconfig_t *config );
 	void	(*VKimp_Shutdown)( qboolean unloadDLL );
 	void*	(*VK_GetInstanceProcAddr)( VkInstance instance, const char *name );
 	qboolean (*VK_CreateSurface)( VkInstance instance, VkSurfaceKHR *pSurface );
+#endif
 
   void	(*Cmd_SetDescription)( const char *name, char *description );
 #ifdef USE_MULTIVM_CLIENT

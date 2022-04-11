@@ -5,13 +5,19 @@ morph:             morpheus
 
 morpheus:          morph.program morph.package morph.plugin
 
-morph.program:     morph.wasm morph.opt morph.html
+morph.program:     morph.wasm q3map2.wasm morph.opt morph.html
 
 morph.package:     xxx-morph-vms.pk3 xxx-morph-files.pk3
 
-MORPH_OBJS         := sys_main.o dlmalloc.o sbrk.o sdl_snd.o
+morph.wasm:        sdl.audio musl.min \
+										$(addsuffix .mkdir,$(addprefix $(BUILD_DIR)/,$(ENGINE_WORKDIRS))) \
+										$(addprefix $(BUILD_DIR)/,$(ENGINE_OBJS))
+	$(echo_cmd) "LD $@"
+	$(Q)$(CC) -o $@ $(MORPH_OBJS) $(CLIENT_LDFLAGS)
 
-morph.wasm:        sdl.audio musl.min $(MORPH_OBJS)
+
+
+q3map2.wasm:       $(Q3MAP2_OBJS)
 
 SDL_OBJS           := SDL.o SDL_assert.o SDL_error.o  SDL_dataqueue.o  SDL_hints.o \
 											audio/SDL_audio.o audio/SDL_mixer.o audio/emscripten/SDL_emscriptenaudio.o \
