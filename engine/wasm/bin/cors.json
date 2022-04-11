@@ -1,0 +1,14 @@
+[
+    {
+      "origin": ["https://briancullinan.github.com"],
+      "responseHeader": ["*"],
+      "method": ["GET", "HEAD"],
+      "maxAgeSeconds": 3600
+    },
+    {
+      "origin": ["*"],
+      "responseHeader": ["*"],
+      "method": ["*"],
+      "maxAgeSeconds": 3600
+    }
+]

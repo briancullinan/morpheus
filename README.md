@@ -12,6 +12,7 @@ Philisophical: Combine 3D with programming. <- Combine THAT, with a Browser plug
 Use the thing to find someone on LinkedIn that the thing I made is useful to (i.e. Purpose). 
 Sell the thing I made to them.
 
+I build it, let me know when it makes contact.
 
 ## Short term
 1) Componentize engine, combine with Ace9
@@ -19,6 +20,7 @@ Sell the thing I made to them.
 3) Modularize goals, separate QVMs
 4) Stream browser automation through plugin
 5) Automate LinkedIn lobby, find gamers
+6) Slippery onboarding,
 
 ## Use cases
 
@@ -124,6 +126,9 @@ Sikuli style desktop automation with OpenCV and the 3D model to automate the bro
 desktop windows all in one.
 
 #### There are 2 separate use cases for home grown automation
+
+After spending countless hours programming this use case, I realized the only reason no one has 
+made automation simpler, is simply because, no one else can. So I must do it, grass roots design.
 
 ### #2 More common
 

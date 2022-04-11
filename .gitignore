@@ -1,0 +1,6 @@
+# wtf github? not user friendly
+#./libs/darwin
+#./build
+
+/libs/darwin/*
+/build/
