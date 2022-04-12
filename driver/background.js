@@ -7243,20 +7243,77 @@ function launchApp(id, callback, errCallback) {
   });
 }
 
-chrome.runtime.onMessage.addListener(async (request, sender, reply) => {
-  let windowId = null
-  let tabs = await chrome.tabs.query({currentWindow: true})
+
+let localFunctions = []
+let localVariables = []
+function runStatement(i, AST) {
+  if(AST[i].type == 'FunctionDeclaration') {
+    localFunctions[AST[i].id.name] = AST[i].body
+  } else
+  if(AST[i].type == 'ReturnStatement') {
+    return runStatement(0, [AST[i].argument])
+  } else
+  if(AST[i].type == 'CallExpression') {
+    if(!AST[i].callee.id && AST[i].callee.type != 'Identifier') {
+      runStatement(0, [AST[i].callee])
+    } else
+    if(localFunctions[AST[i].callee.name]) {
+      runStatement(0, [localFunctions[AST[i].callee.name]])
+    } else {
+      throw new Error('Function not declared: ' + AST[i].callee.name)
+    }
+  } else
+  if(AST[i].type == 'FunctionExpression') {
+    runStatement(0, [AST[i].body])
+  } else
+  if(AST[i].type == 'BlockStatement') {
+    runBody(AST[i].body)
+  } else
+  if(AST[i].type == 'ExpressionStatement') {
+    runStatement(0, [AST[i].expression])
+  }
+  if(AST[i].type == 'MemberExpression') {
+    if(localVariables[AST[i].object.name]) {
+
+    } else {
+      throw new Error('Member not declared: ' + AST[i].object.name)
+    }
+  }
+}
+
+// find and run main
+function runBody(AST) {
+  // doesn't need to be fast, because async DevTools calls, are not fast
+  let result
+  let start = localFunctions.length
+  let startVars = localVariables.length
+  for(let i = 0; i < AST.length; i++) {
+    //if(AST[i].type == 'ExpressionStatement') {
+    //  result = 
+    //}
+    runStatement(i, AST)
+  }
+  // remove anything created in the past context
+  localFunctions.splice(start, localFunctions.length)
+  localVariables.splice(startVars, localVariables.length)
+  return result
+}
+
+
+chrome.runtime.onMessage.addListener((request, sender, reply) => {
   console.log('title:', sender.tab.title)
   console.log('url:', sender.tab.url)
   console.log('script:', request.script)
   // TODO: authorization here
-  await new Promise(function (resolve) {
+  new Promise(function (resolve) {
       // ERROR: Refused to evaluate a string as JavaScript because 'unsafe-eval'
       // ^- That's where most people give up, but I'll write an interpreter
       chrome.debugger.attach({tabId: sender.tab.id}, '1.0', function () {
       try {
-        debugger
-        let AST = acorn.loose.parse(request.script)
+        let AST = acorn.loose.parse(
+          '(function () {\n' + request.script + '\nreturn main();\n})()\n'
+          , {ecmaVersion: 2020, locations: true})
+        let result = runBody(AST.body)
         reply({ result: result + '' })
       } catch (e) {
         console.log(e)
@@ -7266,7 +7323,6 @@ chrome.runtime.onMessage.addListener(async (request, sender, reply) => {
     })
   })
   //chrome.debugger.sendMessage('Page.navigate', {url: 'https://google.com/'})
-
   return true
 });
 

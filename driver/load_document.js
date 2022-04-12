@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if(runButton) {
     runButton.addEventListener('click', function () {
       setTimeout(function () {
-        chrome.runtime.sendMessage({ script: runScript.innerText }, function (response) {
+        chrome.runtime.sendMessage({ script: runScript.innerHTML }, function (response) {
           console.log('result:', response)
           return true
         })

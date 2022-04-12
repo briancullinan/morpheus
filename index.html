@@ -22,6 +22,8 @@ body > img {
 }
 
 #run-button {
+  outline: none;
+
   position: absolute;
   z-index: 1000;
   border: 0;
@@ -272,7 +274,7 @@ body > img {
 	<div id="left-joystick"></div><div id="right-joystick"></div>
 	<div id="viewport-frame">
 		<textarea id="run-script"></textarea>
-		<button id="run-button" class="paused" onclick="window['run-script'].innerText=window.ace.getValue();">&nbsp;</button>
+		<button id="run-button" class="paused" onclick="window['run-script'].innerHTML=window.ace.getValue();">&nbsp;</button>
 		<div id="editor">
 function main() {
 	let title = getWindowTitle()
