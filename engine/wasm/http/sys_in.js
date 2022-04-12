@@ -473,22 +473,109 @@ function IN_Init() {
   document.addEventListener('visibilitychange', InputPushFocusEvent, false)
   document.addEventListener('focus', InputPushFocusEvent, false)
   document.addEventListener('blur', InputPushFocusEvent, false)
-  //document.addEventListener('drop', SYSI.dropHandler, false)
-  //document.addEventListener('dragenter', SYSI.dragEnterHandler, false)
-  //document.addEventListener('dragover', SYSI.dragOverHandler, false)
+  //document.addEventListener('drop', dropHandler, false)
+  //document.addEventListener('dragenter', dragEnterHandler, false)
+  //document.addEventListener('dragover', dragOverHandler, false)
 
   document.addEventListener('pointerlockchange', InputPushFocusEvent, false)
 
   /*
   let nipple handle touch events
-  SYSI.canvas.addEventListener('touchstart', SYSI.InputPushTouchEvent, false)
-  SYSI.canvas.addEventListener('touchend', SYSI.InputPushTouchEvent, false)
-  SYSI.canvas.addEventListener('touchmove', SYSI.InputPushTouchEvent, false)
-  SYSI.canvas.addEventListener('touchcancel', SYSI.InputPushTouchEvent, false)
+  Q3e.canvas.addEventListener('touchstart', InputPushTouchEvent, false)
+  Q3e.canvas.addEventListener('touchend', InputPushTouchEvent, false)
+  Q3e.canvas.addEventListener('touchmove', InputPushTouchEvent, false)
+  Q3e.canvas.addEventListener('touchcancel', InputPushTouchEvent, false)
   */
 
   console.log( '------------------------------------\n' )
 }
+
+function InputPushTouchEvent(joystick, id, evt, data) {
+  INPUT.cancelBackspace = false
+  if(id == 1) {
+    if (data.vector && data.vector.y > .4) {
+      InputPushKeyEvent({type: 'keydown', repeat: true, keyCode: 87})
+    } else {
+      InputPushKeyEvent({type: 'keyup', keyCode: 87})
+    }
+    if (data.vector && data.vector.y < -.4) {
+      InputPushKeyEvent({type: 'keydown', repeat: true, keyCode: 83})
+    } else {
+      InputPushKeyEvent({type: 'keyup', keyCode: 83})
+    }
+    if (data.vector && data.vector.x < -.4) {
+      InputPushKeyEvent({type: 'keydown', repeat: true, keyCode: 65})
+    } else {
+      InputPushKeyEvent({type: 'keyup', keyCode: 65})
+    }
+    if (data.vector && data.vector.x > .4) {
+      InputPushKeyEvent({type: 'keydown', repeat: true, keyCode: 68})
+    } else {
+      InputPushKeyEvent({type: 'keyup', keyCode: 68})
+    }
+  }
+  
+  if(id == 2) {
+    if (data.vector && data.vector.y > .4) {
+      InputPushKeyEvent({type: 'keydown', repeat: true, keyCode: 40})
+    } else {
+      InputPushKeyEvent({type: 'keyup', keyCode: 40})
+    }
+    if (data.vector && data.vector.y < -.4) {
+      InputPushKeyEvent({type: 'keydown', repeat: true, keyCode: 38})
+    } else {
+      InputPushKeyEvent({type: 'keyup', keyCode: 38})
+    }
+    if (data.vector && data.vector.x < -.4) {
+      InputPushKeyEvent({type: 'keydown', repeat: true, keyCode: 37})
+    } else {
+      InputPushKeyEvent({type: 'keyup', keyCode: 37})
+    }
+    if (data.vector && data.vector.x > .4) {
+      InputPushKeyEvent({type: 'keydown', repeat: true, keyCode: 39})
+    } else {
+      InputPushKeyEvent({type: 'keyup', keyCode: 39})
+    }
+  }
+
+  var w = Module['canvas'].width;
+  var h = Module['canvas'].height;
+  var dx = data.angle ? (Math.cos(data.angle.radian) * data.distance) : 0
+  var dy = data.angle ? (Math.sin(data.angle.radian) * data.distance) : 0
+  var x = data.angle ? dx : Math.round(data.position.x)
+  var y = data.angle ? dy : Math.round(data.position.y)
+
+  if(evt.type == 'start') {
+    if((Key_GetCatcher( ) & KEYCATCH_UI) && id == 3) {
+			Sys_QueEvent( Sys_Milliseconds(), SE_MOUSE_ABS, x, y, 0, null );
+		}
+		Sys_QueEvent( Sys_Milliseconds(), SE_FINGER_DOWN, INPUT.keystrings['MOUSE1'], id, 0, null );
+  }
+
+  if(evt.type == 'end') {
+    //Sys_QueEvent( in_eventTime+1, SE_KEY, K_MOUSE1, qfalse, 0, null );
+		Sys_QueEvent( Sys_Milliseconds(), SE_FINGER_UP, INPUT.keystrings['MOUSE1'], id, 0, null );
+		INPUT.touchhats[id][0] = 0;
+		INPUT.touchhats[id][1] = 0;
+  }
+
+  if(evt.type == 'move') {
+    let ratio = Q3e.canvas.clientWidth / Q3e.canvas.clientHeight
+		INPUT.touchhats[id][0] = (x * ratio) * 50
+		INPUT.touchhats[id][1] = y * 50
+  }
+}
+
+function IN_Frame() {
+  let i = 2
+  if(i == 2 && !(Key_GetCatcher( ) & KEYCATCH_UI)) {
+    if(INPUT.touchhats[i][0] != 0 || INPUT.touchhats[i][1] != 0) {
+      Sys_QueEvent( Sys_Milliseconds(), SE_MOUSE, INPUT.touchhats[i][0], 0, 0, null )
+    }
+  }
+
+}
+
 
 function InitNippleJoysticks () {
   // TODO: finish joystick settings
@@ -524,12 +611,12 @@ function InitNippleJoysticks () {
   }
 
   document.body.classList.add('joysticks')
-  if(SYSI.joysticks.length > 0) {
-    for(var i = 0; i < SYSI.joysticks.length; i++) {
-      SYSI.joysticks[i].destroy()
+  if(INPUT.joysticks.length > 0) {
+    for(var i = 0; i < INPUT.joysticks.length; i++) {
+      INPUT.joysticks[i].destroy()
     }
   }
-  SYSI.joysticks[0] = nipplejs.create({
+  INPUT.joysticks[0] = nipplejs.create({
     zone: document.getElementById('left-joystick'),
     multitouch: false,
     mode: 'semi',
@@ -538,7 +625,7 @@ function InitNippleJoysticks () {
     maxNumberOfNipples: 1,
     position: {bottom: '50px', left: '50px'},
   })
-  SYSI.joysticks[1] = nipplejs.create({
+  INPUT.joysticks[1] = nipplejs.create({
     zone: document.getElementById('right-joystick'),
     multitouch: false,
     mode: 'semi',
@@ -547,7 +634,7 @@ function InitNippleJoysticks () {
     maxNumberOfNipples: 1,
     position: {bottom: '50px', right: '50px'},
   })
-  SYSI.joysticks[2] = nipplejs.create({
+  INPUT.joysticks[2] = nipplejs.create({
     dataOnly: true,
     zone: document.body,
     multitouch: false,
@@ -556,9 +643,9 @@ function InitNippleJoysticks () {
     catchDistance: 2,
     maxNumberOfNipples: 1,
   })
-  SYSI.joysticks[0].on('start end move', SYSI.InputPushTouchEvent.bind(null, SYSI.joysticks[0], 1))
-  SYSI.joysticks[1].on('start end move', SYSI.InputPushTouchEvent.bind(null, SYSI.joysticks[1], 2))
-  SYSI.joysticks[2].on('start end move', SYSI.InputPushTouchEvent.bind(null, SYSI.joysticks[2], 3))
+  INPUT.joysticks[0].on('start end move', InputPushTouchEvent.bind(null, INPUT.joysticks[0], 1))
+  INPUT.joysticks[1].on('start end move', InputPushTouchEvent.bind(null, INPUT.joysticks[1], 2))
+  INPUT.joysticks[2].on('start end move', InputPushTouchEvent.bind(null, INPUT.joysticks[2], 3))
 }
 
 
@@ -598,8 +685,8 @@ function GLimp_Shutdown(destroy) {
   document.removeEventListener('focus', InputPushFocusEvent)
   document.removeEventListener('blur', InputPushFocusEvent)
   //document.removeEventListener('drop', dropHandler)
-  //document.removeEventListener('dragenter', SYSI.dragEnterHandler)
-  //document.removeEventListener('dragover', SYSI.dragOverHandler)
+  //document.removeEventListener('dragenter', INPUT.dragEnterHandler)
+  //document.removeEventListener('dragover', INPUT.dragOverHandler)
   document.removeEventListener('pointerlockchange', InputPushFocusEvent);
 
   if (destroy && Q3e.canvas) {
@@ -613,6 +700,8 @@ function GLimp_Shutdown(destroy) {
 }
 
 var INPUT = {
+  touchhats: [[0,0],[0,0],[0,0],[0,0]], // x/y values for nipples
+  joysticks: [],
   keystrings: {},
   firstClick: true,
   IN_Init: IN_Init,
