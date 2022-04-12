@@ -5,9 +5,9 @@ morph:             morpheus
 
 morpheus:          morph.program morph.package morph.plugin
 
-morph.program:     $(BUILD_DIR)/morph.wasm $(BUILD_DIR)/q3map2.wasm $(BUILD_DIR)/morph.opt morph.html
+morph.program:     $(BUILD_DIR)/morph.wasm $(BUILD_DIR)/q3map2.wasm $(BUILD_DIR)/morph.opt
 
-morph.package:     xxx-morph-vms.pk3 xxx-morph-files.pk3
+morph.package:     xxx-morph-vms.pk3 xxx-morph-files.pk3 morph.html
 
 SDL_OBJS           := SDL.o SDL_assert.o SDL_error.o  SDL_dataqueue.o  SDL_hints.o \
 											audio/SDL_audio.o audio/SDL_mixer.o audio/emscripten/SDL_emscriptenaudio.o \
@@ -88,22 +88,65 @@ musl.min:          $(addsuffix .mkdir,$(addprefix $(BUILD_DIR)/,$(MUSL_WORKDIRS)
 $(BUILD_DIR)/morph.opt:         $(BUILD_DIR)/morph.wasm
 	$(echo_cmd) "OPT_CC $<"
 	$(Q)$(OPT) -Os --no-validation -o $@ $<
-	$(DO_SAFE_MOVE)
+	$(call DO_SAFE_MOVE,$@,$<)
+
+WASM_SOURCE      := engine/wasm/http
+WASM_FILES       := quake3e.js sys_emgl.js sys_fs.js sys_in.js \
+                    sys_net.js sys_std.js sys_wasm.js nipplejs.js
+WASM_JS          := $(addprefix $(WASM_SOURCE)/,$(notdir $(WASM_FILES)))
+
+define DO_MORPH_CC
+	$(Q)$(NODE) "let fs = require('fs'); \
+	let base64 = fs.readFileSync('$<', 'base64'); \
+	let preScript = \"window.preFS['$(notdir $<)']='\"+base64+\"';\n\"; \
+	fs.writeFileSync('$@', preScript);"
+endef
+
+define DO_EMBED_CC
+	$(Q)$(NODE) "let fs = require('fs'); \
+	let html = fs.readFileSync('$1', 'utf-8'); \
+	let script = fs.readFileSync('$(BUILD_DIR)/morph.js', 'utf-8'); \
+	let style = fs.readFileSync('$(WASM_SOURCE)/index.css', 'utf-8'); \
+	let bigchars = fs.readFileSync('$(ENGINE_SOURCE)/renderer2/bigchars.png', 'base64'); \
+	let replaced = html.replace(/<script[^>]*?quake3e\.js[^>]*?>/ig, '<script async type=\"text/javascript\">\n/* <\!-- morph.js */\n'+script+'/* --> */\n</script>'); \
+	replaced = replaced.replace(/<link[^>]*?index\.css[^>]*?>/ig, '<style type=\"text/css\">\n/* <\!-- morph.css */\n'+style+'/* --> */\n</style>'); \
+	replaced = replaced.replace(/<\/body>/ig, '</body>\n<img title=\"gfx/2d/bigchars.png\" src=\"data:image/png;base64,'+bigchars+'\" />'); \
+	replaced = replaced.replace(/quake3e\.wasm/ig, 'morph.wasm'); \
+	fs.writeFileSync('$1', replaced);"
+endef
 
 # TODO: add pk3s to wasm
-morph.html:        morph.js morph.plugin morph.png morph.package
+morph.html:         morph.plugin $(BUILD_DIR)/morph.js \
+										 $(BUILD_DIR).do-always/morph.png \
+										 index.html
 
 # TODO: replace <script>
-morph.js:
+$(BUILD_DIR)/morph.js: $(BUILD_DIR)/morph.wasm
+	$(echo_cmd) "UGLY_CC $@"
+	$(DO_MORPH_CC)
+	$(Q)cat $(WASM_JS) >> $@
+#	$(Q)$(UGLIFY) $(BUILD_DIR)/morph.js $(WASM_JS) -o $@ -c -m
+
+# put index.html in the build directory for Github Pages?
+index.html:
+	$(echo_cmd) "PACKAGING $@"
+	$(Q)$(COPY) $(WASM_SOURCE)/index.html $(BUILD_DIR)/morph.html
+	$(call DO_EMBED_CC,$(BUILD_DIR)/morph.html)
+	$(call DO_SAFE_MOVE,$(BUILD_DIR)/morph.html,$@)
+
+deploy: index.html
 
 # TODO: embed image
-morph.png: 
+$(BUILD_DIR).do-always/morph.png: 
 
 xxx-morph-vms.pk3: $(QVM_OBJS)
 
 xxx-morph-files.pk3: $(FILES_OBJS)
 
 morph.plugin:      morph-plugin.opt morph-plugin.zip
+
+driver/dl-plugin.js:
+
 
 # TODO: minify dl-plugin.js
 morph-plugin.opt:  driver/dl-plugin.js
@@ -113,3 +156,14 @@ morph-plugin.opt:  driver/dl-plugin.js
 morph-plugin.zip: 
 
 github.pages: 
+
+release: 
+	$(Q)$(MAKE) V="$(V)" CFLAGS="$(RELEASE_CFLAGS)" LDFLAGS="$(RELEASE_LDFLAGS)" morph
+
+debug:
+	$(Q)$(MAKE) V="$(V)" CFLAGS="$(DEBUG_CFLAGS)" LDFLAGS="$(DEBUG_LDFLAGS)" morph
+
+
+.NOTPARALLEL: clean index.html
+.PHONY: test install git $(WORKDIRS) clean index.html
+

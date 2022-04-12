@@ -61,23 +61,15 @@ function init() {
     }
 
     if(typeof FS.virtual['quake3e.wasm'] != 'undefined') {
-      return Promise.resolve(FS.virtual['quake3e.wasm'].contents)
+      return new Promise(function(resolve) {
+        setTimeout(function () {
+          resolve(FS.virtual['quake3e.wasm'].contents)
+        }, 600)
+      })
     }
   }
 
-  return fetch('./quake3e_mv.wasm?time=' + Q3e.cacheBuster)
-    .catch(function (e) {})
-    .then(function(response) {
-      if(!response || response.status == 404) {
-        return fetch('./quake3e_slim.wasm?time=' + Q3e.cacheBuster)
-      }
-    })
-    .catch(function (e) {})
-    .then(function(response) {
-      if(!response || response.status == 404) {
-        return fetch('./quake3e.wasm?time=' + Q3e.cacheBuster)
-      }
-    })
+  return fetch('./quake3e.wasm?time=' + Q3e.cacheBuster)
     .catch(function (e) {})
     .then(function (response) {
       if(response && response.status == 200) {

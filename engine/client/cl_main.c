@@ -4490,6 +4490,9 @@ static void CL_InitRef( void ) {
 #endif
 
 #ifdef USE_RENDERER_DLOPEN
+#ifdef __WASM__
+#error not ready for this
+#endif
 
 #if defined (__linux__) && defined(__i386__)
 #define REND_ARCH_STRING "x86"
