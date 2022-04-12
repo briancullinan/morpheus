@@ -71,9 +71,9 @@ MORPH_OBJS         := $(addprefix $(BUILD_DIR)/sdl/,$(SDL_OBJS)) \
 											$(addprefix $(BUILD_DIR)/,$(ENGINE_OBJS))
 
 
-$(BUILD_DIR)/morph.wasm:        sdl.audio musl.min \
-										$(addsuffix .mkdir,$(addprefix $(BUILD_DIR)/,$(ENGINE_WORKDIRS))) \
-										$(addprefix $(BUILD_DIR)/,$(ENGINE_OBJS))
+$(BUILD_DIR)/morph.wasm: sdl.audio musl.min \
+												$(addsuffix .mkdir,$(addprefix $(BUILD_DIR)/,$(ENGINE_WORKDIRS))) \
+												$(addprefix $(BUILD_DIR)/,$(ENGINE_OBJS))
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) -o $@ $(MORPH_OBJS) $(CLIENT_LDFLAGS)
 
@@ -82,8 +82,8 @@ $(BUILD_DIR)/morph.wasm:        sdl.audio musl.min \
 $(BUILD_DIR)/q3map2.wasm:       $(Q3MAP2_OBJS)
 
 # minimal system code needed for Q3
-musl.min:          $(addsuffix .mkdir,$(addprefix $(BUILD_DIR)/,$(MUSL_WORKDIRS))) \
-										$(addprefix $(BUILD_DIR)/musl/,$(MUSL_OBJS))
+musl.min:                       $(addsuffix .mkdir,$(addprefix $(BUILD_DIR)/,$(MUSL_WORKDIRS))) \
+																$(addprefix $(BUILD_DIR)/musl/,$(MUSL_OBJS))
 
 $(BUILD_DIR)/morph.opt:         $(BUILD_DIR)/morph.wasm
 	$(echo_cmd) "OPT_CC $<"
@@ -91,8 +91,10 @@ $(BUILD_DIR)/morph.opt:         $(BUILD_DIR)/morph.wasm
 	$(call DO_SAFE_MOVE,$@,$<)
 
 WASM_SOURCE      := engine/wasm/http
-WASM_FILES       := quake3e.js sys_emgl.js sys_fs.js sys_in.js \
-                    sys_net.js sys_std.js sys_wasm.js nipplejs.js
+WASM_FILES       := ace.js theme-monokai.js mode-javascript.js \
+										quake3e.js sys_emgl.js sys_fs.js sys_in.js \
+                    sys_net.js sys_std.js sys_wasm.js nipplejs.js \
+										
 WASM_JS          := $(addprefix $(WASM_SOURCE)/,$(notdir $(WASM_FILES)))
 
 define DO_MORPH_CC
@@ -107,15 +109,18 @@ define DO_EMBED_CC
 	let html = fs.readFileSync('$1', 'utf-8'); \
 	let script = fs.readFileSync('$(BUILD_DIR)/morph.js', 'utf-8'); \
 	let style = fs.readFileSync('$(WASM_SOURCE)/index.css', 'utf-8'); \
-	let ace9 = fs.readFileSync('$(WASM_SOURCE)/ace.js', 'utf-8'); \
 	let bigchars = fs.readFileSync('$(ENGINE_SOURCE)/renderer2/bigchars.png', 'base64'); \
-	let replaced = html.replace(/<script[^>]*?quake3e\.js[^>]*?>/ig, '<script async type=\"text/javascript\">\n/* <\!-- morph.js */\n'+script+'/* --> */\n</script>'); \
-	replaced = replaced.replace(/<script[^>]*?ace\.js[^>]*?>/ig, '<script async type=\"text/javascript\">\n/* <\!-- ace.js */\n'+ace9+'/* --> */\n</script>'); \
-	replaced = replaced.replace(/<link[^>]*?index\.css[^>]*?>/ig, '<style type=\"text/css\">\n/* <\!-- morph.css */\n'+style+'/* --> */\n</style>'); \
-	replaced = replaced.replace(/<\/body>/ig, '</body>\n<img title=\"gfx/2d/bigchars.png\" src=\"data:image/png;base64,'+bigchars+'\" />'); \
-	replaced = replaced.replace(/quake3e\.wasm/ig, 'morph.wasm'); \
+	let replaced = html; \
+	replaced = replaced.replace(/<link[^>]*?index\.css[^>]*?>/i, '<style type=\"text/css\">\n/* <\!-- morph.css */\n'+style+'/* --> */\n</style>'); \
+	replaced = replaced.replace(/<\/html>\s*/i, '<img title=\"gfx/2d/bigchars.png\" src=\"data:image/png;base64,'+bigchars+'\" />\n</html>'); \
+	let scriptTag = replaced.split(/<script[^>]*?quake3e\.js[^>]*?>/ig); \
+	replaced = scriptTag[0] + '<script async type=\"text/javascript\">\n/* <\!-- morph.js */\n'+script.replace(/quake3e\.wasm/ig, 'morph.wasm')+'/* --> */\n' + scriptTag[1]; \
 	fs.writeFileSync('$1', replaced);"
 endef
+
+# 
+# 
+
 
 # TODO: add pk3s to wasm
 morph.html:         morph.plugin $(BUILD_DIR)/morph.js \
@@ -177,6 +182,6 @@ debug:
 	$(Q)$(MAKE) V="$(V)" CFLAGS="$(DEBUG_CFLAGS)" LDFLAGS="$(DEBUG_LDFLAGS)" morph
 
 
-.NOTPARALLEL: clean index.html
+.NOTPARALLEL: clean index.html morph.html
 .PHONY: test install git $(WORKDIRS) clean index.html
 
