@@ -13,7 +13,7 @@ body > img {
   visibility: hidden;
 }
 
-#run-button {
+.run-button {
   outline: none;
 
   position: absolute;
@@ -36,6 +36,13 @@ body > img {
 
 }
 
+.run-button.small {
+  border-width: 12px 0 12px 20px;
+  height: 25px;
+  left: 10px;
+  margin-left: 0px;
+}
+
 #run-script {
   display: none;
   visibility: hidden;
@@ -43,22 +50,34 @@ body > img {
   width: 1px;
 }
 
-#run-button.paused {
+body.running .run-button.paused {
   border-color: transparent transparent transparent #808080;
   border-style: double;
   border-width: 0px 0 0px 60px;
 }
 
-#run-button:hover {
+body.running .run-button.paused.small {
+  border-width: 0px 0 0px 20px;
+}
+
+body.running .run-button:hover {
   border-color: transparent transparent transparent #808080;
   border-style: double;
   border-width: 0px 0 0px 60px;
 }
 
-#run-button.paused:hover {
+body.running .run-button.small:hover {
+  border-width: 0px 0 0px 20px;
+}
+
+.run-button.paused:hover {
   border-color: transparent transparent transparent #208020;
   border-style: solid;
   border-width: 37px 0 37px 60px;
+}
+
+.run-button.paused.small:hover {
+  border-width: 12px 0 12px 20px;
 }
 
 #dialog {

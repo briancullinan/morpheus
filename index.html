@@ -21,7 +21,7 @@ body > img {
   visibility: hidden;
 }
 
-#run-button {
+.run-button {
   outline: none;
 
   position: absolute;
@@ -44,6 +44,13 @@ body > img {
 
 }
 
+.run-button.small {
+  border-width: 12px 0 12px 20px;
+  height: 25px;
+  left: 10px;
+  margin-left: 0px;
+}
+
 #run-script {
   display: none;
   visibility: hidden;
@@ -51,22 +58,34 @@ body > img {
   width: 1px;
 }
 
-#run-button.paused {
+body.running .run-button.paused {
   border-color: transparent transparent transparent #808080;
   border-style: double;
   border-width: 0px 0 0px 60px;
 }
 
-#run-button:hover {
+body.running .run-button.paused.small {
+  border-width: 0px 0 0px 20px;
+}
+
+body.running .run-button:hover {
   border-color: transparent transparent transparent #808080;
   border-style: double;
   border-width: 0px 0 0px 60px;
 }
 
-#run-button.paused:hover {
+body.running .run-button.small:hover {
+  border-width: 0px 0 0px 20px;
+}
+
+.run-button.paused:hover {
   border-color: transparent transparent transparent #208020;
   border-style: solid;
   border-width: 37px 0 37px 60px;
+}
+
+.run-button.paused.small:hover {
+  border-width: 12px 0 12px 20px;
 }
 
 #dialog {
@@ -274,7 +293,7 @@ body > img {
 	<div id="left-joystick"></div><div id="right-joystick"></div>
 	<div id="viewport-frame">
 		<textarea id="run-script"></textarea>
-		<button id="run-button" class="paused" onclick="window['run-script'].innerHTML=window.ace.getValue();">&nbsp;</button>
+		<button id="run-button" class="run-button paused" onclick="runBlock(-1)">&nbsp;</button>
 		<div id="editor">
 function main() {
 	let title = getWindowTitle()
@@ -3113,6 +3132,11 @@ function checkPasteEvent (evt) {
 }
 
 function InputPushKeyEvent(evt) {
+  if (INPUT.editorActive) {
+    return true
+  }
+
+
   if(evt.keyCode === 8) {
     INPUT.cancelBackspace = true;
     setTimeout(function () { INPUT.cancelBackspace = false }, 100)
@@ -3208,6 +3232,9 @@ function InputPushKeyEvent(evt) {
 }
 
 function InputPushTextEvent (evt) {
+  if (INPUT.editorActive) {
+    return true
+  }
   if ( INPUT.consoleKeys.includes(String.fromCharCode(evt.charCode)) )
   {
     Sys_QueEvent( Sys_Milliseconds(), SE_KEY, INPUT.keystrings['CONSOLE'], true, 0, null )
@@ -3608,6 +3635,7 @@ function GLimp_Shutdown(destroy) {
 }
 
 var INPUT = {
+  editorActive: false,
   touchhats: [[0,0],[0,0],[0,0],[0,0]], // x/y values for nipples
   joysticks: [],
   keystrings: {},
@@ -4430,12 +4458,132 @@ navigator.serviceWorker.register('blob:...', {
 })
 */
 
+let ACE = {
+  playCount: 0,
+  playButtons: [],
+}
+
+function newPlay() {
+  let newButton = document.createElement('BUTTON')
+  newButton.className += ' run-button small '
+  document.body.appendChild(newButton)
+  ACE.playButtons.push(newButton)
+  ACE.playCount++
+}
+
+
+function runBlock(start) {
+  if(document.body.className.includes('running')) {
+    if(document.body.className.includes('error')) {
+
+    }
+    document.body.classList.remove('running')
+    document.body.classList.add('paused')
+    return
+  }
+
+  document.body.classList.add('starting')
+
+  if(start == -1) {
+    window['run-script'].innerHTML=window.ace.getValue();
+    return
+  }
+
+  let lastLine = ace.session.getFoldWidgetRange(start).end.row
+  window['run-script'].innerHTML = ace.session
+    .getLines(start, lastLine)
+    .join('\n')
+  ace.renderer.off('afterRender', renderLineWidgets)
+}
+
+
+
+function removeLineWidgets(start) {
+  //let lastLine = ace.session.getFoldWidgetRange(start).end.row
+  for(let i = 0; i < ace.session.getLength(); i++) {
+    if(ace.session.lineWidgets[i]) {
+      ace.session.lineWidgets[i].el.remove()
+      ace.session.lineWidgets[i] = void 0
+      ace.session._emit('changeFold', {data:{start:{row: i}}});
+    }
+  }
+}
+
+
+function renderLineWidgets() {
+  let textLayer = document.getElementsByClassName('ace_text-layer')[0]
+  for(let i = ace.renderer.layerConfig.firstRow; i < ace.renderer.layerConfig.lastRow; i++) {
+    if(ace.session.lineWidgets[i]) {
+      let newHelp = ace.session.lineWidgets[i].el
+      textLayer.insertBefore(newHelp, textLayer.children[i])
+      newHelp.style.height = ace.session.lineWidgets[i].pixelHeight + 'px'
+      newHelp.style.left = '0px'
+    }
+  }
+}
+
+
+function displayBlockCall(start, evt) {
+  let lastLine = ace.session.getFoldWidgetRange(start).end.row
+  let funcName = ace.env.document.getLine(start).match(/function\s(.*?)\(/)[1]
+  let newHelp = document.createElement('DIV')
+  newHelp.className += ' ace_line '
+  if(lastLine < 0) {
+    lastLine = ace.session.length()
+  }
+  if (!ace.session.lineWidgets) {
+    ace.env.editor.execCommand('goToNextError')
+    let error = ace.session.lineWidgets[ace.getCursorPosition().row]
+    if(error && error.el) {
+      error.el.remove()
+      ace.session.lineWidgets[ace.getCursorPosition().row] = void 0
+    }
+  }
+  ace.session.lineWidgets[lastLine] = {
+    row: lastLine,
+    html: '<span class="ace_comment">' + funcName + '();</span>',
+    el: newHelp,
+    pixelHeight: ace.renderer.lineHeight,
+    rowCount: 1,
+  }
+  newHelp.innerHTML = ace.session.lineWidgets[lastLine].html
+  ace.session._emit('changeFold', {data:{start:{row: lastLine}}});
+  ace.renderer.on('afterRender', renderLineWidgets)
+}
+
+
+function updatePlay() {
+  setTimeout(function () {
+    let buttonCounter = 0
+    for(let i = ace.renderer.layerConfig.firstRow; i < ace.renderer.layerConfig.lastRow; i++) {
+      if(ace.session.foldWidgets[i] == 'start' && ace.session.getLine(i).includes('function')) {
+        let top = document.getElementsByClassName('ace_gutter-layer')[0].children[i].offsetTop
+        if(ACE.playCount <= buttonCounter) {
+          newPlay()
+        }
+        ACE.playButtons[buttonCounter].onclick = runBlock.bind(null, i)
+        ACE.playButtons[buttonCounter].onmouseover = displayBlockCall.bind(null, i)
+        ACE.playButtons[buttonCounter].onmouseout = removeLineWidgets.bind(null, i)
+        ACE.playButtons[buttonCounter].style.top = top + 'px'
+        buttonCounter++
+      }
+    }
+  }, 100)
+}
+
 function initAce() {
   // TODO: on native sys_open index.html and use engine as proxy, cebsocket
-  window.ace = ace.edit("editor")
+  window.ace = ace.edit('editor')
   ace.setFontSize(16)
-  ace.setTheme("ace/theme/monokai")
-  ace.session.setMode("ace/mode/javascript")
+  ace.setTheme('ace/theme/monokai')
+  ace.session.setTabSize(2)
+  ace.session.setMode('ace/mode/javascript')
+  ace.session.setUseWorker(false)
+  // add play buttons to individual function blocks for ease of use
+  ace.on('focus', function () {
+    INPUT.editorActive = true
+  })
+  ace.session.on('tokenizerUpdate', updatePlay)
 }
 
 // TODO: change when hot reloading works

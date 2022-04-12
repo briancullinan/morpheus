@@ -7304,27 +7304,39 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
   console.log('title:', sender.tab.title)
   console.log('url:', sender.tab.url)
   console.log('script:', request.script)
+  let AST
+  try {
+    AST = acorn.loose.parse(
+      '(function () {\n' + request.script + '\nreturn main();\n})()\n'
+      , {ecmaVersion: 2020, locations: true})
+  } catch (e) {
+    // return parser errors right away
+    console.log(e)
+    reply({ error: e.message + '' })
+    return
+  }
+
   // TODO: authorization here
-  new Promise(function (resolve) {
-      // ERROR: Refused to evaluate a string as JavaScript because 'unsafe-eval'
-      // ^- That's where most people give up, but I'll write an interpreter
-      chrome.debugger.attach({tabId: sender.tab.id}, '1.0', function () {
+  // ERROR: Refused to evaluate a string as JavaScript because 'unsafe-eval'
+  // ^- That's where most people give up, but I'll write an interpreter
+  setTimeout(function () {
+    chrome.debugger.attach({tabId: sender.tab.id}, '1.0', function () {
       try {
-        let AST = acorn.loose.parse(
-          '(function () {\n' + request.script + '\nreturn main();\n})()\n'
-          , {ecmaVersion: 2020, locations: true})
         let result = runBody(AST.body)
-        reply({ result: result + '' })
+        debugger
+        resolve({ result: result + '' })
       } catch (e) {
         console.log(e)
-        reply({ error: e.message + '' })
+        chrome.tabs.sendMessage(sender.tab.id, { error: e.message + '' }, function(response) {
+
+        });
       }
       return true
     })
-  })
+  }, 300)
   //chrome.debugger.sendMessage('Page.navigate', {url: 'https://google.com/'})
-  return true
-});
+  reply({ started: true })
+})
 
 self.addEventListener('install', function () {
   /*
@@ -7347,4 +7359,4 @@ self.addEventListener('install', function () {
     }
   }
   */
-});
+})

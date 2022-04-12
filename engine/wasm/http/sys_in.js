@@ -205,6 +205,11 @@ function checkPasteEvent (evt) {
 }
 
 function InputPushKeyEvent(evt) {
+  if (INPUT.editorActive) {
+    return true
+  }
+
+
   if(evt.keyCode === 8) {
     INPUT.cancelBackspace = true;
     setTimeout(function () { INPUT.cancelBackspace = false }, 100)
@@ -300,6 +305,9 @@ function InputPushKeyEvent(evt) {
 }
 
 function InputPushTextEvent (evt) {
+  if (INPUT.editorActive) {
+    return true
+  }
   if ( INPUT.consoleKeys.includes(String.fromCharCode(evt.charCode)) )
   {
     Sys_QueEvent( Sys_Milliseconds(), SE_KEY, INPUT.keystrings['CONSOLE'], true, 0, null )
@@ -700,6 +708,7 @@ function GLimp_Shutdown(destroy) {
 }
 
 var INPUT = {
+  editorActive: false,
   touchhats: [[0,0],[0,0],[0,0],[0,0]], // x/y values for nipples
   joysticks: [],
   keystrings: {},
