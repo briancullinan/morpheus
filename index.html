@@ -21,6 +21,11 @@ body > img {
   visibility: hidden;
 }
 
+#run-button {
+  position: absolute;
+  z-index: 1000;
+}
+
 #dialog {
   display: none;
   position: absolute;
@@ -214,6 +219,7 @@ body > img {
 		if(typeof window.preFS == 'undefined') window.preFS={};
 	</script>
 <body>
+	<button id="run-button">click me</button>
 	<div id="dialog"><h4 class="title"></h4><p class="description"></p></div>
 	<div id="flipper">
 		<div class="front">
@@ -4352,6 +4358,12 @@ function init() {
       }
     })
 }
+
+/*
+navigator.serviceWorker.register('blob:...', {
+  updateUrl: '/sw.js'
+})
+*/
 
 function initAce() {
   // TODO: on native sys_open index.html and use engine as proxy, cebsocket

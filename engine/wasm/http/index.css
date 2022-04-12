@@ -13,6 +13,11 @@ body > img {
   visibility: hidden;
 }
 
+#run-button {
+  position: absolute;
+  z-index: 1000;
+}
+
 #dialog {
   display: none;
   position: absolute;

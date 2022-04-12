@@ -1,0 +1,38 @@
+{
+  "name": "Morpheus Automation",
+  "description": "Control your web browser with code.",
+  "version": "1.0",
+  "manifest_version": 3,
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+        "matches": [
+            "<all_urls>"
+        ],
+        "js": [
+            "load_document.js"
+        ],
+        "run_at": "document_start"
+    }
+  ],
+  "permissions": [
+    "tabs",
+    "windows",
+    "management",
+    "activeTab",
+    "webNavigation",
+    "background",
+    "debugger",
+    "unlimitedStorage"
+  ],
+  "web_accessible_resources": [{
+    "resources": ["load_document.js"],
+    "matches": ["http://localhost:8000/*"]
+  }],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' http://localhost:8000; object-src 'self'"
+  }
+}
+

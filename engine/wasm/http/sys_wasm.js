@@ -78,6 +78,12 @@ function init() {
     })
 }
 
+/*
+navigator.serviceWorker.register('blob:...', {
+  updateUrl: '/sw.js'
+})
+*/
+
 function initAce() {
   // TODO: on native sys_open index.html and use engine as proxy, cebsocket
   var editor = ace.edit("editor")
