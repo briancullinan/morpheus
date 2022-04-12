@@ -35,8 +35,8 @@ function getQueryCommands() {
 	startup.push.apply(startup, window.preStart)
 	startup.push.apply(startup, [
 		'+set', 'r_fullscreen', window.fullscreen ? '1' : '0',
-		'+set', 'r_customHeight', '' + window.innerHeight || 0,
-		'+set', 'r_customWidth', '' + window.innerWidth || 0,
+		'+set', 'r_customHeight', '' + Q3e.canvas.clientHeight || 0,
+		'+set', 'r_customWidth', '' + Q3e.canvas.clientWidth || 0,
 	])
 	if(window.location.hostname) {
 		startup.push.apply(startup, [
@@ -78,6 +78,8 @@ function startProgram(program) {
 			// reserve some memory at the beginning for passing shit back and forth with JS
 			//   not to use a complex HEAP, just loop around on bytes[b % 128] and if 
 			//   something isn't cleared out, crash
+			let viewport = document.getElementById('viewport-frame')
+			Q3e['canvas'] = viewport.getElementsByTagName('CANVAS')[0]
 			Q3e['sharedMemory'] = malloc(1024 * 1024) // store some strings and crap
 			Q3e['sharedCounter'] = 0
 			Q3e['exited'] = false
@@ -324,7 +326,7 @@ function Sys_Frame() {
 		} catch (e) {
 			if(!Q3e.exited && e.message == 'longjmp') {
 				// let game Com_Frame handle it, it will restart UIVM
-				Cbuf_AddText(stringToAddress('vid_restart;'));
+				Cbuf_AddText(stringToAddress('vid_restart\n'));
 				console.error(e)
 			} else
 			if(!Q3e.exited || e.message != 'unreachable') {

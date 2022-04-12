@@ -78,9 +78,18 @@ function init() {
     })
 }
 
+function initAce() {
+  // TODO: on native sys_open index.html and use engine as proxy, cebsocket
+  var editor = ace.edit("editor")
+  editor.setFontSize(16)
+  editor.setTheme("ace/theme/monokai")
+  editor.session.setMode("ace/mode/javascript")
+}
+
 // TODO: change when hot reloading works
 window.addEventListener('load', function () {
   if(typeof Q3e.imports == 'undefined') {
+    initAce()
     init()
     .then(instantiateWasm)
     .then(startProgram);

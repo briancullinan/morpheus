@@ -1540,8 +1540,10 @@ function _setTempRet0(val) {
 }
 
 function GL_GetDrawableSize(width, height) {
-  HEAP32[(width+0)>>2] = Q3e.canvas.width
-  HEAP32[(height+0)>>2] = Q3e.canvas.height
+  INPUT.updateWidth = width
+  INPUT.updateHeight = height
+  HEAP32[width>>2] = Q3e.canvas.width
+  HEAP32[height>>2] = Q3e.canvas.height
 }
 
 var GLctx;

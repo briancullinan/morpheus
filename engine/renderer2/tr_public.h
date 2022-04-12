@@ -144,9 +144,6 @@ typedef struct {
 #if defined(USE_RMLUI) || defined(USE_ASYNCHRONOUS)
   qhandle_t  (*CreateShaderFromRaw)(const char* name, const byte *pic, int width, int height);
 #endif
-#ifdef USE_VID_FAST
-  void (*UpdateMode)(glconfig_t *glconfigOut);
-#endif
 #ifdef BUILD_EXPERIMENTAL
   void (*FastCapture)(byte *data);
   void (*FastCaptureOld)(byte *captureBuffer, byte *encodeBuffer);

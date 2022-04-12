@@ -8,9 +8,9 @@ html, body {
 }
 
 body {
-  text-indent: 100%;
+/*  text-indent: 100%;
   white-space: nowrap;
-  overflow: hidden;
+  overflow: hidden; */
 }
 
 body > img {
@@ -32,7 +32,6 @@ body > img {
   margin: 0;
   padding: 0.2em 0.5em;
   background: #333;
-  color: #fff;
   font-family: "Open Sans";
   font-weight: bold;
   text-transform: uppercase;
@@ -40,7 +39,6 @@ body > img {
 #dialog .description {
   margin: 0;
   padding: 0.5em;
-  color: #fff;
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
@@ -57,7 +55,40 @@ body > img {
   background-position: center;
   background-size: 24em;
   z-index: 1;
+  display: flex;
+  flex-direction: row;
 }
+
+#editor {
+  width:50%;
+  flex-shrink: 0;
+}
+
+#viewport-frame canvas {
+  background-color: rgba(0, 0, 0, 0.0);
+  height: 100%;
+  transition: background-color 1s ease-in-out;
+  width: 50%;
+  height: 100%;
+  flex-grow: 1;
+}
+
+@media (max-aspect-ratio: 4/5) {
+  #viewport-frame {
+    flex-direction: column;
+  }
+
+  #editor {
+    width: 100%;
+    height: 50%;
+  }
+
+  #viewport-frame canvas {
+    height: 50%;
+    width: 100%;
+  }
+}
+
 
 #viewport-frame:focus {
   outline: none;
@@ -65,15 +96,6 @@ body > img {
 
 .done-loading #viewport-frame canvas {
   background-color: rgba(0, 0, 0, 1.0);
-}
-#viewport-frame canvas {
-  background-color: rgba(0, 0, 0, 0.0);
-  width: 100%;
-  height: 100%;
-  transition: background-color 1s ease-in-out;
-  position: absolute;
-    top: 0;
-    left: 0;
 }
 
 #viewport-frame:-moz-full-screen,

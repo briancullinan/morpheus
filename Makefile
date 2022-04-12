@@ -107,8 +107,10 @@ define DO_EMBED_CC
 	let html = fs.readFileSync('$1', 'utf-8'); \
 	let script = fs.readFileSync('$(BUILD_DIR)/morph.js', 'utf-8'); \
 	let style = fs.readFileSync('$(WASM_SOURCE)/index.css', 'utf-8'); \
+	let ace9 = fs.readFileSync('$(WASM_SOURCE)/ace.js', 'utf-8'); \
 	let bigchars = fs.readFileSync('$(ENGINE_SOURCE)/renderer2/bigchars.png', 'base64'); \
 	let replaced = html.replace(/<script[^>]*?quake3e\.js[^>]*?>/ig, '<script async type=\"text/javascript\">\n/* <\!-- morph.js */\n'+script+'/* --> */\n</script>'); \
+	replaced = replaced.replace(/<script[^>]*?ace\.js[^>]*?>/ig, '<script async type=\"text/javascript\">\n/* <\!-- ace.js */\n'+ace9+'/* --> */\n</script>'); \
 	replaced = replaced.replace(/<link[^>]*?index\.css[^>]*?>/ig, '<style type=\"text/css\">\n/* <\!-- morph.css */\n'+style+'/* --> */\n</style>'); \
 	replaced = replaced.replace(/<\/body>/ig, '</body>\n<img title=\"gfx/2d/bigchars.png\" src=\"data:image/png;base64,'+bigchars+'\" />'); \
 	replaced = replaced.replace(/quake3e\.wasm/ig, 'morph.wasm'); \
@@ -121,11 +123,22 @@ morph.html:         morph.plugin $(BUILD_DIR)/morph.js \
 										 index.html
 
 # TODO: replace <script>
+ifdef DO_RELEASE
+
+$(BUILD_DIR)/morph.js: $(BUILD_DIR)/morph.wasm
+	$(echo_cmd) "UGLY_CC $@"
+	$(DO_MORPH_CC)
+	$(Q)$(UGLIFY) $(BUILD_DIR)/morph.js $(WASM_JS) -o $@ -c -m
+
+else
+
 $(BUILD_DIR)/morph.js: $(BUILD_DIR)/morph.wasm
 	$(echo_cmd) "UGLY_CC $@"
 	$(DO_MORPH_CC)
 	$(Q)cat $(WASM_JS) >> $@
-#	$(Q)$(UGLIFY) $(BUILD_DIR)/morph.js $(WASM_JS) -o $@ -c -m
+
+endif
+
 
 # put index.html in the build directory for Github Pages?
 index.html:

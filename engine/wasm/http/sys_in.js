@@ -14,13 +14,11 @@ function GLimp_StartDriverAndSetMode(mode, modeFS, fullscreen, fallback) {
   }
   */
   if(!Q3e.canvas) {
-    Q3e['canvas'] = document.createElement('canvas')
-    Q3e.canvas.setAttribute('width', document.body.clientWidth)
-    Q3e.canvas.setAttribute('height', document.body.clientHeight)
-    Q3e.canvas.width = document.body.clientWidth
-    Q3e.canvas.height = document.body.clientHeight
-    document.getElementById('viewport-frame').appendChild(Q3e.canvas)
+    //Q3e.canvas.width = viewport.clientWidth / 2
+    //Q3e.canvas.height = document.body.clientHeight
   }
+  Q3e.canvas.setAttribute('width', Q3e.canvas.clientWidth)
+  Q3e.canvas.setAttribute('height', Q3e.canvas.clientHeight)
 
   //HEAP32[win>>2] = 1
   //window.title = addressToString(title)
@@ -66,20 +64,21 @@ function GLimp_StartDriverAndSetMode(mode, modeFS, fullscreen, fallback) {
 }
 
 function updateVideoCmd () {
-  if(!Q3e.canvas) {
-    Q3e.canvas.setAttribute('width', canvas.clientWidth)
-    Q3e.canvas.setAttribute('height', canvas.clientHeight)
-
-  }
-  // TODO: make this an SDL/Sys_Queue event to `vid_restart fast` on native
+  Q3e.canvas.setAttribute('width', Q3e.canvas.clientWidth)
+  Q3e.canvas.setAttribute('height', Q3e.canvas.clientHeight)
+  HEAP32[INPUT.updateWidth>>2] = Q3e.canvas.width
+  HEAP32[INPUT.updateHeight>>2] = Q3e.canvas.height
   Cvar_Set(stringToAddress('r_customWidth'), stringToAddress('' + Q3e.canvas.clientWidth))
   Cvar_Set(stringToAddress('r_customHeight'), stringToAddress('' + Q3e.canvas.clientHeight))
+  // TODO: make this an SDL/Sys_Queue event to `vid_restart fast` on native
+  Cbuf_AddText(stringToAddress('vid_restart fast\n'));
 }
 
 function resizeViewport () {
   // ignore if the canvas hasn't yet initialized
   if(!Q3e.canvas) return
-
+  Q3e.canvas.removeAttribute('width')
+  Q3e.canvas.removeAttribute('height')
   if (Q3e.resizeDelay) clearTimeout(Q3e.resizeDelay)
   Q3e.resizeDelay = setTimeout(updateVideoCmd, 100);
 }
@@ -402,7 +401,6 @@ function InputPushMouseEvent (evt) {
 }
 
 function Com_MaxFPSChanged() {
-  return;
   INPUT.fpsUnfocused = Cvar_VariableIntegerValue(stringToAddress('com_maxfpsUnfocused'));
   INPUT.fps = Cvar_VariableIntegerValue(stringToAddress('com_maxfps'));
   if(Q3e.frameInterval) {

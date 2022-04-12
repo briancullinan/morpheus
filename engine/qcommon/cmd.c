@@ -308,6 +308,7 @@ void Cbuf_Execute( void )
 			memmove( text, text+i, cmd_text[execCmdI].cursize );
 		}
 
+
 		// execute the command line
 #ifdef USE_SERVER_ROLES
 #ifdef USE_CMD_CONNECTOR
