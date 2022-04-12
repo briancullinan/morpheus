@@ -17,10 +17,10 @@ document.addEventListener('DOMContentLoaded', () => {
       || !document.body.className.includes('starting')) {
       return true
     }
-    let runScript = document.getElementById("run-script").innerHTML
+    let runScript = document.getElementById("run-script")
     document.body.classList.remove('starting')
     setTimeout(function () {
-      chrome.runtime.sendMessage({ script: runScript }, function (response) {
+      chrome.runtime.sendMessage({ script: runScript.innerHTML }, function (response) {
         if(typeof response.started != 'undefined') {
           document.body.classList.add('running')
           evt.target.classList.remove('paused')
@@ -34,9 +34,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 chrome.runtime.onMessage.addListener(
   function(request, sender, reply) {
+    let runScript = document.getElementById("run-script")
     let runButton = document.getElementById("run-button")
     if(typeof request.error != 'undefined') {
       document.body.classList.add('error')
+      runScript.innerHTML = request.error
       runButton.click()
     }
   })
