@@ -3,6 +3,8 @@
 
 DEMO: https://briancullinan.github.io/morpheus
 
+TLDR; Morpheus can automate marketing contact, call centers tasks, web searches and scraping obviously, anything you use to test with web-driver, testing web apps, supplementing website features such as a lack of export feature or message logging.
+
 In the movie the Matrix, Morpheus prevails by communicating with the right persons.
 Morpheus' purpose is to find The One. The One who shares the same goal.
 That is the purpose of Morpheus.
@@ -22,7 +24,7 @@ I build it, let me know when it makes contact.
 3) Modularize goals, separate QVMs
 4) Stream browser automation through plugin
 5) Automate LinkedIn lobby, find gamers
-6) Slippery onboarding,
+6) Slippery onboarding, "Holy Shit!" moment
 
 ## Use cases
 

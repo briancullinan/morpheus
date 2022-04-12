@@ -24,6 +24,47 @@ body > img {
 #run-button {
   position: absolute;
   z-index: 1000;
+  border: 0;
+  background: transparent;
+  box-sizing: border-box;
+  left: 50%;
+  top: 10px;
+  margin-left: -70px;
+  width: 0;
+  height: 74px;
+
+  border-color: transparent transparent transparent #208020;
+  transition: 100ms all ease;
+  cursor: pointer;
+
+  border-style: solid;
+  border-width: 37px 0 37px 60px;
+
+}
+
+#run-script {
+  display: none;
+  visibility: hidden;
+  height: 1px;
+  width: 1px;
+}
+
+#run-button.paused {
+  border-color: transparent transparent transparent #808080;
+  border-style: double;
+  border-width: 0px 0 0px 60px;
+}
+
+#run-button:hover {
+  border-color: transparent transparent transparent #808080;
+  border-style: double;
+  border-width: 0px 0 0px 60px;
+}
+
+#run-button.paused:hover {
+  border-color: transparent transparent transparent #208020;
+  border-style: solid;
+  border-width: 37px 0 37px 60px;
 }
 
 #dialog {
@@ -219,7 +260,6 @@ body > img {
 		if(typeof window.preFS == 'undefined') window.preFS={};
 	</script>
 <body>
-	<button id="run-button">click me</button>
 	<div id="dialog"><h4 class="title"></h4><p class="description"></p></div>
 	<div id="flipper">
 		<div class="front">
@@ -231,10 +271,23 @@ body > img {
 	</div>
 	<div id="left-joystick"></div><div id="right-joystick"></div>
 	<div id="viewport-frame">
-		<div id="editor">function foo(items) {
-	var x = "All this is syntax highlighted";
-	return x;
-}</div>
+		<textarea id="run-script"></textarea>
+		<button id="run-button" class="paused" onclick="window['run-script'].innerText=window.ace.getValue();">&nbsp;</button>
+		<div id="editor">
+function main() {
+	let title = getWindowTitle()
+	let newWin = newWindow()
+	let tab = newTab()
+	newWin.setPosition(
+		window.screenLeft + window.outerWidth / 2, 
+		window.screenTop)
+	newWin.setSize(
+		window.outerWidth / 2, 
+		window.outerHeight)
+	// should now have a window on the right
+}
+
+</div>
 	<canvas></canvas>
 	</div>
 
@@ -4377,10 +4430,10 @@ navigator.serviceWorker.register('blob:...', {
 
 function initAce() {
   // TODO: on native sys_open index.html and use engine as proxy, cebsocket
-  var editor = ace.edit("editor")
-  editor.setFontSize(16)
-  editor.setTheme("ace/theme/monokai")
-  editor.session.setMode("ace/mode/javascript")
+  window.ace = ace.edit("editor")
+  ace.setFontSize(16)
+  ace.setTheme("ace/theme/monokai")
+  ace.session.setMode("ace/mode/javascript")
 }
 
 // TODO: change when hot reloading works

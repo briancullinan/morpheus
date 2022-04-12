@@ -11,11 +11,16 @@ function socketError(evt) {
 
 document.addEventListener('DOMContentLoaded', () => {
   let runButton = document.getElementById("run-button");
+  let runScript = document.getElementById("run-script");
   if(runButton) {
-    runButton.addEventListener("click", () =>
-      chrome.runtime.sendMessage({ greeting: "hello" }, function (response) {
-        console.log(response);
-      }), false);
+    runButton.addEventListener('click', function () {
+      setTimeout(function () {
+        chrome.runtime.sendMessage({ script: runScript.innerText }, function (response) {
+          console.log('result:', response)
+          return true
+        })
+      }, 100)
+    }, false);
   }
 
 });
