@@ -7243,11 +7243,38 @@ function launchApp(id, callback, errCallback) {
   });
 }
 
+
+async function collectParameters(arguments) {
+  let result = []
+  for(let i = 0; i < arguments.length; i++) {
+    let arg = arguments[i]
+    if(arg.type == 'Identifier') {
+      if(localVariables.hasOwnProperty(arg.name)) {
+        result.push(localVariables[arg.name])
+      } else {
+        throw new Error('Identifier not found: ' + arg.name)
+      }
+    }
+  }
+  return result
+}
+
+let WEBDRIVER_API = {
+  documentTitle,
+  newWindow
+}
+
+
+async function newWindow() {
+  let newWindow = await chrome.windows.create()
+  return {window: newWindow.id}
+}
+
+
 async function documentTitle(tabId) {
   let tab = await chrome.tabs.get(tabId)
   return tab.title
 }
-
 
 let localFunctions = {}
 let localVariables = {}
@@ -7260,24 +7287,19 @@ async function runStatement(i, AST, console, tabId) {
   } else
   if(AST[i].type == 'CallExpression') {
     // collect variables
-    let params = AST[i].arguments.map(function(arg) {
-      if(arg.type == 'Identifier') {
-        if(localVariables.hasOwnProperty(arg.name)) {
-          return localVariables[arg.name]
-        } else {
-          throw new Error('Identifier not found: ' + arg.name)
-        }
-      }
-    })
+    let params = await collectParameters(AST[i].arguments)
     if(!AST[i].callee.id && AST[i].callee.type != 'Identifier') {
       let calleeFunc = await runStatement(0, [AST[i].callee], console, tabId)
       return await calleeFunc(...params)
     } else
     if(localFunctions[AST[i].callee.name]) {
       // TODO: assign to param names in next context
+      if(AST[i].arguments.length > 0) {
+        throw new Error('CallExpression: Not implemented!')
+      }
       return await runStatement(0, [localFunctions[AST[i].callee.name]], console, tabId)
-    } else if (self[AST[i].callee.name]) {
-      return await self[AST[i].callee.name](...params, tabId)
+    } else if (WEBDRIVER_API[AST[i].callee.name]) {
+      return await WEBDRIVER_API[AST[i].callee.name](...params, tabId)
     } else {
       throw new Error('Function not declared: ' + AST[i].callee.name)
     }
@@ -7293,7 +7315,7 @@ async function runStatement(i, AST, console, tabId) {
   } else
   if(AST[i].type == 'MemberExpression') {
     if(localVariables.hasOwnProperty(AST[i].object.name)) {
-      debugger
+      throw new Error('MemberExpression: Not implemented!')
     } else if (AST[i].object.name == 'console') {
       return console.log
     } else {
@@ -7372,8 +7394,7 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
     } catch (e) {
       if(e.message.includes('Another debugger')) {
         // TODO: attach to another tab!
-        return
-      }
+      } else
       throw e
     }
     //}

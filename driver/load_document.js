@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           return true
         })
+        runScript.innerHTML = ''
       } catch (e) {
         if(e.message.includes('context invalidated')) {
           document.location = document.location 
@@ -47,14 +48,20 @@ chrome.runtime.onMessage.addListener(
     let runButton = document.getElementById("run-button")
     if(typeof request.error != 'undefined') {
       document.body.classList.add('error')
-      runScript.innerHTML = request.error
+      runScript.innerHTML += request.error + '\n'
       runButton.click()
     } else
     if(typeof request.console != 'undefined') {
       document.body.classList.add('console')
-      runScript.innerHTML = request.console
+      runScript.innerHTML += request.console + '\n'
       runButton.click()
-      document.body.classList.add('running')
+    } else    
+    if(typeof request.result != 'undefined') {
+      document.body.classList.add('result')
+      runScript.innerHTML += request.result + '\n'
+      runButton.click()
+    } else {
+      throw new Error('Not implemented!')
     }
     reply()
     return false

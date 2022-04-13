@@ -854,16 +854,26 @@ function newPlay() {
 
 function runBlock(start) {
   if(document.body.className.includes('running')) {
-    if(document.body.className.includes('error')) {
-      createLineWidget(window['run-script'].innerHTML, ACE.lastLine)
-    } else
-    if(document.body.className.includes('console')) {
-      document.body.classList.remove('console')
-      createLineWidget(window['run-script'].innerHTML, ACE.lastLine++)
-      return
+    if(document.body.className.includes('error')
+    || document.body.className.includes('result')) {
+      document.body.classList.remove('running')
+      document.body.classList.add('paused')
+    } else {
+      // just console update could still be running
     }
-    document.body.classList.remove('running')
-    document.body.classList.add('paused')
+
+    if(document.body.className.includes('error')
+      || document.body.className.includes('console')
+      || document.body.className.includes('result')) {
+      let newLines = window['run-script'].innerHTML.split('\n')
+      for(let j = 0; j < newLines.length; j++) {
+        createLineWidget(newLines[j], ACE.lastLine++)
+      }
+      document.body.classList.remove('error')
+      document.body.classList.remove('result')
+      document.body.classList.remove('console')
+      window['run-script'].innerHTML = ''
+    }
     return
   }
 
@@ -901,6 +911,9 @@ function removeLineWidgets(start) {
 
 
 function renderLineWidgets() {
+  if(!ace.session.lineWidgets) {
+    return
+  }
   let textLayer = document.getElementsByClassName('ace_text-layer')[0]
   let start = ace.renderer.layerConfig.firstRow
   let count = editor.clientHeight / ace.renderer.lineHeight
@@ -929,6 +942,9 @@ function initLineWidgets() {
 function createLineWidget(text, line) {
   if (!ace.session.lineWidgets) {
     initLineWidgets()
+  }
+  if(ace.session.lineWidgets[line]) {
+    ace.session.lineWidgets[line].el.remove()
   }
   ace.renderer.off('afterRender', renderLineWidgets)
   ace.renderer.on('afterRender', renderLineWidgets)
