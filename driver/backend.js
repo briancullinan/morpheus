@@ -7164,84 +7164,6 @@
 
 }));
 
-function checkForExtensionError(errCallback) {
-  if (typeof(chrome.extension.lastError) != 'undefined') {
-      var error = new Error(chrome.extension.lastError.message);
-      errCallback(error);
-      throw error;
-  }
-}
-
-/**
-* Captures a screenshot of the visible tab.
-*
-* @param {function(string)} callback The callback to invoke with the base64
-*     encoded PNG.
-* @param {function(!Error)} errCallback The callback to invoke for error
-*     reporting.
-*/
-function captureScreenshot(callback, errCallback) {
-  chrome.tabs.captureVisibleTab({format: 'png'}, function (dataUrl) {
-      if (chrome.extension.lastError &&
-          chrome.extension.lastError.message.indexOf('permission') != -1) {
-          var error = new Error(chrome.extension.lastError.message);
-          error.code = 103;  // kForbidden
-          errCallback(error);
-          return;
-      }
-      checkForExtensionError(errCallback);
-      var base64 = ';base64,';
-      callback(dataUrl.substr(dataUrl.indexOf(base64) + base64.length))
-  });
-}
-
-/**
-* Gets info about the current window.
-*
-* @param {function(*)} callback The callback to invoke with the window info.
-* @param {function(!Error)} errCallback The callback to invoke for error
-*     reporting.
-*/
-function getWindowInfo(callback, errCallback) {
-  chrome.windows.getCurrent({populate: true}, function (window) {
-      checkForExtensionError(errCallback);
-      callback(window);
-  });
-}
-
-/**
-* Updates the properties of the current window.
-*
-* @param {Object} updateInfo Update info to pass to chrome.windows.update.
-* @param {function()} callback Invoked when the updating is complete.
-* @param {function(!Error)} errCallback The callback to invoke for error
-*     reporting.
-*/
-function updateWindow(updateInfo, callback, errCallback) {
-  console.log(arguments);
-  chrome.windows.getCurrent({}, function (window) {
-      checkForExtensionError(errCallback);
-      chrome.windows.update(self.id, updateInfo, function (window) {
-          checkForExtensionError(errCallback);
-          callback();
-      });
-  });
-}
-
-/**
-* Launches an app with the specified id.
-*
-* @param {string} id The ID of the app to launch.
-* @param {function()} callback Invoked when the launch event is complete.
-* @param {function(!Error)} errCallback The callback to invoke for error
-*     reporting.
-*/
-function launchApp(id, callback, errCallback) {
-  chrome.management.launchApp(id, function () {
-      checkForExtensionError(errCallback);
-      callback();
-  });
-}
 
 
 async function collectParameters(arguments) {
@@ -7259,26 +7181,23 @@ async function collectParameters(arguments) {
   return result
 }
 
+/*
+// API calls are now embedded in web page and uploaded to backend.js
+//   see driver/library.js
 let WEBDRIVER_API = {
   documentTitle,
   newWindow
 }
+*/
 
 
-async function newWindow() {
-  let newWindow = await chrome.windows.create()
-  return {window: newWindow.id}
-}
-
-
-async function documentTitle(tabId) {
-  let tab = await chrome.tabs.get(tabId)
-  return tab.title
-}
-
+let bubbleLine = -1
 let localFunctions = {}
 let localVariables = {}
 async function runStatement(i, AST, console, tabId) {
+  if(AST[i] && AST[i].loc) {
+    bubbleLine = AST[i].loc.start.line
+  }
   if(AST[i].type == 'FunctionDeclaration') {
     localFunctions[AST[i].id.name] = AST[i].body
   } else
@@ -7298,9 +7217,9 @@ async function runStatement(i, AST, console, tabId) {
         throw new Error('CallExpression: Not implemented!')
       }
       return await runStatement(0, [localFunctions[AST[i].callee.name]], console, tabId)
-    } else if (WEBDRIVER_API[AST[i].callee.name]) {
+    } /* else if (WEBDRIVER_API[AST[i].callee.name]) {
       return await WEBDRIVER_API[AST[i].callee.name](...params, tabId)
-    } else {
+    } */ else {
       throw new Error('Function not declared: ' + AST[i].callee.name)
     }
   } else
@@ -7327,10 +7246,61 @@ async function runStatement(i, AST, console, tabId) {
     for(let j = 0; j < AST[i].declarations.length; j++) {
       await runStatement(j, AST[i].declarations, console, tabId)
     }
-  } else {
+  } else
+  if(AST[i].type == 'VariableDeclarator') {
     localVariables[AST[i].id.name] = await runStatement(0, [AST[i].init], console, tabId)
+  } else 
+  if(AST[i].type == 'AssignmentExpression') {
+    let right
+    if(AST[i].right.type == 'Identifier') {
+      throw new Error('AssignmentExpression: Not implemented!')
+    } else {
+      right = await runStatement(0, [AST[i].right])
+    }
+    let left
+    if(AST[i].left.type == 'Identifier') {
+      throw new Error('AssignmentExpression: Not implemented!')
+    } else {
+      left = await runStatement(0, [AST[i].left])
+    }
+    return await runAssignment(left, right)
+  } else
+  if(AST[i].type == 'ObjectExpression') {
+    let newObject = {}
+    return AST[i].properties.reduce(function (obj, prop) {
+      if(prop.type == 'Property') {
+        if(prop.key.type != 'Identifier') {
+          throw new Error('ObjectExpression: Not implemented!')
+        }
+
+        if(prop.value.type != 'Identifier') {
+          throw new Error('ObjectExpression: Not implemented!')
+        }
+
+        if(!localVariables.hasOwnProperty(prop.value.name)
+          && !localFunctions.hasOwnProperty(prop.value.name)) {
+          throw new Error('Member not declared: ' + prop.value.name)
+        }
+
+        obj[prop.key.name] = localVariables[prop.value.name]
+          || localFunctions[prop.value.name]
+      } else {
+        throw new Error('ObjectExpression: Not implemented!')
+      }
+      return newObject
+    }, newObject)
+  } else
+  {
+    debugger
+    throw new Error(AST[i].type + ': Not implemented!')
   }
 }
+
+
+async function runAssignment() {
+  debugger
+}
+
 
 // find and run main
 async function runBody(AST, console, tabId) {
@@ -7355,9 +7325,14 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
   console.log('url:', sender.tab.url)
   console.log('script:', request.script)
   let AST
+  if(!request.script && request.runId) {
+    // TODO: check on runner
+    reply({ console: '.' })
+    return
+  }
   try {
     AST = acorn.loose.parse(
-      '(function () {\n' + request.script + '\nreturn main();\n})()\n'
+      '(function () {\n' + request.script + '\n})()\n'
       , {ecmaVersion: 2020, locations: true})
   } catch (e) {
     // return parser errors right away
@@ -7370,7 +7345,6 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
   // ERROR: Refused to evaluate a string as JavaScript because 'unsafe-eval'
   // ^- That's where most people give up, but I'll write an interpreter
   setTimeout(async function () {
-    let targets = await chrome.debugger.getTargets()
     let newConsole = {
       log: function (...args) {
         console.log(args)
@@ -7379,6 +7353,7 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
         });
       }
     }
+    //let targets = await chrome.debugger.getTargets()
     //if(targets.filter(t => t.attached && t.tabId == sender.tab.id).length == 0) {
     try {
       await chrome.debugger.attach({tabId: sender.tab.id}, '1.0')
@@ -7405,7 +7380,11 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
       });
     } catch (e) {
       console.log(e)
-      chrome.tabs.sendMessage(sender.tab.id, { error: e.message + '' }, function(response) {
+      chrome.tabs.sendMessage(sender.tab.id, { 
+          error: e.message + '',
+          // always subtract 1 because code is wrapping in a 1-line function above
+          line: bubbleLine - 1,
+      }, function(response) {
 
       });
     }

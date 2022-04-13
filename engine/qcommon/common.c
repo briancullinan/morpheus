@@ -277,6 +277,9 @@ void Com_PrintClear(void)
 
 void QDECL Com_PrintfReal( char *file, int line, const uint32_t source, const uint32_t flags, const char *fmt, ... )
 #else
+#ifdef __WASM__
+Q_EXPORT
+#endif
 void QDECL Com_Printf( const char *fmt, ... )
 #endif
 {

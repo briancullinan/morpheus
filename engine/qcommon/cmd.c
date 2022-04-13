@@ -489,6 +489,9 @@ static cmdContext_t		savedCmd;
 Cmd_Argc
 ============
 */
+#ifdef __WASM__
+Q_EXPORT
+#endif
 int Cmd_Argc( void ) {
 	return cmd_argc;
 }
@@ -499,6 +502,9 @@ int Cmd_Argc( void ) {
 Cmd_Clear
 ============
 */
+#ifdef __WASM__
+Q_EXPORT
+#endif
 void Cmd_Clear( void ) {
 	cmd_cmd[0] = '\0';
 	cmd_argc = 0;
@@ -510,6 +516,9 @@ void Cmd_Clear( void ) {
 Cmd_Argv
 ============
 */
+#ifdef __WASM__
+Q_EXPORT
+#endif
 char *Cmd_Argv( int arg ) {
 	if ( (unsigned)arg >= cmd_argc ) {
 		return "";
@@ -538,6 +547,9 @@ Cmd_Args
 Returns a single string containing argv(arg) to argv(argc()-1)
 ============
 */
+#ifdef __WASM__
+Q_EXPORT
+#endif
 char *Cmd_ArgsFrom( int arg ) {
 	static char cmd_args[BIG_INFO_STRING], *s;
 	int i;

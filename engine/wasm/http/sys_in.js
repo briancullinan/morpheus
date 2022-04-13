@@ -341,6 +341,9 @@ function getMovementY(event) {
 }
 
 function InputPushWheelEvent(evt) {
+  if (INPUT.editorActive) {
+    return true
+  }
 	if( evt.deltaY > 0 ) {
 		Sys_QueEvent( Sys_Milliseconds(), SE_KEY, INPUT.keystrings['MWHEELUP'], true, 0, null );
 		Sys_QueEvent( Sys_Milliseconds(), SE_KEY, INPUT.keystrings['MWHEELUP'], false, 0, null );

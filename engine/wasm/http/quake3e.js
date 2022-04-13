@@ -238,6 +238,40 @@ function Sys_Print(message) {
 	console.log(addressToString(message))
 }
 
+function Sys_Edit() {
+	if(typeof window.ace == 'undefined') {
+		return
+	}
+
+	if(Cmd_Argc() < 2) {
+		Com_Printf(stringToAddress('Usage: edit [filename]\n'))
+		return
+	}
+
+	let filename = Cmd_Argv(1)
+	let filenameStr = addressToString(filename)
+	if(!filenameStr || !filenameStr.length) {
+		Com_Printf(stringToAddress('Usage: edit [filename]\n'))
+		return
+	}
+
+	let buf = stringToAddress('DEADBEEF') // pointer to pointer
+	let length
+	if ((length = FS_ReadFile(filename, buf)) > 0 && HEAPU32[buf >> 2] > 0) {
+		let imageView = Array.from(HEAPU8.slice(HEAPU32[buf >> 2], HEAPU32[buf >> 2] + length))
+		let utfEncoded = imageView.map(function (c) { return String.fromCharCode(c) }).join('')
+		FS_FreeFile(HEAPU32[buf >> 2])
+		ace.setValue(utfEncoded)
+		// TODO: show relationships in Jarvis, 
+		//   one module refers to another module
+		//   these are the leaves of change that worry code reviewers
+		ACE.filename = filenameStr
+	} else {
+		Com_Printf(stringToAddress('File not found \'%s\'.\nUsage: edit [filename]\n'), filename)
+	}
+}
+
+
 function Sys_Exit(code) {
 	Q3e.exited = true
 	GLimp_Shutdown();
@@ -453,6 +487,7 @@ var SYS = {
 	Sys_Milliseconds: Sys_Milliseconds,
 	Sys_Microseconds: Sys_Microseconds,
 	Sys_Exit: Sys_Exit,
+	Sys_Edit: Sys_Edit,
 	exit: Sys_Exit,
 	Sys_Frame: Sys_Frame,
 	Sys_Error: Sys_Error,

@@ -1556,11 +1556,6 @@ void	Sys_SnapVector( float *vector );
 
 qboolean Sys_RandomBytes( byte *string, int len );
 
-#ifdef USE_ASYNCHRONOUS
-
-void Sys_Offline( void );
-#endif
-
 // the system console is shown when a dedicated server is running
 void	Sys_DisplaySystemConsole( qboolean show );
 

@@ -101,7 +101,7 @@ define DO_MORPH_CC
 	$(Q)$(NODE) "let fs = require('fs'); \
 	let base64 = fs.readFileSync('$1', 'base64'); \
 	let preScript = \"if(typeof window.preFS == 'undefined') window.preFS={};\n\"; \
-	preScript += \"window.preFS['$(notdir $1)']='\"+base64+\"';\n\"; \
+	preScript += \"window.preFS['$3']='\"+base64+\"';\n\"; \
 	fs.writeFileSync('$2', preScript);"
 endef
 
@@ -170,9 +170,11 @@ DRIVER_OBJS       += driver/morph-plugin.crx
 
 morph.html: morph.plugin driver/index.html
 	$(Q)$(COPY) $(WASM_SOURCE)/index.html $@
-	$(call DO_MORPH_CC,$(BUILD_DIR)/morph.wasm,driver/morph-wasm.js)
-	$(call DO_MORPH_CC,driver/morph-plugin.crx,driver/driver.js)
-	$(Q)$(UGLIFY) $(WASM_JS) driver/driver.js driver/morph-wasm.js -o driver/morph.js -c -m
+	$(call DO_MORPH_CC,$(BUILD_DIR)/morph.wasm,driver/morph-wasm.js,morph.wasm)
+	$(call DO_MORPH_CC,driver/morph-plugin.crx,driver/driver.js,morph-plugin.crx)
+	$(call DO_MORPH_CC,driver/library.js,driver/library-packed.js,multigame/driver/library.js)
+	$(Q)$(UGLIFY) $(WASM_JS) driver/driver.js driver/morph-wasm.js \
+		driver/library-packed.js -o driver/morph.js -c -m
 	$(call DO_EMBED_CC,morph.html)
 	$(call DO_EMBED2_CC,$@,true)
 	$(call DO_SAFE_MOVE,morph.html,index.html)
@@ -181,9 +183,11 @@ else
 
 morph.html: morph.plugin driver/index.html
 	$(Q)$(COPY) $(WASM_SOURCE)/index.html $@
-	$(call DO_MORPH_CC,$(BUILD_DIR)/morph.wasm,driver/morph-wasm.js)
-	$(call DO_MORPH_CC,driver/morph-plugin.zip,driver/driver.js)
-	$(Q)cat $(WASM_JS) driver/driver.js driver/morph-wasm.js > driver/morph.js
+	$(call DO_MORPH_CC,$(BUILD_DIR)/morph.wasm,driver/morph-wasm.js,morph.wasm)
+	$(call DO_MORPH_CC,driver/morph-plugin.zip,driver/driver.js,morph-plugin.zip)
+	$(call DO_MORPH_CC,driver/library.js,driver/library-packed.js,multigame/driver/library.js)
+	$(Q)cat $(WASM_JS) driver/driver.js driver/morph-wasm.js \
+		driver/library-packed.js > driver/morph.js
 	$(call DO_EMBED_CC,morph.html)
 	$(call DO_EMBED2_CC,$@,true)
 	$(call DO_SAFE_MOVE,morph.html,index.html)

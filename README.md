@@ -32,7 +32,14 @@ I build it, let me know when it makes contact.
 
 ## Use cases
 
-What the heck is this? Can't stake a claim without providing evidence.
+What the heck is this? Can't stake a claim without providing evidence. Chrome DevTools is a powerful
+API used by companies like JetBrains to automate Javascript testing and debugging. It works by 
+interpreting the Javascript calls and making calls back to the IDE during execution. Rather than
+exposing this functionality to basic users, Google has decided it should be locked away behind
+walls of settings and guards. This plugin intends to explore the visual design of automating 
+DevTools. 
+
+How can many people benefit from something very complicate made very simple?
 
 ### Use case 1, the lowly call center
 In my experience, there are call centers (*cough* Kaizer) that benefit from automated tools for

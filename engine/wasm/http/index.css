@@ -23,18 +23,28 @@ body > img {
   box-sizing: border-box;
   left: 50%;
   top: 10px;
-  margin-left: -70px;
+  margin-left: -84px;
   width: 0;
   height: 74px;
 
   border-color: transparent transparent transparent #208020;
-  transition: 100ms all ease;
+  transition: 100ms height ease,  100ms border ease,  100ms color ease;
   cursor: pointer;
 
   border-style: solid;
   border-width: 37px 0 37px 60px;
 
 }
+
+
+.line_error {
+  background: #902020;
+}
+.line_error .ace_comment {
+  font-weight: bold;
+  color: #A0D0A0;
+}
+
 
 body.no-gl .run-button { 
   left: 100%;
@@ -96,7 +106,6 @@ body.running .run-button.small:hover {
 
 body.starting .run-button {
   width: 74px;
-  margin-left: -84px;
   border-radius: 100%;
   border-width: 10px;
   border-color: #808080;
