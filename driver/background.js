@@ -7259,14 +7259,25 @@ async function runStatement(i, AST, console, tabId) {
     return await runStatement(0, [AST[i].argument], console, tabId)
   } else
   if(AST[i].type == 'CallExpression') {
+    // collect variables
+    let params = AST[i].arguments.map(function(arg) {
+      if(arg.type == 'Identifier') {
+        if(localVariables.hasOwnProperty(arg.name)) {
+          return localVariables[arg.name]
+        } else {
+          throw new Error('Identifier not found: ' + arg.name)
+        }
+      }
+    })
     if(!AST[i].callee.id && AST[i].callee.type != 'Identifier') {
-      await runStatement(0, [AST[i].callee], console, tabId)
+      let calleeFunc = await runStatement(0, [AST[i].callee], console, tabId)
+      return await calleeFunc(...params)
     } else
     if(localFunctions[AST[i].callee.name]) {
-      await runStatement(0, [localFunctions[AST[i].callee.name]], console, tabId)
+      // TODO: assign to param names in next context
+      return await runStatement(0, [localFunctions[AST[i].callee.name]], console, tabId)
     } else if (self[AST[i].callee.name]) {
-      // TODO: collect variables
-      await self[AST[i].callee.name](tabId)
+      return await self[AST[i].callee.name](...params, tabId)
     } else {
       throw new Error('Function not declared: ' + AST[i].callee.name)
     }
@@ -7281,10 +7292,10 @@ async function runStatement(i, AST, console, tabId) {
     await runStatement(0, [AST[i].expression], console, tabId)
   } else
   if(AST[i].type == 'MemberExpression') {
-    if(localVariables[AST[i].object.name]) {
-
+    if(localVariables.hasOwnProperty(AST[i].object.name)) {
+      debugger
     } else if (AST[i].object.name == 'console') {
-      console.log('test')
+      return console.log
     } else {
       throw new Error('Member not declared: ' + AST[i].object.name)
     }
@@ -7359,9 +7370,9 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
         });
       }
     } catch (e) {
-      debugger
-      if(e.message.includes('another debugger')) {
+      if(e.message.includes('Another debugger')) {
         // TODO: attach to another tab!
+        return
       }
       throw e
     }
