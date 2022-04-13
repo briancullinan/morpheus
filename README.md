@@ -27,6 +27,8 @@ I build it, let me know when it makes contact.
 6) Slippery onboarding, "Holy Shit!" moment
 7) auto-exec on remote cloud for mobile testing
 8) \mvjoin and follow remote player splines
+9) \sync IndexedDB file-system with a Github Gist after CAS
+
 
 ## Use cases
 

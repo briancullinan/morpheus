@@ -3,11 +3,11 @@ include Makefile.config
 
 morph:             morpheus
 
-morpheus:          morph.program morph.package morph.plugin
+morpheus:          morph.program morph.plugin morph.package
 
 morph.program:     $(BUILD_DIR)/morph.wasm $(BUILD_DIR)/q3map2.wasm $(BUILD_DIR)/morph.opt
 
-morph.package:     xxx-morph-vms.pk3 xxx-morph-files.pk3 morph.html
+morph.package:     xxx-morph-vms.pk3 xxx-morph-files.pk3 driver/morph.html
 
 SDL_OBJS           := SDL.o SDL_assert.o SDL_error.o  SDL_dataqueue.o  SDL_hints.o \
 											audio/SDL_audio.o audio/SDL_mixer.o audio/emscripten/SDL_emscriptenaudio.o \
@@ -93,76 +93,104 @@ $(BUILD_DIR)/morph.opt:         $(BUILD_DIR)/morph.wasm
 WASM_SOURCE      := engine/wasm/http
 WASM_FILES       := ace.js theme-monokai.js mode-javascript.js \
 										quake3e.js sys_ace.js sys_emgl.js sys_fs.js sys_in.js \
-                    sys_net.js sys_std.js sys_wasm.js nipplejs.js \
-										
-WASM_JS          := $(addprefix $(WASM_SOURCE)/,$(notdir $(WASM_FILES))) \
-										driver/driver.js 
+										sys_net.js sys_std.js sys_wasm.js nipplejs.js
+WASM_JS          := $(addprefix $(WASM_SOURCE)/,$(notdir $(WASM_FILES)))
 
 
 define DO_MORPH_CC
 	$(Q)$(NODE) "let fs = require('fs'); \
 	let base64 = fs.readFileSync('$1', 'base64'); \
-	let preScript = \"window.preFS['$(notdir $1)']='\"+base64+\"';\n\"; \
+	let preScript = \"if(typeof window.preFS == 'undefined') window.preFS={};\n\"; \
+	preScript += \"window.preFS['$(notdir $1)']='\"+base64+\"';\n\"; \
 	fs.writeFileSync('$2', preScript);"
 endef
 
+# replace <css>
 define DO_EMBED_CC
 	$(Q)$(NODE) "let fs = require('fs'); \
 	let html = fs.readFileSync('$1', 'utf-8'); \
-	let script = fs.readFileSync('$(BUILD_DIR)/morph.js', 'utf-8'); \
 	let style = fs.readFileSync('$(WASM_SOURCE)/index.css', 'utf-8'); \
 	let bigchars = fs.readFileSync('$(ENGINE_SOURCE)/renderer2/bigchars.png', 'base64'); \
 	let replaced = html; \
 	replaced = replaced.replace(/<link[^>]*?index\.css[^>]*?>/i, '<style type=\"text/css\">\n/* <\!-- morph.css */\n'+style+'/* --> */\n</style>'); \
 	replaced = replaced.replace(/<\/html>\s*/i, '<img title=\"gfx/2d/bigchars.png\" src=\"data:image/png;base64,'+bigchars+'\" />\n</html>'); \
 	let scriptTag = replaced.split(/<script[^>]*?quake3e\.js[^>]*?>/ig); \
-	replaced = scriptTag[0] + '<script async type=\"text/javascript\">\n/* <\!-- morph.js */\n'+script.replace(/quake3e\.wasm/ig, 'morph.wasm')+'/* --> */\n' + scriptTag[1]; \
+	replaced = scriptTag[0] \
+		+ '<script async type=\"text/javascript\" src=\"morph.js\">' \
+		+ scriptTag[1]; \
 	fs.writeFileSync('$1', replaced);"
 endef
+
+# replace <script>
+define DO_EMBED2_CC
+	$(Q)$(NODE) "let fs = require('fs'); \
+	let script = fs.readFileSync('driver/morph.js', 'utf-8'); \
+	script = script.replace(/quake3e\.wasm/ig, 'morph.wasm'); \
+	script = script.replace(/quake3e\.js/ig, 'morph.js'); \
+	if($2) { script = script.replace(/morph-plugin\.crx/ig, 'morph-plugin.zip'); \
+	script = script.replace('application/x-chrome-extension', 'application/zip') } \
+	fs.writeFileSync('driver/morph.js', script); \
+	let html = fs.readFileSync('$1', 'utf-8'); \
+	let replaced = html; \
+	let scriptTag = replaced.split(/<script[^>]*?morph\.js[^>]*?>/ig); \
+	replaced = scriptTag[0] \
+		+ '<script async type=\"text/javascript\">\n' \
+		+ '/* <\!-- morph.js */\n' + script +'/* --> */\n' \
+		+ scriptTag[1]; \
+	fs.writeFileSync('$1', replaced);"
+endef
+
 
 define DO_CRXPACK_CC
 	google-chrome --user-data-dir=... --pack-
 extension=... --pack-extension-key=... --no-message-box
 endef
 
-
-# 
-# 
-
-
 # TODO: add pk3s to wasm
-morph.html:         morph.plugin $(BUILD_DIR)/morph.js \
+driver/morph.html:   morph.plugin driver/morph.js \
 										 $(BUILD_DIR).do-always/morph.png \
-										 index.html
-
-# TODO: replace <script>
-ifdef DO_RELEASE
-
-$(BUILD_DIR)/morph.js: $(BUILD_DIR)/morph.wasm
-	$(echo_cmd) "UGLY_CC $@"
-	$(call DO_MORPH_CC,$<,$@)
-	$(call DO_MORPH_CC,driver/driver.crx,driver/driver.js)
-	$(Q)$(UGLIFY) $(BUILD_DIR)/morph.js $(WASM_JS) -o $@ -c -m
-
-else
-
-$(BUILD_DIR)/morph.js: $(BUILD_DIR)/morph.wasm
-	$(echo_cmd) "UGLY_CC $@"
-	$(call DO_MORPH_CC,$<,$@)
-	$(call DO_MORPH_CC,driver/driver.crx,driver/driver.js)
-	$(Q)cat $(WASM_JS) >> $@
-
-endif
-
+										 driver/index.html morph.html
 
 # put index.html in the build directory for Github Pages?
-index.html:
+driver/index.html:
 	$(echo_cmd) "PACKAGING $@"
 	$(Q)$(COPY) $(WASM_SOURCE)/index.html $(BUILD_DIR)/morph.html
 	$(call DO_EMBED_CC,$(BUILD_DIR)/morph.html)
 	$(call DO_SAFE_MOVE,$(BUILD_DIR)/morph.html,$@)
 
-deploy: index.html
+DRIVER_OBJS       := driver/morph.js driver/index.html driver/redpill.png \
+										driver/backend.js driver/frontend.js driver/manifest.json \
+										driver/morph.wasm 
+
+ifdef DO_RELEASE
+# TODO: put approved plugin back here to build Github Pages index.html.
+#   Because plugin does not also include the download for the plugin.
+#   The would be silly.
+DRIVER_OBJS       += driver/morph-plugin.crx
+
+morph.html: morph.plugin driver/index.html
+	$(Q)$(COPY) $(WASM_SOURCE)/index.html $@
+	$(call DO_MORPH_CC,$(BUILD_DIR)/morph.wasm,driver/morph-wasm.js)
+	$(call DO_MORPH_CC,driver/morph-plugin.crx,driver/driver.js)
+	$(Q)$(UGLIFY) $(WASM_JS) driver/driver.js driver/morph-wasm.js -o driver/morph.js -c -m
+	$(call DO_EMBED_CC,morph.html)
+	$(call DO_EMBED2_CC,$@,true)
+	$(call DO_SAFE_MOVE,morph.html,index.html)
+
+else
+
+morph.html: morph.plugin driver/index.html
+	$(Q)$(COPY) $(WASM_SOURCE)/index.html $@
+	$(call DO_MORPH_CC,$(BUILD_DIR)/morph.wasm,driver/morph-wasm.js)
+	$(call DO_MORPH_CC,driver/morph-plugin.zip,driver/driver.js)
+	$(Q)cat $(WASM_JS) driver/driver.js driver/morph-wasm.js > driver/morph.js
+	$(call DO_EMBED_CC,morph.html)
+	$(call DO_EMBED2_CC,$@,true)
+	$(call DO_SAFE_MOVE,morph.html,index.html)
+
+endif
+
+deploy: morph.html
 
 # TODO: embed image
 $(BUILD_DIR).do-always/morph.png: 
@@ -171,17 +199,27 @@ xxx-morph-vms.pk3: $(QVM_OBJS)
 
 xxx-morph-files.pk3: $(FILES_OBJS)
 
-morph.plugin:      morph-plugin.opt morph-plugin.zip
+morph.plugin:      driver/morph.js driver/morph-plugin.zip
 
-driver/dl-plugin.js:
+# fingers crossed Chrome fixes WASM loading from plugin source like .js
+ifdef DO_RELEASE
 
+driver/morph.js: $(BUILD_DIR)/morph.wasm
+	$(echo_cmd) "UGLY_CC $@"
+	$(Q)$(UGLIFY) $(WASM_JS) -o $@ -c -m
 
-# TODO: minify dl-plugin.js
-morph-plugin.opt:  driver/dl-plugin.js
-	@:
+else
 
-# TODO: minify and zip DevTools relay
-morph-plugin.zip: 
+driver/morph.js: $(BUILD_DIR)/morph.wasm
+	$(echo_cmd) "UGLY_CC $@"
+	$(Q)$(COPY) $(WASM_SOURCE)/ace.js driver/ace.js
+	$(Q)cat $(WASM_JS) > $@
+
+endif
+
+driver/morph-plugin.zip: $(DRIVER_OBJS)
+	$(Q)$(COPY) $(BUILD_DIR)/morph.wasm driver/morph.wasm
+	$(Q)cd driver && $(ZIP) -FSr -o $(notdir $@) $(subst driver/,,$(DRIVER_OBJS)) 
 
 github.pages: 
 
@@ -192,6 +230,6 @@ debug:
 	$(Q)$(MAKE) V="$(V)" CFLAGS="$(DEBUG_CFLAGS)" LDFLAGS="$(DEBUG_LDFLAGS)" morph
 
 
-.NOTPARALLEL: clean index.html morph.html
-.PHONY: test install git $(WORKDIRS) clean index.html
+.NOTPARALLEL: clean driver/index.html driver/morph.html
+.PHONY: test install git $(WORKDIRS) clean driver/index.html
 

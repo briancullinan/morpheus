@@ -5,9 +5,6 @@
 	<title>Morpheus Automation</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 	<link rel="stylesheet" href="index.css" />
-	<script type="text/javascript">
-		if(typeof window.preFS == 'undefined') window.preFS={};
-	</script>
 <body class="">
 	<div id="dialog"><h4 class="title"></h4><p class="description"></p></div>
 	<div id="flipper">
@@ -23,6 +20,7 @@
 		<textarea id="run-script"></textarea>
 		<button id="run-button" class="run-button paused" onclick="runBlock(-1)">&nbsp;</button>
 		<div id="editor">// after installing the plugin, DevTools can start
+// instructions: https://developer.chrome.com/docs/extensions/mv3/getstarted/#unpacked
 function main() {
 	let title = documentTitle()
 	console.log(title)
@@ -44,6 +42,5 @@ function main() {
 
 </body>
 <!-- <script type="text/javascript" src="/webgl-debug.js"></script>-->
-<script async type="text/javascript" src="ace.js"></script>
 <script async type="text/javascript" src="quake3e.js"></script>
 </html>

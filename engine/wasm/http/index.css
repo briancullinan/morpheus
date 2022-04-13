@@ -36,6 +36,10 @@ body > img {
 
 }
 
+body.no-gl .run-button { 
+  left: 100%;
+}
+
 .run-button.small {
   border-width: 12px 0 12px 20px;
   height: 25px;
@@ -174,6 +178,14 @@ body.starting .run-button.small {
   flex-grow: 1;
 }
 
+body.no-gl #viewport-frame canvas {
+  width:0;
+}
+
+body.no-gl #editor {
+  width:100%;
+}
+
 @media (max-aspect-ratio: 4/5) {
   #viewport-frame {
     flex-direction: column;
@@ -188,6 +200,15 @@ body.starting .run-button.small {
     height: 50%;
     width: 100%;
   }
+
+  body.no-gl #editor {
+    height:100%;
+  }
+
+  body.no-gl #viewport-frame canvas {
+    height:0;
+  }
+
 }
 
 

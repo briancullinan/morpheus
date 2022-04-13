@@ -51,15 +51,17 @@ function runBlock(start) {
   setTimeout(function () {
     if(document.body.className.includes('starting')) {
       // maybe we don't have the plugin
-      let file = FS.virtual['driver.crx'].contents
+      let file = FS.virtual['morph-plugin.crx'].contents
       let blob = new Blob([file], {type: 'application/x-chrome-extension'})
+      
       let exportUrl = URL.createObjectURL(blob);
-      let popout = window.open(exportUrl, '_blank', 
-        'location=yes,height=570,width=520,scrollbars=yes,status=yes');
+      const tempLink = document.createElement('A');
+      tempLink.style.display = 'none';
+      tempLink.href = exportUrl;
+      tempLink.setAttribute('download', 'morph-plugin.zip');
+      document.body.appendChild(tempLink);
+      tempLink.click();
       URL.revokeObjectURL(exportUrl);
-      setTimeout(function () {
-        if(popout) popout.close()
-      }, 1000)
     }
   }, 1000)
 

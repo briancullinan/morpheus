@@ -1,5 +1,11 @@
 {
   "name": "Morpheus Automation",
+  "options_ui": {
+    "page": "index.html",
+    "open_in_tab": true
+  },
+  "icons": { 
+   "128": "redpill.png" },
   "description": "Control your web browser with code.",
   "version": "1.0",
   "manifest_version": 3,
@@ -8,13 +14,13 @@
   },
   "content_scripts": [
     {
-        "matches": [
-            "<all_urls>"
-        ],
-        "js": [
-            "frontend.js"
-        ],
-        "run_at": "document_start"
+      "matches": [
+          "<all_urls>"
+      ],
+      "js": [
+          "frontend.js"
+      ],
+      "run_at": "document_start"
     }
   ],
   "permissions": [
@@ -28,11 +34,11 @@
     "unlimitedStorage"
   ],
   "web_accessible_resources": [{
-    "resources": ["frontend.js"],
-    "matches": ["http://localhost:8000/*"]
+    "resources": ["frontend.js", "morph.js", "morph.wasm"],
+    "matches": ["<all_urls>"]
   }],
   "content_security_policy": {
-    "extension_pages": "script-src 'self' http://localhost:8000; object-src 'self'"
+    "extension_pages": "script-src 'self' ; object-src 'self' ;"
   }
 }
 

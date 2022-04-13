@@ -1,4 +1,5 @@
 // Launcher program for web browser and .wasm builds
+let isStreaming = false
 
 function instantiateWasm(bytes) {
   let libraries = {
@@ -12,7 +13,27 @@ function instantiateWasm(bytes) {
     INPUT: INPUT,
     STD: STD,
   }
+  let viewport = document.getElementById('viewport-frame')
+  Q3e['canvas'] = viewport.getElementsByTagName('CANVAS')[0]
   if(!bytes) {
+    if(Q3e.canvas) {
+      Q3e.canvas.transferControlToOffscreen()
+    }
+    // try it in a service worker
+    if((window.location.protocol == 'http:' 
+      || window.location.protocol == 'https:'
+      || window.location.protocol == 'chrome-extension:')
+      && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('quake3e.js', { scope: '/' })
+        .then(function (registration) {
+          if(typeof SYS != 'undefined') SYS.servicable = true
+        })
+        .catch(function (err) {
+          if(typeof SYS != 'undefined') SYS.servicable = false
+          console.log('Service Worker registration failed: ', err)
+        })
+    }
+    document.body.classList.add('no-gl')
     throw new Error('Couldn\'t find wasm!')
   }
 
@@ -22,7 +43,11 @@ function instantiateWasm(bytes) {
     Object.assign(Q3e.env, Object.values(libraries)[i])
   }
 
-  return WebAssembly.instantiate(bytes, Q3e)
+  if(isStreaming) {
+    return WebAssembly.instantiateStreaming(bytes, Q3e)
+  } else {
+    return WebAssembly.instantiate(bytes, Q3e)
+  }
 }
 
 function _base64ToArrayBuffer(base64) {
@@ -69,13 +94,10 @@ function init() {
     }
   }
 
-  return fetch('./quake3e.wasm?time=' + Q3e.cacheBuster)
-    .catch(function (e) {})
-    .then(function (response) {
-      if(response && response.status == 200) {
-        return response.arrayBuffer()
-      }
-    })
+  //isStreaming = true
+  //return fetch('./quake3e.wasm?time=' + Q3e.cacheBuster)
+  //  .catch(function (e) {})
+  return Promise.resolve()
 }
 
 // TODO: change when hot reloading works

@@ -78,8 +78,6 @@ function startProgram(program) {
 			// reserve some memory at the beginning for passing shit back and forth with JS
 			//   not to use a complex HEAP, just loop around on bytes[b % 128] and if 
 			//   something isn't cleared out, crash
-			let viewport = document.getElementById('viewport-frame')
-			Q3e['canvas'] = viewport.getElementsByTagName('CANVAS')[0]
 			Q3e['sharedMemory'] = malloc(1024 * 1024) // store some strings and crap
 			Q3e['sharedCounter'] = 0
 			Q3e['exited'] = false
