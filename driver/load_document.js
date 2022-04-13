@@ -29,11 +29,10 @@ document.addEventListener('DOMContentLoaded', () => {
           return true
         })
       } catch (e) {
-        if(e.message.includes('conext invalidated')) {
-          debugger
+        if(e.message.includes('context invalidated')) {
           document.location = document.location 
-            + (document.location.includes('?') ? '&' : '?')
-            + 'tzrl=' + Date.now()
+          //  + (document.location.includes('?') ? '&' : '?')
+          //  + 'tzrl=' + Date.now()
         }
         throw e
       }
@@ -50,6 +49,12 @@ chrome.runtime.onMessage.addListener(
       document.body.classList.add('error')
       runScript.innerHTML = request.error
       runButton.click()
+    } else
+    if(typeof request.console != 'undefined') {
+      document.body.classList.add('console')
+      runScript.innerHTML = request.console
+      runButton.click()
+      document.body.classList.add('running')
     }
     reply()
     return false

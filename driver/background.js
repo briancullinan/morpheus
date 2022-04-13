@@ -7243,38 +7243,48 @@ function launchApp(id, callback, errCallback) {
   });
 }
 
+async function documentTitle(tabId) {
+  let tab = await chrome.tabs.get(tabId)
+  return tab.title
+}
+
 
 let localFunctions = {}
 let localVariables = {}
-async function runStatement(i, AST) {
+async function runStatement(i, AST, console, tabId) {
   if(AST[i].type == 'FunctionDeclaration') {
     localFunctions[AST[i].id.name] = AST[i].body
   } else
   if(AST[i].type == 'ReturnStatement') {
-    return await runStatement(0, [AST[i].argument])
+    return await runStatement(0, [AST[i].argument], console, tabId)
   } else
   if(AST[i].type == 'CallExpression') {
     if(!AST[i].callee.id && AST[i].callee.type != 'Identifier') {
-      await runStatement(0, [AST[i].callee])
+      await runStatement(0, [AST[i].callee], console, tabId)
     } else
     if(localFunctions[AST[i].callee.name]) {
-      await runStatement(0, [localFunctions[AST[i].callee.name]])
+      await runStatement(0, [localFunctions[AST[i].callee.name]], console, tabId)
+    } else if (self[AST[i].callee.name]) {
+      // TODO: collect variables
+      await self[AST[i].callee.name](tabId)
     } else {
       throw new Error('Function not declared: ' + AST[i].callee.name)
     }
   } else
   if(AST[i].type == 'FunctionExpression') {
-    await runStatement(0, [AST[i].body])
+    await runStatement(0, [AST[i].body], console, tabId)
   } else
   if(AST[i].type == 'BlockStatement') {
-    await runBody(AST[i].body)
+    await runBody(AST[i].body, console, tabId)
   } else
   if(AST[i].type == 'ExpressionStatement') {
-    await runStatement(0, [AST[i].expression])
+    await runStatement(0, [AST[i].expression], console, tabId)
   } else
   if(AST[i].type == 'MemberExpression') {
     if(localVariables[AST[i].object.name]) {
 
+    } else if (AST[i].object.name == 'console') {
+      console.log('test')
     } else {
       throw new Error('Member not declared: ' + AST[i].object.name)
     }
@@ -7282,15 +7292,15 @@ async function runStatement(i, AST) {
   if(AST[i].type == 'VariableDeclaration') {
     // so context doesn't disappear
     for(let j = 0; j < AST[i].declarations.length; j++) {
-      await runStatement(j, AST[i].declarations)
+      await runStatement(j, AST[i].declarations, console, tabId)
     }
   } else {
-    localVariables[AST[i].id.name] = await runStatement(0, [AST[i].init])
+    localVariables[AST[i].id.name] = await runStatement(0, [AST[i].init], console, tabId)
   }
 }
 
 // find and run main
-async function runBody(AST) {
+async function runBody(AST, console, tabId) {
   // doesn't need to be fast, because async DevTools calls, are not fast
   let result
   let start = localFunctions
@@ -7298,7 +7308,7 @@ async function runBody(AST) {
   let startVars = localVariables
   localVariables = Object.assign({}, localVariables)
   for(let i = 0; i < AST.length; i++) {
-    await runStatement(i, AST)
+    await runStatement(i, AST, console, tabId)
   }
   // remove anything created in the past context
   localFunctions = start
@@ -7328,11 +7338,36 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
   // ^- That's where most people give up, but I'll write an interpreter
   setTimeout(async function () {
     let targets = await chrome.debugger.getTargets()
-    if(targets.filter(t => t.attached && t.tabId == sender.tab.id).length == 0) {
-      await chrome.debugger.attach({tabId: sender.tab.id}, '1.0')
+    let newConsole = {
+      log: function (...args) {
+        console.log(args)
+        chrome.tabs.sendMessage(sender.tab.id, { console: args }, function(response) {
+
+        });
+      }
     }
+    //if(targets.filter(t => t.attached && t.tabId == sender.tab.id).length == 0) {
     try {
-      let result = await runBody(AST.body)
+      await chrome.debugger.attach({tabId: sender.tab.id}, '1.0')
+      // confirm it works
+      let dom = await chrome.debugger.sendCommand({
+        tabId: sender.tab.id
+      }, 'DOM.getDocument')
+      if(dom.root.children[1].children[1].attributes[1] != 'running') {
+        chrome.tabs.sendMessage(sender.tab.id, { error: 'Tab not running.' }, function(response) {
+
+        });
+      }
+    } catch (e) {
+      debugger
+      if(e.message.includes('another debugger')) {
+        // TODO: attach to another tab!
+      }
+      throw e
+    }
+    //}
+    try {
+      let result = await runBody(AST.body, newConsole, sender.tab.id)
       chrome.tabs.sendMessage(sender.tab.id, { result: result + '' }, function(response) {
 
       });
@@ -7343,7 +7378,8 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
       });
     }
   }, 300)
-  //chrome.debugger.sendMessage('Page.navigate', {url: 'https://google.com/'})
+
+
   reply({ started: true })
 })
 

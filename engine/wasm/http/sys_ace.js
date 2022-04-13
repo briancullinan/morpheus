@@ -23,7 +23,11 @@ function runBlock(start) {
   if(document.body.className.includes('running')) {
     if(document.body.className.includes('error')) {
       createLineWidget(window['run-script'].innerHTML, ACE.lastLine)
-      ace.renderer.on('afterRender', renderLineWidgets)
+    } else
+    if(document.body.className.includes('console')) {
+      document.body.classList.remove('console')
+      createLineWidget(window['run-script'].innerHTML, ACE.lastLine++)
+      return
     }
     document.body.classList.remove('running')
     document.body.classList.add('paused')
@@ -35,11 +39,11 @@ function runBlock(start) {
 
   if(start == -1) {
     window['run-script'].innerHTML=window.ace.getValue();
-    ACE.lastLine = ace.session.getLength() - 1
+    ACE.lastLine = ace.session.getLength()
     return
   }
 
-  ACE.lastLine = ace.session.getFoldWidgetRange(start).end.row - 1
+  ACE.lastLine = ace.session.getFoldWidgetRange(start).end.row
   window['run-script'].innerHTML = ace.session
     .getLines(start, ACE.lastLine)
     .join('\n')
@@ -53,7 +57,7 @@ function removeLineWidgets(start) {
     return
   }
   //let lastLine = ace.session.getFoldWidgetRange(start).end.row
-  for(let i = 0; i < ace.session.getLength(); i++) {
+  for(let i = 0; i < ace.session.lineWidgets.length; i++) {
     if(ace.session.lineWidgets[i]) {
       ace.session.lineWidgets[i].el.remove()
       ace.session.lineWidgets[i] = void 0
@@ -65,10 +69,13 @@ function removeLineWidgets(start) {
 
 function renderLineWidgets() {
   let textLayer = document.getElementsByClassName('ace_text-layer')[0]
-  for(let i = ace.renderer.layerConfig.firstRow; i < ace.renderer.layerConfig.lastRow + 1; i++) {
+  let start = ace.renderer.layerConfig.firstRow
+  let count = editor.clientHeight / ace.renderer.lineHeight
+  for(let i = start; i < start + count; i++) {
     if(ace.session.lineWidgets[i]) {
       let newHelp = ace.session.lineWidgets[i].el
       textLayer.insertBefore(newHelp, textLayer.children[i])
+      newHelp.style.top = ((i - start) * ace.renderer.lineHeight) + 'px'
       newHelp.style.height = ace.session.lineWidgets[i].pixelHeight + 'px'
       newHelp.style.left = '0px'
     }
@@ -90,6 +97,8 @@ function createLineWidget(text, line) {
   if (!ace.session.lineWidgets) {
     initLineWidgets()
   }
+  ace.renderer.off('afterRender', renderLineWidgets)
+  ace.renderer.on('afterRender', renderLineWidgets)
   let newHelp = document.createElement('DIV')
   newHelp.className += ' ace_line '
   let newWidget = {

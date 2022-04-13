@@ -24,7 +24,8 @@
 		<button id="run-button" class="run-button paused" onclick="runBlock(-1)">&nbsp;</button>
 		<div id="editor">// after installing the plugin, DevTools can start
 function main() {
-	let title = getWindowTitle()
+	let title = documentTitle()
+	console.log(title)
 	let newWin = newWindow()
 	let tab = newTab()
 	newWin.setPosition(
