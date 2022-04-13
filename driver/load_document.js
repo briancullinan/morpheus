@@ -20,13 +20,23 @@ document.addEventListener('DOMContentLoaded', () => {
     let runScript = document.getElementById("run-script")
     document.body.classList.remove('starting')
     setTimeout(function () {
-      chrome.runtime.sendMessage({ script: runScript.innerHTML }, function (response) {
-        if(typeof response.started != 'undefined') {
-          document.body.classList.add('running')
-          evt.target.classList.remove('paused')
+      try {
+        chrome.runtime.sendMessage({ script: runScript.innerHTML }, function (response) {
+          if(typeof response.started != 'undefined') {
+            document.body.classList.add('running')
+            evt.target.classList.remove('paused')
+          }
+          return true
+        })
+      } catch (e) {
+        if(e.message.includes('conext invalidated')) {
+          debugger
+          document.location = document.location 
+            + (document.location.includes('?') ? '&' : '?')
+            + 'tzrl=' + Date.now()
         }
-        return true
-      })
+        throw e
+      }
     }, 100)
   })
 

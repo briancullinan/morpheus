@@ -7244,58 +7244,65 @@ function launchApp(id, callback, errCallback) {
 }
 
 
-let localFunctions = []
-let localVariables = []
-function runStatement(i, AST) {
+let localFunctions = {}
+let localVariables = {}
+async function runStatement(i, AST) {
   if(AST[i].type == 'FunctionDeclaration') {
     localFunctions[AST[i].id.name] = AST[i].body
   } else
   if(AST[i].type == 'ReturnStatement') {
-    return runStatement(0, [AST[i].argument])
+    return await runStatement(0, [AST[i].argument])
   } else
   if(AST[i].type == 'CallExpression') {
     if(!AST[i].callee.id && AST[i].callee.type != 'Identifier') {
-      runStatement(0, [AST[i].callee])
+      await runStatement(0, [AST[i].callee])
     } else
     if(localFunctions[AST[i].callee.name]) {
-      runStatement(0, [localFunctions[AST[i].callee.name]])
+      await runStatement(0, [localFunctions[AST[i].callee.name]])
     } else {
       throw new Error('Function not declared: ' + AST[i].callee.name)
     }
   } else
   if(AST[i].type == 'FunctionExpression') {
-    runStatement(0, [AST[i].body])
+    await runStatement(0, [AST[i].body])
   } else
   if(AST[i].type == 'BlockStatement') {
-    runBody(AST[i].body)
+    await runBody(AST[i].body)
   } else
   if(AST[i].type == 'ExpressionStatement') {
-    runStatement(0, [AST[i].expression])
-  }
+    await runStatement(0, [AST[i].expression])
+  } else
   if(AST[i].type == 'MemberExpression') {
     if(localVariables[AST[i].object.name]) {
 
     } else {
       throw new Error('Member not declared: ' + AST[i].object.name)
     }
+  } else
+  if(AST[i].type == 'VariableDeclaration') {
+    // so context doesn't disappear
+    for(let j = 0; j < AST[i].declarations.length; j++) {
+      await runStatement(j, AST[i].declarations)
+    }
+  } else {
+    localVariables[AST[i].id.name] = await runStatement(0, [AST[i].init])
   }
 }
 
 // find and run main
-function runBody(AST) {
+async function runBody(AST) {
   // doesn't need to be fast, because async DevTools calls, are not fast
   let result
-  let start = localFunctions.length
-  let startVars = localVariables.length
+  let start = localFunctions
+  localFunctions = Object.assign({}, localFunctions)
+  let startVars = localVariables
+  localVariables = Object.assign({}, localVariables)
   for(let i = 0; i < AST.length; i++) {
-    //if(AST[i].type == 'ExpressionStatement') {
-    //  result = 
-    //}
-    runStatement(i, AST)
+    await runStatement(i, AST)
   }
   // remove anything created in the past context
-  localFunctions.splice(start, localFunctions.length)
-  localVariables.splice(startVars, localVariables.length)
+  localFunctions = start
+  localVariables = startVars
   return result
 }
 
@@ -7325,7 +7332,7 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
       await chrome.debugger.attach({tabId: sender.tab.id}, '1.0')
     }
     try {
-      let result = runBody(AST.body)
+      let result = await runBody(AST.body)
       chrome.tabs.sendMessage(sender.tab.id, { result: result + '' }, function(response) {
 
       });

@@ -92,7 +92,7 @@ $(BUILD_DIR)/morph.opt:         $(BUILD_DIR)/morph.wasm
 
 WASM_SOURCE      := engine/wasm/http
 WASM_FILES       := ace.js theme-monokai.js mode-javascript.js \
-										quake3e.js sys_emgl.js sys_fs.js sys_in.js \
+										quake3e.js sys_ace.js sys_emgl.js sys_fs.js sys_in.js \
                     sys_net.js sys_std.js sys_wasm.js nipplejs.js \
 										
 WASM_JS          := $(addprefix $(WASM_SOURCE)/,$(notdir $(WASM_FILES)))

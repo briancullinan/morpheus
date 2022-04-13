@@ -242,9 +242,13 @@ function Sys_FOpen(filename, mode) {
     && (FS.virtual[localName].mode >> 12) == ST_FILE) {
     // open the file successfully
     return createFP()
-  } else if (modeStr.includes('w')
+  } else if (
+    // only write+ files after they have all been loaded, so we don't accidentally overwrite
+    !Q3e.fs_loading && modeStr.includes('w')
+    // check if parent directory has been created, TODO: POSIX errno?
     && ((parentDirectory = localName.substring(0, localName.lastIndexOf('/')))
-    && typeof FS.virtual[parentDirectory] != 'undefined')
+    // allow writing to root
+    && (parentDirectory.length == 0 || typeof FS.virtual[parentDirectory] != 'undefined'))
   ) {
     // create the file for write because the parent directory exists
     FS.virtual[localName] = {
