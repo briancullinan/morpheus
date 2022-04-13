@@ -7319,20 +7319,22 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
   // TODO: authorization here
   // ERROR: Refused to evaluate a string as JavaScript because 'unsafe-eval'
   // ^- That's where most people give up, but I'll write an interpreter
-  setTimeout(function () {
-    chrome.debugger.attach({tabId: sender.tab.id}, '1.0', function () {
-      try {
-        let result = runBody(AST.body)
-        debugger
-        resolve({ result: result + '' })
-      } catch (e) {
-        console.log(e)
-        chrome.tabs.sendMessage(sender.tab.id, { error: e.message + '' }, function(response) {
+  setTimeout(async function () {
+    let targets = await chrome.debugger.getTargets()
+    if(targets.filter(t => t.attached && t.tabId == sender.tab.id).length == 0) {
+      await chrome.debugger.attach({tabId: sender.tab.id}, '1.0')
+    }
+    try {
+      let result = runBody(AST.body)
+      chrome.tabs.sendMessage(sender.tab.id, { result: result + '' }, function(response) {
 
-        });
-      }
-      return true
-    })
+      });
+    } catch (e) {
+      console.log(e)
+      chrome.tabs.sendMessage(sender.tab.id, { error: e.message + '' }, function(response) {
+
+      });
+    }
   }, 300)
   //chrome.debugger.sendMessage('Page.navigate', {url: 'https://google.com/'})
   reply({ started: true })

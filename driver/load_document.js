@@ -41,6 +41,8 @@ chrome.runtime.onMessage.addListener(
       runScript.innerHTML = request.error
       runButton.click()
     }
+    reply()
+    return false
   })
 //const s = document.createElement('div');
 //(document.body || document.documentElement).appendChild(s);
