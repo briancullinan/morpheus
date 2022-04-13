@@ -19,12 +19,14 @@ Sell the thing I made to them.
 I build it, let me know when it makes contact.
 
 ## Short term
-1) Componentize engine, combine with Ace9
+1) DONE: Componentize engine, combine with Ace9
 2) Give Morpheus form, animations and world geometry
 3) Modularize goals, separate QVMs
-4) Stream browser automation through plugin
+4) IN PROGRESS: Stream browser automation through plugin
 5) Automate LinkedIn lobby, find gamers
 6) Slippery onboarding, "Holy Shit!" moment
+7) auto-exec on remote cloud for mobile testing
+8) \mvjoin and follow remote player splines
 
 ## Use cases
 
