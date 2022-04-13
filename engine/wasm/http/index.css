@@ -90,6 +90,34 @@ body.running .run-button.small:hover {
   border-width: 12px 0 12px 20px;
 }
 
+body.starting .run-button {
+  width: 74px;
+  margin-left: -84px;
+  border-radius: 100%;
+  border-width: 10px;
+  border-color: #808080;
+  border-top-color: #FFFFFF;
+  transform: translateZ(0);
+  animation: load8 1.1s infinite linear;
+}
+
+body.starting .run-button.small {
+  width: 25px;
+  margin-left: 0px;
+  border-width: 5px;
+}
+
+@keyframes load8 {
+  0% {
+    -webkit-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+  100% {
+    -webkit-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+
 #dialog {
   display: none;
   position: absolute;

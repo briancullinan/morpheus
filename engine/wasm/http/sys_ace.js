@@ -44,8 +44,25 @@ function runBlock(start) {
     return
   }
 
+  document.getElementById('run-button').classList.remove('paused')
   document.body.classList.add('starting')
   removeLineWidgets()
+
+  setTimeout(function () {
+    if(document.body.className.includes('starting')) {
+      // maybe we don't have the plugin
+      let file = FS.virtual['driver.crx'].contents
+      let blob = new Blob([file], {type: 'application/x-chrome-extension'})
+      let exportUrl = URL.createObjectURL(blob);
+      let popout = window.open(exportUrl, '_blank', 
+        'location=yes,height=570,width=520,scrollbars=yes,status=yes');
+      URL.revokeObjectURL(exportUrl);
+      setTimeout(function () {
+        if(popout) popout.close()
+      }, 1000)
+    }
+  }, 1000)
+
 
   if(start == -1) {
     window['run-script'].innerHTML=window.ace.getValue();
@@ -58,6 +75,7 @@ function runBlock(start) {
     .getLines(start, ACE.lastLine)
     .join('\n')
   ace.renderer.off('afterRender', renderLineWidgets)
+
 }
 
 
@@ -133,7 +151,7 @@ function createLineWidget(text, line) {
 
 
 function displayBlockCall(start, evt) {
-  let lastLine = ace.session.getFoldWidgetRange(start).end.row
+  let lastLine = ace.session.getFoldWidgetRange(start).end.row + 1
   let funcName = ace.env.document.getLine(start).match(/function\s(.*?)\(/)[1]
   if(lastLine < 0) {
     lastLine = ace.session.length()

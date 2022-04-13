@@ -4,7 +4,7 @@
   "version": "1.0",
   "manifest_version": 3,
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "backend.js"
   },
   "content_scripts": [
     {
@@ -12,7 +12,7 @@
             "<all_urls>"
         ],
         "js": [
-            "load_document.js"
+            "frontend.js"
         ],
         "run_at": "document_start"
     }
@@ -28,7 +28,7 @@
     "unlimitedStorage"
   ],
   "web_accessible_resources": [{
-    "resources": ["load_document.js"],
+    "resources": ["frontend.js"],
     "matches": ["http://localhost:8000/*"]
   }],
   "content_security_policy": {

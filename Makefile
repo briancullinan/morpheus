@@ -95,13 +95,15 @@ WASM_FILES       := ace.js theme-monokai.js mode-javascript.js \
 										quake3e.js sys_ace.js sys_emgl.js sys_fs.js sys_in.js \
                     sys_net.js sys_std.js sys_wasm.js nipplejs.js \
 										
-WASM_JS          := $(addprefix $(WASM_SOURCE)/,$(notdir $(WASM_FILES)))
+WASM_JS          := $(addprefix $(WASM_SOURCE)/,$(notdir $(WASM_FILES))) \
+										driver/driver.js 
+
 
 define DO_MORPH_CC
 	$(Q)$(NODE) "let fs = require('fs'); \
-	let base64 = fs.readFileSync('$<', 'base64'); \
-	let preScript = \"window.preFS['$(notdir $<)']='\"+base64+\"';\n\"; \
-	fs.writeFileSync('$@', preScript);"
+	let base64 = fs.readFileSync('$1', 'base64'); \
+	let preScript = \"window.preFS['$(notdir $1)']='\"+base64+\"';\n\"; \
+	fs.writeFileSync('$2', preScript);"
 endef
 
 define DO_EMBED_CC
@@ -118,6 +120,12 @@ define DO_EMBED_CC
 	fs.writeFileSync('$1', replaced);"
 endef
 
+define DO_CRXPACK_CC
+	google-chrome --user-data-dir=... --pack-
+extension=... --pack-extension-key=... --no-message-box
+endef
+
+
 # 
 # 
 
@@ -132,14 +140,16 @@ ifdef DO_RELEASE
 
 $(BUILD_DIR)/morph.js: $(BUILD_DIR)/morph.wasm
 	$(echo_cmd) "UGLY_CC $@"
-	$(DO_MORPH_CC)
+	$(call DO_MORPH_CC,$<,$@)
+	$(call DO_MORPH_CC,driver/driver.crx,driver/driver.js)
 	$(Q)$(UGLIFY) $(BUILD_DIR)/morph.js $(WASM_JS) -o $@ -c -m
 
 else
 
 $(BUILD_DIR)/morph.js: $(BUILD_DIR)/morph.wasm
 	$(echo_cmd) "UGLY_CC $@"
-	$(DO_MORPH_CC)
+	$(call DO_MORPH_CC,$<,$@)
+	$(call DO_MORPH_CC,driver/driver.crx,driver/driver.js)
 	$(Q)cat $(WASM_JS) >> $@
 
 endif

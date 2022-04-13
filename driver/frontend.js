@@ -10,7 +10,14 @@ function socketError(evt) {
 }
 
 
+
 document.addEventListener('DOMContentLoaded', () => {
+
+  document.addEventListener('keypress', function (evt) {
+    // add magnanimus class-name uniquifier selection tool to every page
+
+  })
+
 
   document.addEventListener('click', function (evt) {
     if(!evt.target || !evt.target.className.includes('run-button')
@@ -18,13 +25,13 @@ document.addEventListener('DOMContentLoaded', () => {
       return true
     }
     let runScript = document.getElementById("run-script")
-    document.body.classList.remove('starting')
     setTimeout(function () {
       try {
         chrome.runtime.sendMessage({ script: runScript.innerHTML }, function (response) {
           if(typeof response.started != 'undefined') {
+            document.body.classList.remove('starting')
             document.body.classList.add('running')
-            evt.target.classList.remove('paused')
+            evt.target.classList.remove('running')
           }
           return true
         })
