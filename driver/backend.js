@@ -7181,14 +7181,10 @@ async function collectParameters(arguments) {
   return result
 }
 
-/*
 // API calls are now embedded in web page and uploaded to backend.js
 //   see driver/library.js
 let WEBDRIVER_API = {
-  documentTitle,
-  newWindow
 }
-*/
 
 
 let bubbleLine = -1
@@ -7237,6 +7233,8 @@ async function runStatement(i, AST, console, tabId) {
       throw new Error('MemberExpression: Not implemented!')
     } else if (AST[i].object.name == 'console') {
       return console.log
+    }  else if (AST[i].object.name == 'module') {
+      return WEBDRIVER_API
     } else {
       throw new Error('Member not declared: ' + AST[i].object.name)
     }
@@ -7267,28 +7265,35 @@ async function runStatement(i, AST, console, tabId) {
   } else
   if(AST[i].type == 'ObjectExpression') {
     let newObject = {}
-    return AST[i].properties.reduce(function (obj, prop) {
-      if(prop.type == 'Property') {
-        if(prop.key.type != 'Identifier') {
-          throw new Error('ObjectExpression: Not implemented!')
-        }
-
-        if(prop.value.type != 'Identifier') {
-          throw new Error('ObjectExpression: Not implemented!')
-        }
-
-        if(!localVariables.hasOwnProperty(prop.value.name)
-          && !localFunctions.hasOwnProperty(prop.value.name)) {
-          throw new Error('Member not declared: ' + prop.value.name)
-        }
-
-        obj[prop.key.name] = localVariables[prop.value.name]
-          || localFunctions[prop.value.name]
-      } else {
+    for(let k = 0; k < AST[i].properties.length; k++) {
+      let prop = AST[i].properties[k]
+      if(prop.type != 'Property') {
         throw new Error('ObjectExpression: Not implemented!')
       }
-      return newObject
-    }, newObject)
+
+      if(prop.key.type != 'Identifier') {
+        throw new Error('ObjectExpression: Not implemented!')
+      }
+
+      if(prop.value.type != 'Identifier') {
+        throw new Error('ObjectExpression: Not implemented!')
+      }
+
+      if(!localVariables.hasOwnProperty(prop.value.name)
+        && !localFunctions.hasOwnProperty(prop.value.name)) {
+        throw new Error('Member not declared: ' + prop.value.name)
+      }
+
+      newObject[prop.key.name] = localVariables[prop.value.name]
+          || localFunctions[prop.value.name]
+    }
+    return newObject
+  } else
+  if(AST[i].type == 'AwaitExpression') {
+    if(!AST[i].argument) {
+      throw new Error('AwaitExpression: Not implemented!')
+    }
+    return runStatement(0, [AST[i].argument])
   } else
   {
     debugger
@@ -7297,8 +7302,12 @@ async function runStatement(i, AST, console, tabId) {
 }
 
 
-async function runAssignment() {
-  debugger
+async function runAssignment(left, right) {
+  if(left === WEBDRIVER_API) {
+    Object.assign(left, right)
+  } else {
+    throw new Error('AssignmentExpression: Not implemented!')
+  }
 }
 
 
@@ -7321,9 +7330,6 @@ async function runBody(AST, console, tabId) {
 
 
 chrome.runtime.onMessage.addListener((request, sender, reply) => {
-  console.log('title:', sender.tab.title)
-  console.log('url:', sender.tab.url)
-  console.log('script:', request.script)
   let AST
   if(!request.script && request.runId) {
     // TODO: check on runner
@@ -7331,6 +7337,9 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
     return
   }
   try {
+    console.log('title:', sender.tab.title)
+    console.log('url:', sender.tab.url)
+    console.log('script:', request.script)
     AST = acorn.loose.parse(
       '(function () {\n' + request.script + '\n})()\n'
       , {ecmaVersion: 2020, locations: true})
