@@ -12,6 +12,11 @@ function socketError(evt) {
 let runnerTimer
 
 document.addEventListener('DOMContentLoaded', (sender) => {
+  window.postMessage({
+    result: 'Worker service started\n'
+  }, function () {
+    debugger
+  })
 
   document.addEventListener('keypress', function (evt) {
     // add magnanimus class-name uniquifier selection tool to every page
@@ -120,9 +125,11 @@ function processResponse(request, trim) {
     throw new Error('Not implemented!')
   }
 
-  let newMessage = {}
+  let newMessage = {
+    line: request.line
+  }
   document.body.classList.add(typeKey)
-  newMessage[typeKey] = request[typeKey] + '\n' + (request.line > 0 ? ' on ' + request.line : '')
+  newMessage[typeKey] = request[typeKey] + '\n'
   window.postMessage(newMessage, function () {
     debugger
   })

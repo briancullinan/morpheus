@@ -28,7 +28,7 @@ function newPlay() {
 
 function processResponse(response) {
   if(!document.body.className.includes('running')) {
-    debugger
+    ACE.lastLine = 0
   }
 
   if(document.body.className.includes('error')
@@ -51,19 +51,21 @@ function processResponse(response) {
   }
   let isStatus = updateText == '.'
   let newLines = updateText.trim().split('\n')
-  let newErrorLine = newLines[newLines.length-1].match(/\son\s([0-9]+)/)
   let prevLine = ACE.lastLine
   // if error has a line number, insert message below that line
-  if(newErrorLine) {
-    newLines.pop() // remove ' on 000'
-    prevLine = parseInt(newErrorLine[1])
+  if(response.data.line) {
+    prevLine = response.data.line
+    setTimeout(ace.gotoLine.bind(ace, prevLine), 100)
     // if the error occurs on a line inside the library
     if(prevLine < ACE.libraryLines && !ACE.libraryLoaded) {
       ACE.libraryLoaded = true
       ace.setValue(ACE.libraryCode + ace.getValue())
+      prevLine--;
     } else if (!ACE.libraryLoaded) {
       // if library code is not loaded, subtract
       prevLine -= ACE.libraryLines
+    } else {
+      prevLine--;
     }
   }
   for(let j = 0; j < newLines.length; j++) {
@@ -78,7 +80,7 @@ function processResponse(response) {
     }
   }
   // add console output to bottom of code
-  if(!newErrorLine) {
+  if(!response.data.line) {
     ACE.lastLine = prevLine
   }
   document.body.classList.remove('error')
@@ -132,7 +134,9 @@ function runBlock(start) {
   }
 
   if(start == -1) {
-    window['run-script'].innerHTML = ACE.libraryCode
+    window['run-script'].innerHTML = 
+      // because library inserted into page on error
+      (!ACE.libraryLoaded ? ACE.libraryCode : '')
       + window.ace.getValue()
       + '\nreturn main();'
     ACE.lastLine = ace.session.getLength()
@@ -141,7 +145,8 @@ function runBlock(start) {
 
   let funcName = ace.env.document.getLine(start).match(NAMED_FUNCTION)[1]
   ACE.lastLine = ace.session.getFoldWidgetRange(start).end.row
-  window['run-script'].innerHTML = ACE.libraryCode
+  window['run-script'].innerHTML = 
+    (!ACE.libraryLoaded ? ACE.libraryCode : '')
     + ace.session.getLines(start, ACE.lastLine).join('\n')
     + '\nreturn ' + funcName + '();\n'
   ace.renderer.off('afterRender', renderLineWidgets)

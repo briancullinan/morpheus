@@ -81,8 +81,8 @@ function launchApp(id, callback, errCallback) {
 }
 
 async function newWindow() {
-  let newWindow = await chrome.windows.create()
-  return {window: newWindow.id}
+  let win = await chrome.windows.create()
+  return {window: win.id}
 }
 
 async function documentTitle(tabId) {
@@ -90,8 +90,13 @@ async function documentTitle(tabId) {
   return tab.title
 }
 
+async function sleep(secs) {
+  return new Promise(resolve => setTimeout(resolve, secs * 1000))
+}
+
 module.exports = {
   documentTitle,
-  newWindow
+  newWindow,
+  sleep,
 }
 

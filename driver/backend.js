@@ -7166,16 +7166,31 @@
 
 
 
-async function collectParameters(arguments, runContext) {
+async function collectParameters(params, runContext) {
   let result = []
-  for(let i = 0; i < arguments.length; i++) {
-    let arg = arguments[i]
+  let bindingFunction
+  for(let i = 0; i < params.length; i++) {
+    let arg = params[i]
     if(arg.type == 'Identifier') {
       if(runContext.localVariables.hasOwnProperty(arg.name)) {
         result.push(runContext.localVariables[arg.name])
       } else {
         throw new Error('Identifier not found: ' + arg.name)
       }
+    } else
+    if(arg.type == 'Literal') {
+      result.push(arg.value)
+    } else 
+    if (arg.type == 'AssignmentExpression') {
+      bindingFunction = await runStatement(0, [arg], runContext)
+    } else 
+    // CREATE INLINE LAMBDA!
+    // interesting, so lambda could be implemented in the compiler by first
+    //    adding an extra call parameter resolve => callBlock was originally
+    //    new Promise(x=resolve, {}), then the operator was added => to combine
+    //    in next version of self hosted compiler?
+    if (arg.type == 'CallExpression') {
+      result.push(bindingFunction.bind(null, arg))
     } else {
       throw new Error('CallExpression: Not implemented!')
     }
@@ -7189,36 +7204,78 @@ let WEBDRIVER_API = {
 }
 
 
+async function runCall(runContext, parameterDefinition, body, ...callArgs) {
+  // assign to param names in next context
+  let startVars = runContext.localVariables
+  let callStack = Object.assign({}, runContext.localVariables)
+  for(let l = 0; l < parameterDefinition.length; l++) {
+    if(parameterDefinition[l].type != 'Identifier') {
+      throw new Error('FunctionDeclaration: Not implemented!')
+    }
+    if(l == callArgs.length) {
+      continue;
+    }
+    callStack[parameterDefinition[l].name] = callArgs[l]
+  }
+
+  // run new command context
+  runContext.localVariables = callStack
+  let result = await runStatement(0, [body], runContext)
+  runContext.localVariables = startVars
+  return result
+}
+
+
+
 async function runStatement(i, AST, runContext) {
   if(AST[i] && AST[i].loc) {
     runContext.bubbleLine = AST[i].loc.start.line
   }
   if(AST[i].type == 'FunctionDeclaration') {
-    return runContext.localFunctions[AST[i].id.name] = AST[i].body
+    if(typeof AST[i].arguments != 'undefined') {
+      debugger
+      throw new Error('FunctionDeclaration: Not implemented!')
+    }
+    if(typeof runContext.localVariables[AST[i].id.name] != 'undefined') {
+      throw new Error('Variable already declared! ' + AST[i].id.name)
+    }
+    return (runContext.localFunctions[AST[i].id.name] 
+        = runCall.bind(null, runContext, AST[i].params, AST[i].body))
   } else
   if(AST[i].type == 'ReturnStatement') {
     return await runStatement(0, [AST[i].argument], runContext)
   } else
-  if(AST[i].type == 'CallExpression') {
+  if(AST[i].type == 'CallExpression' || AST[i].type == 'NewExpression') {
     // collect variables
     let params = await collectParameters(AST[i].arguments, runContext)
     if(!AST[i].callee.id && AST[i].callee.type != 'Identifier') {
-      let calleeFunc = await runStatement(0, [AST[i].callee], runContext)
-      let result = await calleeFunc(...params)
-      return result
-    } else
-    if(runContext.localFunctions[AST[i].callee.name]) {
-      // TODO: assign to param names in next context
-      if(AST[i].arguments.length > 0) {
-        throw new Error('CallExpression: Not implemented!')
+      calleeFunc = await runStatement(0, [AST[i].callee], runContext)
+    } else 
+    if (runContext.localFunctions[AST[i].callee.name]) {
+      calleeFunc = runContext.localFunctions[AST[i].callee.name]
+    } else 
+    if(runContext.localVariables[AST[i].callee.name]) {
+      if(typeof runContext.localVariables[AST[i].callee.name] == 'function') {
+        calleeFunc = runContext.localVariables[AST[i].callee.name]
+      } else {
+        throw new Error('Not a function! ' + AST[i].callee.name)
       }
-      let result = await runStatement(0, [runContext.localFunctions[AST[i].callee.name]], runContext)
-      return result
-    } /* else if (WEBDRIVER_API[AST[i].callee.name]) {
-      return await WEBDRIVER_API[AST[i].callee.name](...params, tabId)
-    } */ else {
+    } else
+    // TODO: incase libraries aren't sent, preprocessed libs are used here
+    if (WEBDRIVER_API[AST[i].callee.name]) {
+      calleeFunc = WEBDRIVER_API[AST[i].callee.name]
+    } else {
       throw new Error('Function not declared: ' + AST[i].callee.name)
     }
+  
+    let result;
+    if(AST[i].type == 'NewExpression') {
+      result = await new calleeFunc(...params)
+    } else {
+      result = await calleeFunc.apply(this, params)
+    }
+    return result
+
   } else
   if(AST[i].type == 'FunctionExpression') {
     if(AST[i].params.length) {
@@ -7264,18 +7321,34 @@ async function runStatement(i, AST, runContext) {
     return result
   } else
   if(AST[i].type == 'VariableDeclarator') {
+    if(typeof runContext.localFunctions[AST[i].id.name] != 'undefined') {
+      throw new Error('Function already declared! ' + AST[i].id.name)
+    }
     return runContext.localVariables[AST[i].id.name] = await runStatement(0, [AST[i].init], runContext)
   } else 
   if(AST[i].type == 'AssignmentExpression') {
     let right
     if(AST[i].right.type == 'Identifier') {
       throw new Error('AssignmentExpression: Not implemented!')
+    } else 
+    if(AST[i].right.type == 'BinaryExpression') {
+       // CREATE INLINE LAMBDA!
+       if(AST[i].right.left.name.charCodeAt(0) == 0x2716) {
+        right = runCall
+      } else {
+        throw new Error('AssignmentExpression: Not implemented!')
+      }
     } else {
       right = await runStatement(0, [AST[i].right], runContext)
     }
     let left
     if(AST[i].left.type == 'Identifier') {
-      throw new Error('AssignmentExpression: Not implemented!')
+      // CREATE INLINE LAMBDA!
+      if(right == runCall) {
+        return right.bind(null, runContext, [AST[i].left])
+      } else {
+        throw new Error('AssignmentExpression: Not implemented!')
+      }
     } else {
       left = await runStatement(0, [AST[i].left], runContext)
     }
@@ -7313,6 +7386,13 @@ async function runStatement(i, AST, runContext) {
       throw new Error('AwaitExpression: Not implemented!')
     }
     return await runStatement(0, [AST[i].argument], runContext)
+  } else
+  if(AST[i].type == 'BinaryExpression') {
+    //if() {
+
+    //} else {
+      throw new Error(AST[i].type + ': Not implemented!')
+    //}
   } else
   {
     debugger
@@ -7369,11 +7449,15 @@ async function createEnvironment(sender) {
     console: {
       log: function (...args) {
         console.log(args)
-        chrome.tabs.sendMessage(sender.tab.id, { console: args }, function(response) {
+        chrome.tabs.sendMessage(sender.tab.id, { console: args.join('\n') }, function(response) {
 
         });
       }
     },
+    setTimeout: setTimeout,
+    setInterval: setInterval,
+    Promise: Promise, // TODO: bind promise to something like chromedriver does
+
   }
   return {
     bubbleLine: -1,
@@ -7382,6 +7466,10 @@ async function createEnvironment(sender) {
   }
 }
 
+// ERROR: Refused to evaluate a string as JavaScript because 'unsafe-eval'
+// ^- That's where most people give up, but I'll write an interpreter
+//let targets = await chrome.debugger.getTargets()
+//if(targets.filter(t => t.attached && t.tabId == sender.tab.id).length == 0) {
 
 
 chrome.runtime.onMessage.addListener((request, sender, reply) => {
@@ -7406,13 +7494,11 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
   }
 
   // TODO: authorization here
-  // ERROR: Refused to evaluate a string as JavaScript because 'unsafe-eval'
-  // ^- That's where most people give up, but I'll write an interpreter
+
   setTimeout(async function () {
     let runContext;
     runContext =  await createEnvironment(sender)
-    //let targets = await chrome.debugger.getTargets()
-    //if(targets.filter(t => t.attached && t.tabId == sender.tab.id).length == 0) {
+    // attach debugger
     try {
       await chrome.debugger.attach({tabId: sender.tab.id}, '1.0')
       // confirm it works
@@ -7420,7 +7506,9 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
         tabId: sender.tab.id
       }, 'DOM.getDocument')
       if(dom.root.children[1].children[1].attributes[1] != 'running') {
-        chrome.tabs.sendMessage(sender.tab.id, { error: 'Tab not running.' }, function(response) {
+        chrome.tabs.sendMessage(sender.tab.id, { 
+          error: 'Tab not running.' 
+        }, function(response) {
 
         });
       }
@@ -7430,14 +7518,15 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
       } else
       throw e
     }
-    //}
+
+    // run code from client
     try {
       let result = await runBody(AST.body, runContext)
       chrome.tabs.sendMessage(sender.tab.id, { result: result + '' }, function(response) {
 
       });
     } catch (e) {
-      console.log(e)
+      console.log('line: ' + (runContext.bubbleLine - 1), e)
       chrome.tabs.sendMessage(sender.tab.id, { 
           error: e.message + '',
           // always subtract 1 because code is wrapping in a 1-line function above
