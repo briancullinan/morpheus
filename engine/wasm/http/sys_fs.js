@@ -67,6 +67,10 @@ function readAll() {
   let hadDefault = false
   let startTime = Date.now()
   Q3e.fs_loading = 1
+  FS.virtual['home'] = {
+    timestamp: new Date(),
+    mode: FS_DIR,
+  }
   if(typeof window.fs_loading != 'undefined') {
     HEAPU32[fs_loading >> 2] = Q3e.fs_loading
   }
@@ -215,7 +219,6 @@ function Sys_GetFileStats( filename, size, mtime, ctime ) {
 }
 
 function Sys_FOpen(filename, mode) {
-  let parentDirectory
   // now we don't have to do the indexing crap here because it's built into the engine already
   let fileStr = addressToString(filename)
   let modeStr = addressToString(mode)
@@ -237,18 +240,19 @@ function Sys_FOpen(filename, mode) {
     return FS.filePointer // not zero
   }
 
+  // check if parent directory has been created, TODO: POSIX errno?
+  let parentDirectory = localName.substring(0, localName.lastIndexOf('/'))
   // TODO: check mode?
   if(typeof FS.virtual[localName] != 'undefined'
     && (FS.virtual[localName].mode >> 12) == ST_FILE) {
     // open the file successfully
     return createFP()
-  } else if (
-    // only write+ files after they have all been loaded, so we don't accidentally overwrite
-    !Q3e.fs_loading && modeStr.includes('w')
-    // check if parent directory has been created, TODO: POSIX errno?
-    && ((parentDirectory = localName.substring(0, localName.lastIndexOf('/')))
-    // allow writing to root
-    && (parentDirectory.length == 0 || typeof FS.virtual[parentDirectory] != 'undefined'))
+  } else 
+  // only write+ files after they have all been loaded, so we don't accidentally overwrite
+  if (/* !Q3e.fs_loading && */ modeStr.includes('w')
+    && (typeof FS.virtual[parentDirectory] != 'undefined'
+    // allow writing to root path
+    || parentDirectory.length == 0)
   ) {
     // create the file for write because the parent directory exists
     FS.virtual[localName] = {

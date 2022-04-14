@@ -7167,6 +7167,19 @@
 
 
 
+
+
+
+
+const DEFAULT_DELAY = 1500
+
+
+
+
+
+
+
+
 async function collectParameters(params, runContext) {
   let result = []
   let bindingFunction
@@ -7214,6 +7227,7 @@ async function collectParameters(params, runContext) {
 //   see driver/library.js
 let WEBDRIVER_API = {
 }
+
 
 // TODO: add 
 // @Late
@@ -7263,8 +7277,10 @@ async function runStatement(i, AST, runContext) {
       if(typeof runContext.localVariables[AST[i].id.name] != 'undefined') {
         throw new Error('Variable already declared! ' + AST[i].id.name)
       }
-      return (runContext.localFunctions[AST[i].id.name] 
+      let result = (runContext.localFunctions[AST[i].id.name] 
           = runCall.bind(null, runContext, AST[i].params, AST[i].body))
+      //await new Promise(resolve => setTimeout(resolve, DEFAULT_DELAY))
+      return result
     } else
     if(AST[i].type == 'ReturnStatement') {
       return await runStatement(0, [AST[i].argument], runContext)
@@ -7303,12 +7319,19 @@ async function runStatement(i, AST, runContext) {
         throw new Error('CallExpression: Not implemented!')
       }
 
+      let beforeLine = runContext.bubbleLine
       try {
         let result;
         if(AST[i].type == 'NewExpression') {
           result = await (new calleeFunc(...params))
         } else {
           result = await calleeFunc.apply(this, params)
+        }
+
+        // automatically pause for a second on function calls outside of library
+        if(AST[i].callee.name != 'sleep'
+          && beforeLine > runContext.libraryLines) {
+          await new Promise(resolve => setTimeout(resolve, DEFAULT_DELAY))
         }
         return result
     
@@ -7368,9 +7391,13 @@ async function runStatement(i, AST, runContext) {
       if(typeof runContext.localFunctions[AST[i].id.name] != 'undefined') {
         throw new Error('Function already declared! ' + AST[i].id.name)
       }
+      // update client with variable informations
+      doAssign(AST[i].id.name, runContext)
       // TODO: add late binding
-
-      return runContext.localVariables[AST[i].id.name] = await runStatement(0, [AST[i].init], runContext)
+      let result = (runContext.localVariables[AST[i].id.name] 
+          = await runStatement(0, [AST[i].init], runContext))
+      doAssign(AST[i].id.name, runContext)
+      return result
     } else 
     if(AST[i].type == 'AssignmentExpression') {
       let right
@@ -7406,7 +7433,7 @@ async function runStatement(i, AST, runContext) {
         return
       }
 
-      return await runAssignment(left, right)
+      return await runAssignment(left, right, runContext)
     } else
     if(AST[i].type == 'ObjectExpression') {
       let newObject = {}
@@ -7511,8 +7538,9 @@ async function runStatement(i, AST, runContext) {
 }
 
 
-async function runAssignment(left, right) {
+async function runAssignment(left, right, runContext) {
   if(left === WEBDRIVER_API) {
+    runContext.libraryLines = runContext.bubbleLine
     Object.assign(left, right)
   } else {
     throw new Error('AssignmentExpression: Not implemented!')
@@ -7547,6 +7575,24 @@ async function runBody(AST, runContext) {
     return result
   } catch (e) {
     doError(e, runContext)
+  }
+}
+
+function doAssign(varName, runContext) {
+  try {
+    chrome.tabs.sendMessage(runContext.senderId, { 
+      assign: runContext.localVariables[varName],
+      // always subtract 1 because code is wrapping in a 1-line function above
+      line: runContext.bubbleLine - 1,
+    }, function(response) {
+  
+    });
+  } catch (e) {
+    if(e.message.includes('context invalidated')) {
+
+    } else {
+      debugger
+    }
   }
 }
 
@@ -7739,13 +7785,17 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
   // TODO: authorization here
 
   setTimeout(async function () {
-    let runContext = {};
+    let runContext = {
+      body: AST.body,
+      script: request.script,
+      runId: request.runId,
+    };
     await createEnvironment(sender, runContext)
     threads[request.runId] = runContext
     // attach debugger
     await attachDebugger(sender.tab.id)
     // run code from client
-    let result = await runBody(AST.body, runContext)
+    let result = await runBody(runContext.body, runContext)
     if(runContext.ended) {
       // TODO: send async status?
     } else if (runContext.async) {

@@ -154,6 +154,9 @@ function processResponse(request) {
   if(typeof request.async != 'undefined') {
     typeKey = 'async'
   } else
+  if(typeof request.assign != 'undefined') {
+    typeKey = 'assign'
+  } else
   if(typeof request.console != 'undefined') {
     typeKey = 'result'
   } else

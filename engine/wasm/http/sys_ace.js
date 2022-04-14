@@ -61,7 +61,7 @@ function processResponse(updateText, lineNumber, error) {
     prevLine = processLineNumber(lineNumber)
   }
   for(let j = 0; j < newLines.length; j++) {
-    createLineWidget(newLines[j], prevLine++, error ? ' line_error ' : '')
+    createLineWidget(newLines[j], prevLine++, error ? 'morph_error' : '')
   }
   // add console output to bottom of code
   if(typeof lineNumber != 'number') {
@@ -367,7 +367,7 @@ function onStatus(request) {
     return // don't load status line while it's out of view
   }
   if(!ACE.statusLine) {
-    createLineWidget('.', prevLine)
+    createLineWidget('.', prevLine, 'morph_cursor')
     ACE.statusLine = ace.session.lineWidgets[prevLine]
   }
   ACE.statusLine.el.children[0].innerText += '.'
@@ -377,6 +377,7 @@ function onStatus(request) {
   ace.session.lineWidgets[prevLine] = ACE.statusLine
   ace.session._emit('changeFold', {data:{start:{row: prevLine}}});
 }
+
 
 
 window.addEventListener('message', function (message) {
@@ -417,6 +418,9 @@ window.addEventListener('message', function (message) {
     processResponse(request.result, request.line, false)
   } else 
   if(typeof request.status != 'undefined') {
+    onStatus(request)
+  } else 
+  if(typeof request.assign != 'undefined') {
     onStatus(request)
   } else {
     debugger

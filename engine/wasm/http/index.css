@@ -13,14 +13,17 @@ body > img {
   visibility: hidden;
 }
 
-.line_error {
+.morph_error {
   background: #902020;
 }
-.line_error .ace_comment {
+.morph_error .ace_comment {
   font-weight: bold;
   color: #A0D0A0;
 }
-
+.morph_cursor {
+  background: #206020;
+  color: #D0A0D0;
+}
 
 .run-button {
   outline: none;
@@ -139,6 +142,7 @@ body .run-button.small:hover {
   height: 1px;
   width: 1px;
 }
+
 
 @keyframes load8 {
   0% {
