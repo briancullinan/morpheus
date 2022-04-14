@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', (sender) => {
   if(!document.getElementById("run-script")) {
     return
   }
-  
+
   restoreRunner()
 
   document.addEventListener('click', function (evt) {
@@ -78,10 +78,12 @@ document.addEventListener('DOMContentLoaded', (sender) => {
       }, processResponse)
       runScript.innerHTML = ''
     } catch (e) {
+      // reload the page!
       if(e.message.includes('context invalidated')) {
         document.location = document.location 
         //  + (document.location.includes('?') ? '&' : '?')
         //  + 'tzrl=' + Date.now()
+        return
       }
       throw e
     }
@@ -107,6 +109,14 @@ async function checkOnRunner(runId) {
       processResponse(response)
     })
   } catch (e) {
+    if(runnerTimer) {
+      clearInterval(runnerTimer)
+    }
+    // reload the page!
+    if(e.message.includes('context invalidated')) {
+      document.location = document.location 
+      return
+    }
     window.postMessage({
       error: e.message + '\n'
     }, function () {
@@ -146,14 +156,17 @@ function processResponse(request) {
   } else
   if(typeof request.console != 'undefined') {
     typeKey = 'result'
+  } else
+  if(typeof request.warning != 'undefined') {
+    warning = 'result'
   } else {
     throw new Error('Not implemented!')
   }
 
   let newMessage = {
-    line: request.line
+    line: request.line,
+    type: typeKey,
   }
-  document.body.classList.add(typeKey)
   newMessage[typeKey] = request[typeKey] + '\n'
   window.postMessage(newMessage)
 }
@@ -202,6 +215,10 @@ chrome.runtime.onMessage.addListener(function(request, sender, reply) {
 })
 
 
-
-//restoreRunner()
+setTimeout(function () {
+  if(!document.getElementById("run-script")) {
+    return
+  }
+  restoreRunner()
+}, 1000)
 

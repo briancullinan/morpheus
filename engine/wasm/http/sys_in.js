@@ -19,6 +19,9 @@ function GLimp_StartDriverAndSetMode(mode, modeFS, fullscreen, fallback) {
   }
   Q3e.canvas.setAttribute('width', Q3e.canvas.clientWidth)
   Q3e.canvas.setAttribute('height', Q3e.canvas.clientHeight)
+  if(window.flipper) {
+    window.flipper.remove()
+  }
 
   //HEAP32[win>>2] = 1
   //window.title = addressToString(title)

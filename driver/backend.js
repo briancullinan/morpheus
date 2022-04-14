@@ -6586,7 +6586,8 @@
           var rightStart = this.storeCurrentPos();
           node.right = this.parseExprOp(this.parseMaybeUnary(false), rightStart, prec, noIn, indent, line);
         }
-        this.finishNode(node, /&&|\|\||\?\?/.test(node.operator) ? "LogicalExpression" : "BinaryExpression");
+        this.finishNode(node, /&&|\|\||\?\?/.test(node.operator) 
+          ? "LogicalExpression" : "BinaryExpression");
         return this.parseExprOp(node, start, minPrec, noIn, indent, line)
       }
     }
@@ -7196,9 +7197,10 @@ async function collectParameters(params, runContext) {
       result.push(bindingFunction.bind(null, arg))
       bindingFunction = false
     } else 
-    if (arg.type == 'BinaryExpression') {
+    if (arg.type == 'BinaryExpression' || arg.type == 'MemberExpression') {
       result.push(await runStatement(0, [arg], runContext))
-    } else {
+    } else 
+    {
       throw new Error('CallExpression: Not implemented!')
     }
     if(runContext.ended) {
@@ -7472,9 +7474,24 @@ async function runStatement(i, AST, runContext) {
 
       if(runContext.ended) {
         return
-      }
+      } else
       if(AST[i].operator == '*') {
         return left * right
+      } else
+      if(AST[i].operator == '/') {
+        return left / right
+      } else
+      if(AST[i].operator == '+') {
+        return left + right
+      } else
+      if(AST[i].operator == '-') {
+        return left - right
+      } else
+      if(AST[i].operator == '%') {
+        return left % right
+      } else
+      if(AST[i].operator == '^') {
+        return left ^ right
       } else {
         throw new Error(AST[i].type + ': Not implemented!')
       }
@@ -7643,9 +7660,9 @@ async function attachDebugger(tabId) {
     let dom = await chrome.debugger.sendCommand({
       tabId: tabId
     }, 'DOM.getDocument')
-    if(dom.root.children[1].children[1].attributes[1] != 'running') {
+    if(!dom.root.children[1].children[1].attributes.includes('running')) {
       chrome.tabs.sendMessage(tabId, { 
-        error: 'Tab not running.' 
+        warning: 'Tab not running.' 
       }, function(response) {
 
       });

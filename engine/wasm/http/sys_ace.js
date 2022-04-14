@@ -29,36 +29,13 @@ function newPlay() {
 }
 
 
-function processResponse(request) {
-  // never download if we get a response from extension
-  ACE.downloaded = true 
-
-  if(document.body.className.includes('error')
-  || document.body.className.includes('result')) {
-    document.body.classList.remove('running')
-    document.body.classList.add('paused')
-  } else {
-    // just console update could still be running
-  }
-
-  let updateText
-  if(typeof request.console != 'undefined') {
-    updateText = request.console
-  } else if(typeof request.error != 'undefined') {
-    updateText = request.error
-  } else if(typeof request.result != 'undefined') {
-    updateText = request.result
-  } else if(typeof request.started != 'undefined') {
-    updateText = ''
-  } else {
-    debugger
-  }
+function processResponse(updateText, lineNumber, error) {
   let isStatus = updateText.trim() == '.'
   let newLines = updateText.trim().split('\n')
   let prevLine = ACE.lastLine
   // if error has a line number, insert message below that line
-  if(request.line) {
-    prevLine = request.line
+  if(typeof lineNumber == 'number') {
+    prevLine = lineNumber
     setTimeout(ace.gotoLine.bind(ace, prevLine), 100)
     // if the error occurs on a line inside the library
     if(prevLine < ACE.libraryLines && !ACE.libraryLoaded) {
@@ -74,8 +51,7 @@ function processResponse(request) {
   }
   for(let j = 0; j < newLines.length; j++) {
     if(!isStatus || !ACE.statusLine) {
-      createLineWidget(newLines[j], prevLine++, 
-        document.body.className.includes('error') ? ' line_error ' : '')
+      createLineWidget(newLines[j], prevLine++, error ? ' line_error ' : '')
     }
     // break
     if(isStatus && !ACE.statusLine) {
@@ -85,12 +61,9 @@ function processResponse(request) {
     }
   }
   // add console output to bottom of code
-  if(!request.line) {
+  if(typeof lineNumber != 'number') {
     ACE.lastLine = prevLine
   }
-  document.body.classList.remove('error')
-  document.body.classList.remove('result')
-  document.body.classList.remove('console')
 }
 
 
@@ -102,7 +75,6 @@ function runBlock(start) {
     return
   }
 
-  document.getElementById('run-button').classList.remove('paused')
   document.body.classList.add('starting')
   removeLineWidgets(void 0, 'ace_line')
   setTimeout(emitDownload, 3000)
@@ -118,17 +90,17 @@ function runBlock(start) {
       + window.ace.getValue()
       + '\nreturn main();'
     ACE.lastLine = ace.session.getLength()
-    return
+  } else {
+    let funcName = ace.env.document.getLine(start).match(NAMED_FUNCTION)[1]
+    ACE.lastLine = ace.session.getFoldWidgetRange(start).end.row
+    window['run-script'].innerHTML = 
+      (!ACE.libraryLoaded ? ACE.libraryCode : '')
+      + ace.session.getLines(start, ACE.lastLine).join('\n')
+      + '\nreturn ' + funcName + '();\n'
   }
 
-  let funcName = ace.env.document.getLine(start).match(NAMED_FUNCTION)[1]
-  ACE.lastLine = ace.session.getFoldWidgetRange(start).end.row
-  window['run-script'].innerHTML = 
-    (!ACE.libraryLoaded ? ACE.libraryCode : '')
-    + ace.session.getLines(start, ACE.lastLine).join('\n')
-    + '\nreturn ' + funcName + '();\n'
   ace.renderer.off('afterRender', renderLineWidgets)
-
+  //ace.focus()
 }
 
 
@@ -330,48 +302,97 @@ function initAce() {
 
 
 
-
-window.addEventListener('message', function (request) {
-  if(typeof request.data.accessor != 'undefined') {
-    if(!document.body.className.includes('running')) {
-      debugger
-    }
-    switch(request.data.accessor) {
-      // safe to share?
-      case 'window.screenLeft':
-      case 'window.screenTop':
-      case 'window.outerHeight':
-      case 'window.outerWidth':
-      let propertyName = request.data.accessor.split('.')[1]
-      window['run-script'].innerHTML = window[propertyName]
-      break
-
-      default:
-      debugger
-    }
-    window['run-button'].click()
-  } else 
-  if(typeof request.data.service != 'undefined') {
-    ACE.downloaded = true
-  } else 
-  if(typeof request.data.frontend != 'undefined') {
-    window['run-script'].innerHTML = ACE.lastRunId
-    document.body.classList.add('starting')
-    window['run-button'].click()
-    ACE.downloaded = true
-  } else
-  if(typeof request.data.started != 'undefined') {
+function onError(request) {
+  if(request.error.includes('No script')) {
+    document.body.classList.remove('runnning')
     document.body.classList.remove('starting')
-    document.body.classList.add('running')
-    ACE.lastRunId = request.data.started
-    window['run-button'].classList.remove('running')
+    document.body.classList.remove('error')
+    return
+  }
+
+  document.body.classList.remove('running')
+  document.body.classList.add('paused')
+  processResponse(request.error, request.line, true)
+}
+
+
+function onAccessor(request) {
+  if(!document.body.className.includes('running')) {
+    debugger
+  }
+  switch(request.accessor) {
+    // safe to share?
+    case 'window.screenLeft':
+    case 'window.screenTop':
+    case 'window.outerHeight':
+    case 'window.outerWidth':
+    let propertyName = request.accessor.split('.')[1]
+    window['run-script'].innerHTML = window[propertyName]
+    break
+
+    default:
+    debugger
+  }
+  window['run-button'].click()
+}
+
+
+function onFrontend() {
+  window['run-script'].innerHTML = ACE.lastRunId
+  document.body.classList.add('starting')
+  window['run-button'].click()
+  ACE.downloaded = true
+}
+
+function onStarted(request) {
+  document.body.classList.remove('paused')
+  document.body.classList.remove('starting')
+  document.body.classList.add('running')
+  ACE.lastRunId = request.started
+  window['run-button'].classList.remove('running')
+}
+
+
+window.addEventListener('message', function (message) {
+  let request = message.data
+  // never download if we get a response from extension
+  ACE.downloaded = true 
+  if(request.type) {
+    document.body.classList.add(request.type)
+  }
+
+  if(typeof request.accessor != 'undefined') {
+    onAccessor(request)
+  } else 
+  if(typeof request.service != 'undefined') {
+    debugger
+  } else 
+  if(typeof request.frontend != 'undefined') {
+    onFrontend()
+  } else
+  if(typeof request.started != 'undefined') {
+    onStarted(request)
+  } else
+
+
   // the rest of these are console messages
+  if(typeof request.warning != 'undefined') {
+    processResponse(request.warning, request.line, false)
+  } else
+  if(typeof request.console != 'undefined') {
+    processResponse(request.console, request.line, false)
+  } else 
+  if(typeof request.error != 'undefined') {
+    onError(request)
+  } else 
+  if(typeof request.result != 'undefined') {
+    document.body.classList.remove('running')
+    document.body.classList.add('paused')
+    processResponse(request.result, request.line, false)
+  } else 
+  if(typeof request.status != 'undefined') {
+    processResponse(request.status, request.line, false)
   } else {
-    if(typeof request.data.error != 'undefined') {
-      if(request.data.error.includes('No script')) {
-        document.body.classList.remove('starting')
-      }
-    }
-    processResponse(request.data)
+    debugger
   }
 }, false)
