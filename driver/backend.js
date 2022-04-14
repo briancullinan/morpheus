@@ -7201,6 +7201,9 @@ async function collectParameters(params, runContext) {
     } else {
       throw new Error('CallExpression: Not implemented!')
     }
+    if(runContext.ended) {
+      return // bubble up
+    }
   }
   return result
 }
@@ -7366,6 +7369,10 @@ async function runStatement(i, AST, runContext) {
       } else {
         right = await runStatement(0, [AST[i].right], runContext)
       }
+      if(runContext.ended) {
+        return
+      }
+
       let left
       if(AST[i].left.type == 'Identifier') {
         // CREATE INLINE LAMBDA!
@@ -7377,6 +7384,10 @@ async function runStatement(i, AST, runContext) {
       } else {
         left = await runStatement(0, [AST[i].left], runContext)
       }
+      if(runContext.ended) {
+        return
+      }
+
       return await runAssignment(left, right)
     } else
     if(AST[i].type == 'ObjectExpression') {
@@ -7421,9 +7432,39 @@ async function runStatement(i, AST, runContext) {
     } else
 
     // TODO: MATHS!
+    if(AST[i].type == 'BinaryExpression') {
+      let left
+      if(AST[i].left.type == 'Identifier') {
+        if(!runContext.localVariables[AST[i].left]) {
+          throw new Error('Identifier not found: ' + AST[i].left)
+        }
+        left = runContext.localVariables[AST[i].left]
+      } else {
+        left = await runStatement(0, [AST[i].left])
+      }
+      if(runContext.ended) {
+        return
+      }
 
+      let right
+      if(AST[i].right.type == 'Identifier') {
+        if(!runContext.localVariables[AST[i].right]) {
+          throw new Error('Identifier not found: ' + AST[i].right)
+        }
+        right = runContext.localVariables[AST[i].right]
+      } else {
+        right = await runStatement(0, [AST[i].right])
+      }
 
-
+      if(runContext.ended) {
+        return
+      }
+      if(AST[i].operator) {
+        return left * right
+      } else {
+        throw new Error(AST[i].type + ': Not implemented!')
+      }
+    } else
     {
       debugger
       throw new Error(AST[i].type + ': Not implemented!')
