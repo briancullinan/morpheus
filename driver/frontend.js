@@ -158,7 +158,10 @@ function processResponse(request) {
     typeKey = 'result'
   } else
   if(typeof request.warning != 'undefined') {
-    warning = 'result'
+    typeKey = 'warning'
+  } else
+  if(typeof request.status != 'undefined') {
+    typeKey = 'status'
   } else {
     throw new Error('Not implemented!')
   }

@@ -7250,7 +7250,10 @@ async function runStatement(i, AST, runContext) {
   }
   try {
     if(AST[i] && AST[i].loc) {
-      runContext.bubbleLine = AST[i].loc.start.line
+      if(runContext.bubbleLine != AST[i].loc.start.line) {
+        runContext.bubbleLine = AST[i].loc.start.line
+        doStatus(runContext)
+      }
     }
     if(AST[i].type == 'FunctionDeclaration') {
       if(typeof AST[i].arguments != 'undefined') {
@@ -7547,15 +7550,33 @@ async function runBody(AST, runContext) {
   }
 }
 
+function doStatus(runContext) {
+  try {
+    chrome.tabs.sendMessage(runContext.senderId, { 
+      status: '.',
+      // always subtract 1 because code is wrapping in a 1-line function above
+      line: runContext.bubbleLine - 1,
+    }, function(response) {
+  
+    });
+  } catch (e) {
+    if(e.message.includes('context invalidated')) {
+
+    } else {
+      debugger
+    }
+  }
+}
+
 
 function doError(err, runContext) {
   try {
     runContext.ended = true
     console.log('line: ' + (runContext.bubbleLine - 1), err)
     chrome.tabs.sendMessage(runContext.senderId, { 
-        error: err.message + '',
-        // always subtract 1 because code is wrapping in a 1-line function above
-        line: runContext.bubbleLine - 1,
+      error: err.message + '',
+      // always subtract 1 because code is wrapping in a 1-line function above
+      line: runContext.bubbleLine - 1,
     }, function(response) {
   
     });
@@ -7677,11 +7698,23 @@ async function attachDebugger(tabId) {
 }
 
 
+let threads = {
+
+}
+
+
 chrome.runtime.onMessage.addListener((request, sender, reply) => {
   let AST
   if(!request.script && request.runId) {
     // TODO: check on runner
-    reply({ console: '.' })
+    if(typeof threads[request.runId] == 'undefined') {
+      debugger
+    }
+    // now every status update will report the line number
+    reply({ 
+      status: '.', 
+      line: threads[request.runId].bubbleLine - 1
+    })
     return
   }
   try {
@@ -7708,6 +7741,7 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
   setTimeout(async function () {
     let runContext = {};
     await createEnvironment(sender, runContext)
+    threads[request.runId] = runContext
     // attach debugger
     await attachDebugger(sender.tab.id)
     // run code from client

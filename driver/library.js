@@ -80,9 +80,11 @@ function launchApp(id, callback, errCallback) {
   });
 }
 
+
+
 async function newWindow() {
   let win = await chrome.windows.create()
-  return {window: win.id}
+  return win
 }
 
 async function documentTitle(tabId) {

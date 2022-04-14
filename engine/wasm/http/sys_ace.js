@@ -29,36 +29,39 @@ function newPlay() {
 }
 
 
+function processLineNumber(lineNumber) {
+  let prevLine = lineNumber
+  if(!lineNumber) { // startup error message?
+    return lineNumber
+  }
+  if(ace.gotoLine) {
+    setTimeout(ace.gotoLine.bind(ace, prevLine), 100)
+  }
+  // if the error occurs on a line inside the library
+  if(prevLine < ACE.libraryLines && !ACE.libraryLoaded) {
+    ACE.libraryLoaded = true
+    removeLineWidgets()
+    ace.setValue(ACE.libraryCode + ace.getValue())
+    prevLine--;
+  } else if (!ACE.libraryLoaded) {
+    // if library code is not loaded, subtract
+    prevLine -= ACE.libraryLines
+  } else {
+    prevLine--;
+  }
+  return prevLine
+}
+
+
 function processResponse(updateText, lineNumber, error) {
-  let isStatus = updateText.trim() == '.'
   let newLines = updateText.trim().split('\n')
   let prevLine = ACE.lastLine
   // if error has a line number, insert message below that line
   if(typeof lineNumber == 'number') {
-    prevLine = lineNumber
-    setTimeout(ace.gotoLine.bind(ace, prevLine), 100)
-    // if the error occurs on a line inside the library
-    if(prevLine < ACE.libraryLines && !ACE.libraryLoaded) {
-      ACE.libraryLoaded = true
-      ace.setValue(ACE.libraryCode + ace.getValue())
-      prevLine--;
-    } else if (!ACE.libraryLoaded) {
-      // if library code is not loaded, subtract
-      prevLine -= ACE.libraryLines
-    } else {
-      prevLine--;
-    }
+    prevLine = processLineNumber(lineNumber)
   }
   for(let j = 0; j < newLines.length; j++) {
-    if(!isStatus || !ACE.statusLine) {
-      createLineWidget(newLines[j], prevLine++, error ? ' line_error ' : '')
-    }
-    // break
-    if(isStatus && !ACE.statusLine) {
-      ACE.statusLine = ace.session.lineWidgets[prevLine-1]
-    } else if (isStatus) {
-      ACE.statusLine.el.children[0].innerText += '.'
-    }
+    createLineWidget(newLines[j], prevLine++, error ? ' line_error ' : '')
   }
   // add console output to bottom of code
   if(typeof lineNumber != 'number') {
@@ -89,10 +92,10 @@ function runBlock(start) {
       (!ACE.libraryLoaded ? ACE.libraryCode : '')
       + window.ace.getValue()
       + '\nreturn main();'
-    ACE.lastLine = ace.session.getLength()
+    ACE.lastLine = ACE.libraryLines + ace.session.getLength()
   } else {
     let funcName = ace.env.document.getLine(start).match(NAMED_FUNCTION)[1]
-    ACE.lastLine = ace.session.getFoldWidgetRange(start).end.row
+    ACE.lastLine = ACE.libraryLines + ace.session.getFoldWidgetRange(start).end.row
     window['run-script'].innerHTML = 
       (!ACE.libraryLoaded ? ACE.libraryCode : '')
       + ace.session.getLines(start, ACE.lastLine).join('\n')
@@ -352,6 +355,29 @@ function onStarted(request) {
   window['run-button'].classList.remove('running')
 }
 
+function onStatus(request) {
+  let prevLine = request.line
+  if(!ACE.libraryLoaded) {
+    prevLine -= ACE.libraryLines
+  } else {
+    prevLine--;
+  }
+  // TODO: status line always out of view because sleep is in library.js
+  if(prevLine < 0) {
+    return // don't load status line while it's out of view
+  }
+  if(!ACE.statusLine) {
+    createLineWidget('.', prevLine)
+    ACE.statusLine = ace.session.lineWidgets[prevLine]
+  }
+  ACE.statusLine.el.children[0].innerText += '.'
+  ace.session.lineWidgets[ACE.statusLine.row] = void 0
+  ace.session._emit('changeFold', {data:{start:{row: ACE.statusLine.row}}});
+  ACE.statusLine.row = prevLine // so it can keep removing itself as the program cursor moves
+  ace.session.lineWidgets[prevLine] = ACE.statusLine
+  ace.session._emit('changeFold', {data:{start:{row: prevLine}}});
+}
+
 
 window.addEventListener('message', function (message) {
   let request = message.data
@@ -391,7 +417,7 @@ window.addEventListener('message', function (message) {
     processResponse(request.result, request.line, false)
   } else 
   if(typeof request.status != 'undefined') {
-    processResponse(request.status, request.line, false)
+    onStatus(request)
   } else {
     debugger
   }
