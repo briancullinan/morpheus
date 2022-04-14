@@ -7181,16 +7181,23 @@ async function collectParameters(params, runContext) {
     if(arg.type == 'Literal') {
       result.push(arg.value)
     } else 
-    if (arg.type == 'AssignmentExpression') {
+    
+    // CREATE INLINE LAMBDA!
+    if (arg.type == 'AssignmentExpression'
+      && arg.right.left.name.charCodeAt(0) == 0x2716) {
       bindingFunction = await runStatement(0, [arg], runContext)
     } else 
-    // CREATE INLINE LAMBDA!
     // interesting, so lambda could be implemented in the compiler by first
     //    adding an extra call parameter resolve => callBlock was originally
     //    new Promise(x=resolve, {}), then the operator was added => to combine
     //    in next version of self hosted compiler?
-    if (arg.type == 'CallExpression') {
+    
+    if (arg.type == 'CallExpression' && bindingFunction) {
       result.push(bindingFunction.bind(null, arg))
+      bindingFunction = false
+    } else 
+    if (arg.type == 'BinaryExpression') {
+      result.push(await runStatement(0, [arg], runContext))
     } else {
       throw new Error('CallExpression: Not implemented!')
     }
@@ -7228,175 +7235,203 @@ async function runCall(runContext, parameterDefinition, body, ...callArgs) {
 
 
 async function runStatement(i, AST, runContext) {
-  if(AST[i] && AST[i].loc) {
-    runContext.bubbleLine = AST[i].loc.start.line
+  if(runContext.ended) {
+    throw new Error('context ended!')
   }
-  if(AST[i].type == 'FunctionDeclaration') {
-    if(typeof AST[i].arguments != 'undefined') {
-      debugger
-      throw new Error('FunctionDeclaration: Not implemented!')
+  try {
+    if(AST[i] && AST[i].loc) {
+      runContext.bubbleLine = AST[i].loc.start.line
     }
-    if(typeof runContext.localVariables[AST[i].id.name] != 'undefined') {
-      throw new Error('Variable already declared! ' + AST[i].id.name)
-    }
-    return (runContext.localFunctions[AST[i].id.name] 
-        = runCall.bind(null, runContext, AST[i].params, AST[i].body))
-  } else
-  if(AST[i].type == 'ReturnStatement') {
-    return await runStatement(0, [AST[i].argument], runContext)
-  } else
-  if(AST[i].type == 'CallExpression' || AST[i].type == 'NewExpression') {
-    // collect variables
-    let params = await collectParameters(AST[i].arguments, runContext)
-    if(!AST[i].callee.id && AST[i].callee.type != 'Identifier') {
-      calleeFunc = await runStatement(0, [AST[i].callee], runContext)
-    } else 
-    if (runContext.localFunctions[AST[i].callee.name]) {
-      calleeFunc = runContext.localFunctions[AST[i].callee.name]
-    } else 
-    if(runContext.localVariables[AST[i].callee.name]) {
-      if(typeof runContext.localVariables[AST[i].callee.name] == 'function') {
-        calleeFunc = runContext.localVariables[AST[i].callee.name]
+    if(AST[i].type == 'FunctionDeclaration') {
+      if(typeof AST[i].arguments != 'undefined') {
+        debugger
+        throw new Error('FunctionDeclaration: Not implemented!')
+      }
+      if(typeof runContext.localVariables[AST[i].id.name] != 'undefined') {
+        throw new Error('Variable already declared! ' + AST[i].id.name)
+      }
+      return (runContext.localFunctions[AST[i].id.name] 
+          = runCall.bind(null, runContext, AST[i].params, AST[i].body))
+    } else
+    if(AST[i].type == 'ReturnStatement') {
+      return await runStatement(0, [AST[i].argument], runContext)
+    } else
+    if(AST[i].type == 'CallExpression' || AST[i].type == 'NewExpression') {
+      // collect variables
+      
+      let params = await collectParameters(AST[i].arguments, runContext)
+      if(runContext.ended) {
+        return // bubble up
+      }
+      if(!AST[i].callee.id && AST[i].callee.type != 'Identifier') {
+        calleeFunc = await runStatement(0, [AST[i].callee], runContext)
+      } else 
+      if (runContext.localFunctions[AST[i].callee.name]) {
+        calleeFunc = runContext.localFunctions[AST[i].callee.name]
+      } else 
+      if(runContext.localVariables[AST[i].callee.name]) {
+        if(typeof runContext.localVariables[AST[i].callee.name] == 'function') {
+          calleeFunc = runContext.localVariables[AST[i].callee.name]
+        } else {
+          throw new Error('Not a function! ' + AST[i].callee.name)
+        }
+      } else
+      // TODO: incase libraries aren't sent, preprocessed libs are used here
+      if (WEBDRIVER_API[AST[i].callee.name]) {
+        calleeFunc = WEBDRIVER_API[AST[i].callee.name]
       } else {
-        throw new Error('Not a function! ' + AST[i].callee.name)
+        throw new Error('Function not declared: ' + AST[i].callee.name)
+      }
+    
+      if(!calleeFunc) {
+        debugger
+        throw new Error('CallExpression: Not implemented!')
+      }
+
+      try {
+        let result;
+        if(AST[i].type == 'NewExpression') {
+          result = new calleeFunc(...params)
+        } else {
+          result = await calleeFunc.apply(this, params)
+        }
+        return result
+    
+      } catch (e) {
+        doError(e, runContext)
+      }
+
+    } else
+    if(AST[i].type == 'FunctionExpression') {
+      if(AST[i].params.length) {
+        debugger
+        throw new Error('FunctionExpression: Not implemented!')
+      }
+      return await runStatement(0, [AST[i].body], runContext)
+    } else
+    if(AST[i].type == 'BlockStatement') {
+      return await runBody(AST[i].body, runContext)
+    } else
+    if(AST[i].type == 'ExpressionStatement') {
+      return await runStatement(0, [AST[i].expression], runContext)
+    } else
+    if(AST[i].type == 'MemberExpression') {
+      if(!AST[i].property) {
+        debugger
+        throw new Error('MemberExpression: Not implemented!')
+      }
+
+      let property = AST[i].property.name
+      let parent
+      if (AST[i].object.type == 'MemberExpression') {
+        parent = await runStatement(0, [AST[i].object], runContext)
+      } else if(AST[i].object.type == 'Identifier') {
+        parent = runContext.localVariables[AST[i].object.name]
+      } else {
+        throw new Error('MemberExpression: Not implemented!')
+      }
+
+      if(!parent || !parent.hasOwnProperty(property)) {
+        throw new Error('Member access error: ' + property)
+      } else {
+        return parent[property]
       }
     } else
-    // TODO: incase libraries aren't sent, preprocessed libs are used here
-    if (WEBDRIVER_API[AST[i].callee.name]) {
-      calleeFunc = WEBDRIVER_API[AST[i].callee.name]
-    } else {
-      throw new Error('Function not declared: ' + AST[i].callee.name)
-    }
-  
-    let result;
-    if(AST[i].type == 'NewExpression') {
-      result = await new calleeFunc(...params)
-    } else {
-      result = await calleeFunc.apply(this, params)
-    }
-    return result
-
-  } else
-  if(AST[i].type == 'FunctionExpression') {
-    if(AST[i].params.length) {
-      debugger
-      throw new Error('FunctionExpression: Not implemented!')
-    }
-    return await runStatement(0, [AST[i].body], runContext)
-  } else
-  if(AST[i].type == 'BlockStatement') {
-    return await runBody(AST[i].body, runContext)
-  } else
-  if(AST[i].type == 'ExpressionStatement') {
-    return await runStatement(0, [AST[i].expression], runContext)
-  } else
-  if(AST[i].type == 'MemberExpression') {
-    if(!AST[i].property) {
-      debugger
-      throw new Error('MemberExpression: Not implemented!')
-    }
-
-    let property = AST[i].property.name
-    let parent
-    if (AST[i].object.type == 'MemberExpression') {
-      parent = await runStatement(0, [AST[i].object], runContext)
-    } else if(AST[i].object.type == 'Identifier') {
-      parent = runContext.localVariables[AST[i].object.name]
-    } else {
-      throw new Error('MemberExpression: Not implemented!')
-    }
-
-    if(!parent || !parent.hasOwnProperty(property)) {
-      throw new Error('Member access error: ' + property)
-    } else {
-      return parent[property]
-    }
-  } else
-  if(AST[i].type == 'VariableDeclaration') {
-    let result
-    // so context doesn't disappear
-    for(let j = 0; j < AST[i].declarations.length; j++) {
-      result = await runStatement(j, AST[i].declarations, runContext)
-    }
-    return result
-  } else
-  if(AST[i].type == 'VariableDeclarator') {
-    if(typeof runContext.localFunctions[AST[i].id.name] != 'undefined') {
-      throw new Error('Function already declared! ' + AST[i].id.name)
-    }
-    return runContext.localVariables[AST[i].id.name] = await runStatement(0, [AST[i].init], runContext)
-  } else 
-  if(AST[i].type == 'AssignmentExpression') {
-    let right
-    if(AST[i].right.type == 'Identifier') {
-      throw new Error('AssignmentExpression: Not implemented!')
+    if(AST[i].type == 'VariableDeclaration') {
+      let result
+      // so context doesn't disappear
+      for(let j = 0; j < AST[i].declarations.length; j++) {
+        result = await runStatement(j, AST[i].declarations, runContext)
+      }
+      return result
+    } else
+    if(AST[i].type == 'VariableDeclarator') {
+      if(typeof runContext.localFunctions[AST[i].id.name] != 'undefined') {
+        throw new Error('Function already declared! ' + AST[i].id.name)
+      }
+      return runContext.localVariables[AST[i].id.name] = await runStatement(0, [AST[i].init], runContext)
     } else 
-    if(AST[i].right.type == 'BinaryExpression') {
-       // CREATE INLINE LAMBDA!
-       if(AST[i].right.left.name.charCodeAt(0) == 0x2716) {
-        right = runCall
-      } else {
+    if(AST[i].type == 'AssignmentExpression') {
+      let right
+      if(AST[i].right.type == 'Identifier') {
         throw new Error('AssignmentExpression: Not implemented!')
-      }
-    } else {
-      right = await runStatement(0, [AST[i].right], runContext)
-    }
-    let left
-    if(AST[i].left.type == 'Identifier') {
-      // CREATE INLINE LAMBDA!
-      if(right == runCall) {
-        return right.bind(null, runContext, [AST[i].left])
+      } else 
+      if(AST[i].right.type == 'BinaryExpression') {
+        // CREATE INLINE LAMBDA!
+        if(AST[i].right.left.name.charCodeAt(0) == 0x2716) {
+          right = runCall
+        } else {
+          throw new Error('AssignmentExpression: Not implemented!')
+        }
       } else {
-        throw new Error('AssignmentExpression: Not implemented!')
+        right = await runStatement(0, [AST[i].right], runContext)
       }
-    } else {
-      left = await runStatement(0, [AST[i].left], runContext)
-    }
-    return await runAssignment(left, right)
-  } else
-  if(AST[i].type == 'ObjectExpression') {
-    let newObject = {}
-    for(let k = 0; k < AST[i].properties.length; k++) {
-      let prop = AST[i].properties[k]
-      if(prop.type != 'Property') {
-        throw new Error('ObjectExpression: Not implemented!')
+      let left
+      if(AST[i].left.type == 'Identifier') {
+        // CREATE INLINE LAMBDA!
+        if(right == runCall) {
+          return right.bind(null, runContext, [AST[i].left])
+        } else {
+          throw new Error('AssignmentExpression: Not implemented!')
+        }
+      } else {
+        left = await runStatement(0, [AST[i].left], runContext)
       }
+      return await runAssignment(left, right)
+    } else
+    if(AST[i].type == 'ObjectExpression') {
+      let newObject = {}
+      for(let k = 0; k < AST[i].properties.length; k++) {
+        let prop = AST[i].properties[k]
+        if(prop.type != 'Property') {
+          throw new Error('ObjectExpression: Not implemented!')
+        }
 
-      if(prop.key.type != 'Identifier') {
-        throw new Error('ObjectExpression: Not implemented!')
+        if(prop.key.type != 'Identifier') {
+          throw new Error('ObjectExpression: Not implemented!')
+        }
+
+        if(prop.value.type != 'Identifier') {
+          newObject[prop.key.name] = await runStatement(0, [prop.value], runContext)
+          continue
+        }
+
+        if(!runContext.localVariables.hasOwnProperty(prop.value.name)
+          && !runContext.localFunctions.hasOwnProperty(prop.value.name)) {
+          throw new Error('Property not declared: ' + prop.value.name)
+        }
+
+        newObject[prop.key.name] = runContext.localVariables[prop.value.name]
+            || runContext.localFunctions[prop.value.name]
       }
-
-      if(prop.value.type != 'Identifier') {
-        newObject[prop.key.name] = await runStatement(0, [prop.value], runContext)
-        continue
+      return newObject
+    } else
+    if(AST[i].type == 'AwaitExpression') {
+      if(!AST[i].argument) {
+        throw new Error('AwaitExpression: Not implemented!')
       }
+      return await runStatement(0, [AST[i].argument], runContext)
+    } else
+    if(AST[i].type == 'BinaryExpression') {
+      //if() {
 
-      if(!runContext.localVariables.hasOwnProperty(prop.value.name)
-        && !runContext.localFunctions.hasOwnProperty(prop.value.name)) {
-        throw new Error('Property not declared: ' + prop.value.name)
-      }
+      //} else {
+        throw new Error(AST[i].type + ': Not implemented!')
+      //}
+    } else
 
-      newObject[prop.key.name] = runContext.localVariables[prop.value.name]
-          || runContext.localFunctions[prop.value.name]
-    }
-    return newObject
-  } else
-  if(AST[i].type == 'AwaitExpression') {
-    if(!AST[i].argument) {
-      throw new Error('AwaitExpression: Not implemented!')
-    }
-    return await runStatement(0, [AST[i].argument], runContext)
-  } else
-  if(AST[i].type == 'BinaryExpression') {
-    //if() {
+    // TODO: MATHS!
 
-    //} else {
+
+
+    {
+      debugger
       throw new Error(AST[i].type + ': Not implemented!')
-    //}
-  } else
-  {
-    debugger
-    throw new Error(AST[i].type + ': Not implemented!')
+    }
+
+  } catch (e) {
+    doError(e, runContext)
+    return
   }
 }
 
@@ -7412,21 +7447,46 @@ async function runAssignment(left, right) {
 
 // find and run main
 async function runBody(AST, runContext) {
-  // doesn't need to be fast, because async DevTools calls, are not fast
-  let result
-  let start = runContext.localFunctions
-  runContext.localFunctions = Object.assign({}, runContext.localFunctions)
-  let startVars = runContext.localVariables
-  runContext.localVariables = Object.assign({}, runContext.localVariables)
-  for(let i = 0; i < AST.length; i++) {
-    result = await runStatement(i, AST, runContext)
+  if(runContext.ended) {
+    throw new Error('context ended!')
   }
-  // remove anything created in the past context
-  runContext.localFunctions = start
-  runContext.localVariables = startVars
-  return result
+  // any time a setTimer is use the callStack will be reset
+  //   which means error messaging must intercept here not to
+  //   ruin out worker process
+  try {
+      // doesn't need to be fast, because async DevTools calls, are not fast
+    let result
+    let start = runContext.localFunctions
+    runContext.localFunctions = Object.assign({}, runContext.localFunctions)
+    let startVars = runContext.localVariables
+    runContext.localVariables = Object.assign({}, runContext.localVariables)
+    for(let i = 0; i < AST.length; i++) {
+      result = await runStatement(i, AST, runContext)
+      if(runContext.ended) {
+        break // bubble up
+      }
+    }
+    // remove anything created in the past context
+    runContext.localFunctions = start
+    runContext.localVariables = startVars
+    return result
+  } catch (e) {
+    doError(e, runContext)
+  }
 }
 
+
+function doError(err, runContext) {
+  runContext.ended = true
+  console.log('line: ' + (runContext.bubbleLine - 1), err)
+  chrome.tabs.sendMessage(runContext.senderId, { 
+      error: err.message + '',
+      // always subtract 1 because code is wrapping in a 1-line function above
+      line: runContext.bubbleLine - 1,
+  }, function(response) {
+
+  });
+}
 
 
 async function createEnvironment(sender) {
@@ -7462,7 +7522,9 @@ async function createEnvironment(sender) {
   return {
     bubbleLine: -1,
     localVariables: env,
-    localFunctions: {}
+    localFunctions: {},
+    senderId: sender.tab.id,
+    ended: false,
   }
 }
 
@@ -7470,6 +7532,30 @@ async function createEnvironment(sender) {
 // ^- That's where most people give up, but I'll write an interpreter
 //let targets = await chrome.debugger.getTargets()
 //if(targets.filter(t => t.attached && t.tabId == sender.tab.id).length == 0) {
+
+
+async function attachDebugger(tabId) {
+  try {
+    await chrome.debugger.attach({tabId: tabId}, '1.0')
+    // confirm it works
+    let dom = await chrome.debugger.sendCommand({
+      tabId: tabId
+    }, 'DOM.getDocument')
+    if(dom.root.children[1].children[1].attributes[1] != 'running') {
+      chrome.tabs.sendMessage(tabId, { 
+        error: 'Tab not running.' 
+      }, function(response) {
+
+      });
+    }
+  } catch (e) {
+    if(e.message.includes('Another debugger')) {
+      // TODO: attach to another tab!
+    } else
+    throw e
+  }
+
+}
 
 
 chrome.runtime.onMessage.addListener((request, sender, reply) => {
@@ -7499,39 +7585,13 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
     let runContext;
     runContext =  await createEnvironment(sender)
     // attach debugger
-    try {
-      await chrome.debugger.attach({tabId: sender.tab.id}, '1.0')
-      // confirm it works
-      let dom = await chrome.debugger.sendCommand({
-        tabId: sender.tab.id
-      }, 'DOM.getDocument')
-      if(dom.root.children[1].children[1].attributes[1] != 'running') {
-        chrome.tabs.sendMessage(sender.tab.id, { 
-          error: 'Tab not running.' 
-        }, function(response) {
-
-        });
-      }
-    } catch (e) {
-      if(e.message.includes('Another debugger')) {
-        // TODO: attach to another tab!
-      } else
-      throw e
-    }
-
+    await attachDebugger(sender.tab.id)
     // run code from client
-    try {
-      let result = await runBody(AST.body, runContext)
+    let result = await runBody(AST.body, runContext)
+    if(runContext.ended) {
+      // TODO: send async status?
+    } else {
       chrome.tabs.sendMessage(sender.tab.id, { result: result + '' }, function(response) {
-
-      });
-    } catch (e) {
-      console.log('line: ' + (runContext.bubbleLine - 1), e)
-      chrome.tabs.sendMessage(sender.tab.id, { 
-          error: e.message + '',
-          // always subtract 1 because code is wrapping in a 1-line function above
-          line: runContext.bubbleLine - 1,
-      }, function(response) {
 
       });
     }
