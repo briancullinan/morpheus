@@ -160,7 +160,7 @@ driver/index.html:
 
 DRIVER_OBJS       := driver/morph.js driver/index.html driver/redpill.png \
 										driver/backend.js driver/frontend.js driver/manifest.json \
-										driver/morph.wasm 
+										$(BUILD_DIR)/morph.wasm 
 
 ifdef DO_RELEASE
 # TODO: put approved plugin back here to build Github Pages index.html.
