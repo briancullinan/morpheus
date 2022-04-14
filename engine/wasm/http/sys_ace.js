@@ -37,11 +37,6 @@ function processResponse(request) {
   || document.body.className.includes('result')) {
     document.body.classList.remove('running')
     document.body.classList.add('paused')
-  } else if(typeof request.started != 'undefined') {
-    document.body.classList.remove('starting')
-    document.body.classList.add('running')
-    ACE.lastRunId = request.started
-    window['run-button'].classList.remove('running')
   } else {
     // just console update could still be running
   }
@@ -338,6 +333,9 @@ function initAce() {
 
 window.addEventListener('message', function (request) {
   if(typeof request.data.accessor != 'undefined') {
+    if(!document.body.className.includes('running')) {
+      debugger
+    }
     switch(request.data.accessor) {
       // safe to share?
       case 'window.screenLeft':
@@ -347,18 +345,27 @@ window.addEventListener('message', function (request) {
       let propertyName = request.data.accessor.split('.')[1]
       window['run-script'].innerHTML = window[propertyName]
       break
-      
+
       default:
       debugger
     }
     window['run-button'].click()
-  } else if(typeof request.data.service != 'undefined') {
+  } else 
+  if(typeof request.data.service != 'undefined') {
     ACE.downloaded = true
-  } else if(typeof request.data.frontend != 'undefined') {
+  } else 
+  if(typeof request.data.frontend != 'undefined') {
     window['run-script'].innerHTML = ACE.lastRunId
     document.body.classList.add('starting')
     window['run-button'].click()
     ACE.downloaded = true
+  } else
+  if(typeof request.data.started != 'undefined') {
+    document.body.classList.remove('starting')
+    document.body.classList.add('running')
+    ACE.lastRunId = request.data.started
+    window['run-button'].classList.remove('running')
+  // the rest of these are console messages
   } else {
     if(typeof request.data.error != 'undefined') {
       if(request.data.error.includes('No script')) {
