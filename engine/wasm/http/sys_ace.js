@@ -26,56 +26,73 @@ function newPlay() {
 }
 
 
-function runBlock(start) {
-  if(document.body.className.includes('running')) {
-    if(document.body.className.includes('error')
-    || document.body.className.includes('result')) {
-      document.body.classList.remove('running')
-      document.body.classList.add('paused')
-    } else {
-      // just console update could still be running
-    }
+function processResponse(response) {
+  if(!document.body.className.includes('running')) {
+    debugger
+  }
 
-    if(document.body.className.includes('error')
-      || document.body.className.includes('console')
-      || document.body.className.includes('result')) {
-      let isStatus = window['run-script'].innerHTML == '.'
-      let newLines = window['run-script'].innerHTML.trim().split('\n')
-      let newErrorLine = newLines[newLines.length-1].match(/\son\s([0-9]+)/)
-      let prevLine = ACE.lastLine
-      // if error has a line number, insert message below that line
-      if(newErrorLine) {
-        newLines.pop() // remove ' on 000'
-        prevLine = parseInt(newErrorLine[1]) - 1
-        // if the error occurs on a line inside the library
-        if(prevLine < ACE.libraryLines && !ACE.libraryLoaded) {
-          ACE.libraryLoaded = true
-          ace.setValue(ACE.libraryCode + ace.getValue())
-        } else if (!ACE.libraryLoaded) {
-          // if library code is not loaded, subtract
-          prevLine -= ACE.libraryLines
-        }
-      }
-      for(let j = 0; j < newLines.length; j++) {
-        if(!isStatus || !ACE.statusLine) {
-          createLineWidget(newLines[j], prevLine++, 
-            document.body.className.includes('error') ? ' line_error ' : '')
-        }
-        if(isStatus && !ACE.statusLine) {
-          ACE.statusLine = ace.session.lineWidgets[prevLine-1]
-        } else if (isStatus) {
-          ACE.statusLine.el.children[0].innerText += '.'
-        }
-      }
-      // add console output to bottom of code
-      if(!newErrorLine) {
-        ACE.lastLine = prevLine
-      }
-      document.body.classList.remove('error')
-      document.body.classList.remove('result')
-      document.body.classList.remove('console')
-      window['run-script'].innerHTML = ''
+  if(document.body.className.includes('error')
+  || document.body.className.includes('result')) {
+    document.body.classList.remove('running')
+    document.body.classList.add('paused')
+  } else {
+    // just console update could still be running
+  }
+
+  let updateText
+  if(typeof response.data.console != 'undefined') {
+    updateText = response.data.console
+  } else if(typeof response.data.error != 'undefined') {
+    updateText = response.data.error
+  } else if(typeof response.data.result != 'undefined') {
+    updateText = response.data.result
+  } else {
+    debugger
+  }
+  let isStatus = updateText == '.'
+  let newLines = updateText.trim().split('\n')
+  let newErrorLine = newLines[newLines.length-1].match(/\son\s([0-9]+)/)
+  let prevLine = ACE.lastLine
+  // if error has a line number, insert message below that line
+  if(newErrorLine) {
+    newLines.pop() // remove ' on 000'
+    prevLine = parseInt(newErrorLine[1])
+    // if the error occurs on a line inside the library
+    if(prevLine < ACE.libraryLines && !ACE.libraryLoaded) {
+      ACE.libraryLoaded = true
+      ace.setValue(ACE.libraryCode + ace.getValue())
+    } else if (!ACE.libraryLoaded) {
+      // if library code is not loaded, subtract
+      prevLine -= ACE.libraryLines
     }
+  }
+  for(let j = 0; j < newLines.length; j++) {
+    if(!isStatus || !ACE.statusLine) {
+      createLineWidget(newLines[j], prevLine++, 
+        document.body.className.includes('error') ? ' line_error ' : '')
+    }
+    if(isStatus && !ACE.statusLine) {
+      ACE.statusLine = ace.session.lineWidgets[prevLine]
+    } else if (isStatus) {
+      ACE.statusLine.el.children[0].innerText += '.'
+    }
+  }
+  // add console output to bottom of code
+  if(!newErrorLine) {
+    ACE.lastLine = prevLine
+  }
+  document.body.classList.remove('error')
+  document.body.classList.remove('result')
+  document.body.classList.remove('console')
+}
+
+window.addEventListener('message', processResponse, false)
+
+
+
+function runBlock(start) {
+  if(document.body.className.includes('running')
+    || document.body.className.includes('starting')) {
     return
   }
 

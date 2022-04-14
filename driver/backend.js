@@ -7166,16 +7166,18 @@
 
 
 
-async function collectParameters(arguments) {
+async function collectParameters(arguments, runContext) {
   let result = []
   for(let i = 0; i < arguments.length; i++) {
     let arg = arguments[i]
     if(arg.type == 'Identifier') {
-      if(localVariables.hasOwnProperty(arg.name)) {
-        result.push(localVariables[arg.name])
+      if(runContext.localVariables.hasOwnProperty(arg.name)) {
+        result.push(runContext.localVariables[arg.name])
       } else {
         throw new Error('Identifier not found: ' + arg.name)
       }
+    } else {
+      throw new Error('CallExpression: Not implemented!')
     }
   }
   return result
@@ -7187,32 +7189,31 @@ let WEBDRIVER_API = {
 }
 
 
-let bubbleLine = -1
-let localFunctions = {}
-let localVariables = {}
-async function runStatement(i, AST, console, tabId) {
+async function runStatement(i, AST, runContext) {
   if(AST[i] && AST[i].loc) {
-    bubbleLine = AST[i].loc.start.line
+    runContext.bubbleLine = AST[i].loc.start.line
   }
   if(AST[i].type == 'FunctionDeclaration') {
-    localFunctions[AST[i].id.name] = AST[i].body
+    return runContext.localFunctions[AST[i].id.name] = AST[i].body
   } else
   if(AST[i].type == 'ReturnStatement') {
-    return await runStatement(0, [AST[i].argument], console, tabId)
+    return await runStatement(0, [AST[i].argument], runContext)
   } else
   if(AST[i].type == 'CallExpression') {
     // collect variables
-    let params = await collectParameters(AST[i].arguments)
+    let params = await collectParameters(AST[i].arguments, runContext)
     if(!AST[i].callee.id && AST[i].callee.type != 'Identifier') {
-      let calleeFunc = await runStatement(0, [AST[i].callee], console, tabId)
-      return await calleeFunc(...params)
+      let calleeFunc = await runStatement(0, [AST[i].callee], runContext)
+      let result = await calleeFunc(...params)
+      return result
     } else
-    if(localFunctions[AST[i].callee.name]) {
+    if(runContext.localFunctions[AST[i].callee.name]) {
       // TODO: assign to param names in next context
       if(AST[i].arguments.length > 0) {
         throw new Error('CallExpression: Not implemented!')
       }
-      return await runStatement(0, [localFunctions[AST[i].callee.name]], console, tabId)
+      let result = await runStatement(0, [runContext.localFunctions[AST[i].callee.name]], runContext)
+      return result
     } /* else if (WEBDRIVER_API[AST[i].callee.name]) {
       return await WEBDRIVER_API[AST[i].callee.name](...params, tabId)
     } */ else {
@@ -7220,46 +7221,63 @@ async function runStatement(i, AST, console, tabId) {
     }
   } else
   if(AST[i].type == 'FunctionExpression') {
-    await runStatement(0, [AST[i].body], console, tabId)
+    if(AST[i].params.length) {
+      debugger
+      throw new Error('FunctionExpression: Not implemented!')
+    }
+    return await runStatement(0, [AST[i].body], runContext)
   } else
   if(AST[i].type == 'BlockStatement') {
-    await runBody(AST[i].body, console, tabId)
+    return await runBody(AST[i].body, runContext)
   } else
   if(AST[i].type == 'ExpressionStatement') {
-    await runStatement(0, [AST[i].expression], console, tabId)
+    return await runStatement(0, [AST[i].expression], runContext)
   } else
   if(AST[i].type == 'MemberExpression') {
-    if(localVariables.hasOwnProperty(AST[i].object.name)) {
+    if(!AST[i].property) {
+      debugger
       throw new Error('MemberExpression: Not implemented!')
-    } else if (AST[i].object.name == 'console') {
-      return console.log
-    }  else if (AST[i].object.name == 'module') {
-      return WEBDRIVER_API
+    }
+
+    let property = AST[i].property.name
+    let parent
+    if (AST[i].object.type == 'MemberExpression') {
+      parent = await runStatement(0, [AST[i].object], runContext)
+    } else if(AST[i].object.type == 'Identifier') {
+      parent = runContext.localVariables[AST[i].object.name]
     } else {
-      throw new Error('Member not declared: ' + AST[i].object.name)
+      throw new Error('MemberExpression: Not implemented!')
+    }
+
+    if(!parent || !parent.hasOwnProperty(property)) {
+      throw new Error('Member access error: ' + property)
+    } else {
+      return parent[property]
     }
   } else
   if(AST[i].type == 'VariableDeclaration') {
+    let result
     // so context doesn't disappear
     for(let j = 0; j < AST[i].declarations.length; j++) {
-      await runStatement(j, AST[i].declarations, console, tabId)
+      result = await runStatement(j, AST[i].declarations, runContext)
     }
+    return result
   } else
   if(AST[i].type == 'VariableDeclarator') {
-    localVariables[AST[i].id.name] = await runStatement(0, [AST[i].init], console, tabId)
+    return runContext.localVariables[AST[i].id.name] = await runStatement(0, [AST[i].init], runContext)
   } else 
   if(AST[i].type == 'AssignmentExpression') {
     let right
     if(AST[i].right.type == 'Identifier') {
       throw new Error('AssignmentExpression: Not implemented!')
     } else {
-      right = await runStatement(0, [AST[i].right])
+      right = await runStatement(0, [AST[i].right], runContext)
     }
     let left
     if(AST[i].left.type == 'Identifier') {
       throw new Error('AssignmentExpression: Not implemented!')
     } else {
-      left = await runStatement(0, [AST[i].left])
+      left = await runStatement(0, [AST[i].left], runContext)
     }
     return await runAssignment(left, right)
   } else
@@ -7276,16 +7294,17 @@ async function runStatement(i, AST, console, tabId) {
       }
 
       if(prop.value.type != 'Identifier') {
-        throw new Error('ObjectExpression: Not implemented!')
+        newObject[prop.key.name] = await runStatement(0, [prop.value], runContext)
+        continue
       }
 
-      if(!localVariables.hasOwnProperty(prop.value.name)
-        && !localFunctions.hasOwnProperty(prop.value.name)) {
-        throw new Error('Member not declared: ' + prop.value.name)
+      if(!runContext.localVariables.hasOwnProperty(prop.value.name)
+        && !runContext.localFunctions.hasOwnProperty(prop.value.name)) {
+        throw new Error('Property not declared: ' + prop.value.name)
       }
 
-      newObject[prop.key.name] = localVariables[prop.value.name]
-          || localFunctions[prop.value.name]
+      newObject[prop.key.name] = runContext.localVariables[prop.value.name]
+          || runContext.localFunctions[prop.value.name]
     }
     return newObject
   } else
@@ -7293,7 +7312,7 @@ async function runStatement(i, AST, console, tabId) {
     if(!AST[i].argument) {
       throw new Error('AwaitExpression: Not implemented!')
     }
-    return runStatement(0, [AST[i].argument])
+    return await runStatement(0, [AST[i].argument], runContext)
   } else
   {
     debugger
@@ -7312,21 +7331,57 @@ async function runAssignment(left, right) {
 
 
 // find and run main
-async function runBody(AST, console, tabId) {
+async function runBody(AST, runContext) {
   // doesn't need to be fast, because async DevTools calls, are not fast
   let result
-  let start = localFunctions
-  localFunctions = Object.assign({}, localFunctions)
-  let startVars = localVariables
-  localVariables = Object.assign({}, localVariables)
+  let start = runContext.localFunctions
+  runContext.localFunctions = Object.assign({}, runContext.localFunctions)
+  let startVars = runContext.localVariables
+  runContext.localVariables = Object.assign({}, runContext.localVariables)
   for(let i = 0; i < AST.length; i++) {
-    await runStatement(i, AST, console, tabId)
+    result = await runStatement(i, AST, runContext)
   }
   // remove anything created in the past context
-  localFunctions = start
-  localVariables = startVars
+  runContext.localFunctions = start
+  runContext.localVariables = startVars
   return result
 }
+
+
+
+async function createEnvironment(sender) {
+  // TODO: this is where we add Chrome security model,
+  //    this they decided "IT'S TOO DANGEROUS"
+  // A nice design was never explored.
+  let env = {
+    tabId: sender.tab.id,
+    chrome: {
+      tabs: {
+        get: chrome.tabs.get
+      },
+      windows: {
+        create: chrome.windows.create
+      }
+    },
+    module: {
+      exports: WEBDRIVER_API
+    },
+    console: {
+      log: function (...args) {
+        console.log(args)
+        chrome.tabs.sendMessage(sender.tab.id, { console: args }, function(response) {
+
+        });
+      }
+    },
+  }
+  return {
+    bubbleLine: -1,
+    localVariables: env,
+    localFunctions: {}
+  }
+}
+
 
 
 chrome.runtime.onMessage.addListener((request, sender, reply) => {
@@ -7354,14 +7409,8 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
   // ERROR: Refused to evaluate a string as JavaScript because 'unsafe-eval'
   // ^- That's where most people give up, but I'll write an interpreter
   setTimeout(async function () {
-    let newConsole = {
-      log: function (...args) {
-        console.log(args)
-        chrome.tabs.sendMessage(sender.tab.id, { console: args }, function(response) {
-
-        });
-      }
-    }
+    let runContext;
+    runContext =  await createEnvironment(sender)
     //let targets = await chrome.debugger.getTargets()
     //if(targets.filter(t => t.attached && t.tabId == sender.tab.id).length == 0) {
     try {
@@ -7383,7 +7432,7 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
     }
     //}
     try {
-      let result = await runBody(AST.body, newConsole, sender.tab.id)
+      let result = await runBody(AST.body, runContext)
       chrome.tabs.sendMessage(sender.tab.id, { result: result + '' }, function(response) {
 
       });
@@ -7392,7 +7441,7 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
       chrome.tabs.sendMessage(sender.tab.id, { 
           error: e.message + '',
           // always subtract 1 because code is wrapping in a 1-line function above
-          line: bubbleLine - 1,
+          line: runContext.bubbleLine - 1,
       }, function(response) {
 
       });

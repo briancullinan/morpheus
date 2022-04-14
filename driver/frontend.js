@@ -81,8 +81,6 @@ function getRunId(length) {
 
 
 function checkOnRunner(runId) {
-  let runScript = document.getElementById("run-script")
-  let runButton = document.getElementById("run-button")
   try {
     chrome.runtime.sendMessage({ 
       runId: runId,
@@ -90,18 +88,17 @@ function checkOnRunner(runId) {
       processResponse(response, true)
     })
   } catch (e) {
-    document.body.classList.add('error')
-    runScript.innerHTML += e.message + '\n'
-    runButton.click()
+    window.postMessage({
+      error: e.message + '\n'
+    }, function () {
+      debugger
+    })
   }
 
 }
 
 
 function processResponse(request, trim) {
-  let runScript = document.getElementById("run-script")
-  let runButton = document.getElementById("run-button")
-
   // clear status timer if an end result is received
   if(typeof request.error != 'undefined'
     || typeof request.result != 'undefined') {
@@ -110,26 +107,25 @@ function processResponse(request, trim) {
     }
   }
 
+  let typeKey
   if(typeof request.error != 'undefined') {
-    document.body.classList.add('error')
-    runScript.innerHTML += request.error + '\n'
-    if(request.line > 0) {
-      runScript.innerHTML += ' on ' + request.line
-    }
-    runButton.click()
+    typeKey = 'error'
   } else
   if(typeof request.console != 'undefined') {
-    document.body.classList.add('console')
-    runScript.innerHTML += request.console == '.' ? '.' : (request.console + '\n')
-    runButton.click()
-  } else    
-  if(typeof request.result != 'undefined') {
-    document.body.classList.add('result')
-    runScript.innerHTML += request.result + '\n'
-    runButton.click()
+    typeKey = 'console'
+  } else
+  if(typeof request.console != 'undefined') {
+    typeKey = 'result'
   } else {
     throw new Error('Not implemented!')
   }
+
+  let newMessage = {}
+  document.body.classList.add(typeKey)
+  newMessage[typeKey] = request[typeKey] + '\n' + (request.line > 0 ? ' on ' + request.line : '')
+  window.postMessage(newMessage, function () {
+    debugger
+  })
 }
 
 
