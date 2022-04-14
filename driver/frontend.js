@@ -10,13 +10,31 @@ function socketError(evt) {
 }
 
 let runnerTimer
+let accessorResult = null
+
+
+async function restoreRunner(sender) {
+  // try to restore runner status
+  window.postMessage({
+    frontend: 'Worker service started\n'
+  })
+  awaitingAccessor = true
+  accessorResult = null
+  await setDelay(function () { return !awaitingAccessor }, 1000)
+  if(awaitingAccessor) {
+    awaitingAccessor = false
+  } else {
+    chrome.runtime.sendMessage({ 
+      frontend: accessorResult,
+    }, processResponse)
+  }
+}
+
 
 document.addEventListener('DOMContentLoaded', (sender) => {
-  window.postMessage({
-    result: 'Worker service started\n'
-  }, function () {
-    debugger
-  })
+  restoreRunner()
+  /*
+  */
 
   document.addEventListener('keypress', function (evt) {
     // add magnanimus class-name uniquifier selection tool to every page
@@ -37,39 +55,36 @@ document.addEventListener('DOMContentLoaded', (sender) => {
   }
 
   document.addEventListener('click', function (evt) {
+    let runScript = document.getElementById("run-script")
+    if(awaitingAccessor) {
+      awaitingAccessor = false
+      if(runScript.innerHTML) {
+        accessorResult = JSON.parse(runScript.innerHTML)
+      } else {
+        accessorResult = null
+      }
+      return
+    }
     if(!evt.target || !evt.target.className.includes('run-button')
       || !document.body.className.includes('starting')) {
       return true
     }
-    let runScript = document.getElementById("run-script")
-    setTimeout(function () {
-      try {
-        let runId = getRunId(20)
-        chrome.runtime.sendMessage({ 
-          script: runScript.innerHTML,
-          runId: runId,
-        }, function (response) {
-          if(typeof response.started != 'undefined') {
-            if(runnerTimer) {
-              clearInterval(runnerTimer)
-            }
-            runnerTimer = setInterval(checkOnRunner.bind(null, runId), 1000)
-          }
-          processResponse(response) // in case of error
-          return true
-        })
-        runScript.innerHTML = ''
-      } catch (e) {
-        if(e.message.includes('context invalidated')) {
-          document.location = document.location 
-          //  + (document.location.includes('?') ? '&' : '?')
-          //  + 'tzrl=' + Date.now()
-        }
-        throw e
+    try {
+      let runId = getRunId(20)
+      chrome.runtime.sendMessage({ 
+        script: runScript.innerHTML,
+        runId: runId,
+      }, processResponse)
+      runScript.innerHTML = ''
+    } catch (e) {
+      if(e.message.includes('context invalidated')) {
+        document.location = document.location 
+        //  + (document.location.includes('?') ? '&' : '?')
+        //  + 'tzrl=' + Date.now()
       }
-    }, 100)
+      throw e
+    }
   })
-
 })
 
 
@@ -83,7 +98,7 @@ function getRunId(length) {
 }
 
 
-function checkOnRunner(runId) {
+async function checkOnRunner(runId) {
   try {
     chrome.runtime.sendMessage({ 
       runId: runId,
@@ -100,6 +115,7 @@ function checkOnRunner(runId) {
 
 }
 
+let awaitingAccessor = false
 
 function processResponse(request) {
   // clear status timer if an end result is received
@@ -112,10 +128,11 @@ function processResponse(request) {
 
   let typeKey
   if(typeof request.started != 'undefined') {
+    if(runnerTimer) {
+      clearInterval(runnerTimer)
+    }
+    runnerTimer = setInterval(checkOnRunner.bind(null, request.started), 1000)
     typeKey = 'started'
-  } else
-  if(typeof request.accessor != 'undefined') {
-    typeKey = 'accessor'
   } else
   if(typeof request.error != 'undefined') {
     typeKey = 'error'
@@ -137,18 +154,53 @@ function processResponse(request) {
   }
   document.body.classList.add(typeKey)
   newMessage[typeKey] = request[typeKey] + '\n'
-  window.postMessage(newMessage, function () {
-    debugger
+  window.postMessage(newMessage)
+}
+
+
+async function setDelay(callback, msecs) {
+  await new Promise(resolve => {
+    let newTimer
+    let safety = 0
+    newTimer = setInterval(function () {
+      if(callback()) {
+        clearInterval(newTimer)
+        resolve()
+      } else if(safety >= msecs / 100) {
+        resolve()
+      } else {
+        safety++
+      }
+    }, 100)
   })
 }
 
 
 
-chrome.runtime.onMessage.addListener(
-  function(request, sender, reply) {
+chrome.runtime.onMessage.addListener(function(request, sender, reply) {
+  // access a client variable they've shared from code
+  if(typeof request.accessor != 'undefined') {
+    awaitingAccessor = true
+    accessorResult = null
+    typeKey = 'accessor'
+    setDelay(function () { return !awaitingAccessor }, 3000)
+      .then(function () {
+        if(awaitingAccessor) {
+          awaitingAccessor = false
+          return reply({fail: true})
+        } else {
+          return reply({result: accessorResult})
+        }
+      })
+    return true
+  } else {
+    // basic client status message
     processResponse(request)
-    reply()
-    return false
-  })
+    return reply()
+  }
+})
 
+
+
+restoreRunner()
 

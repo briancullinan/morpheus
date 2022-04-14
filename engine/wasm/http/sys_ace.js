@@ -6,6 +6,7 @@ navigator.serviceWorker.register('blob:...', {
 */
 
 let ACE = {
+  lastRunId: null,
   playCount: 0,
   playButtons: [],
   downloaded: false,
@@ -28,14 +29,9 @@ function newPlay() {
 }
 
 
-function processResponse(response) {
+function processResponse(request) {
   // never download if we get a response from extension
-  let request = response.data // call it this to match frontend.js
   ACE.downloaded = true 
-
-  if(!document.body.className.includes('running')) {
-    ACE.lastLine = 0
-  }
 
   if(document.body.className.includes('error')
   || document.body.className.includes('result')) {
@@ -44,6 +40,7 @@ function processResponse(response) {
   } else if(typeof request.started != 'undefined') {
     document.body.classList.remove('starting')
     document.body.classList.add('running')
+    ACE.lastRunId = request.started
     window['run-button'].classList.remove('running')
   } else {
     // just console update could still be running
@@ -101,7 +98,6 @@ function processResponse(response) {
   document.body.classList.remove('console')
 }
 
-window.addEventListener('message', processResponse, false)
 
 
 
@@ -336,3 +332,27 @@ function initAce() {
   ace.renderer.on('afterRender', updatePlay)
 
 }
+
+
+
+
+window.addEventListener('message', function (request) {
+  if(typeof request.data.accessor != 'undefined') {
+    debugger
+    window['run-button'].click()
+  } else if(typeof request.data.service != 'undefined') {
+    ACE.downloaded = true
+  } else if(typeof request.data.frontend != 'undefined') {
+    window['run-script'].innerHTML = ACE.lastRunId
+    document.body.classList.add('starting')
+    window['run-button'].click()
+    ACE.downloaded = true
+  } else {
+    if(typeof request.data.error != 'undefined') {
+      if(request.data.error.includes('No script')) {
+        document.body.classList.remove('starting')
+      }
+    }
+    processResponse(request.data)
+  }
+}, false)

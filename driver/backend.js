@@ -7342,7 +7342,7 @@ async function runStatement(i, AST, runContext) {
       }
 
       if(typeof parent._accessor != 'undefined') {
-        debugger
+        return await parent._accessor(i, AST[i], AST, runContext)
       }
 
       if(!parent || !parent.hasOwnProperty(property)) {
@@ -7567,10 +7567,19 @@ async function createEnvironment(sender, runContext) {
   //    this they decided "IT'S TOO DANGEROUS"
   // A nice design was never explored.
   let thisWindow = {
-    _accessor: function (member, callback) {
-      chrome.tabs.sendMessage(sender.tab.id, { accessor: 'window.' + member }, function(response) {
-        callback(response.accessorResponse)
-      });
+    _accessor: async function (i, member, AST, ctx, callback) {
+      let response = await chrome.tabs.sendMessage(sender.tab.id, { accessor: 'window.' + member })
+      if(typeof response.function != 'undefined') {
+        return function () {
+          debugger
+        }
+      } else if (typeof response.result != 'undefined') {
+        return response.result
+      } else if (typeof response.fail != 'undefined') {
+        throw new Error('Member access failed: ' + member)
+      } else {
+        throw new Error('Couldn\'t understand response.')
+      }
     },
     // window.screenLeft, window.outerHeight
   }
@@ -7650,7 +7659,11 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
   try {
     console.log('title:', sender.tab.title)
     console.log('url:', sender.tab.url)
+    console.log('id:', request.runId)
     console.log('script:', request.script)
+    if(!request.script || !request.script.length) {
+      throw new Error('No script!')
+    }
     AST = acorn.loose.parse(
       '(function () {\n' + request.script + '\n})()\n'
       , {ecmaVersion: 2020, locations: true, onComment: []})
@@ -7660,6 +7673,7 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
     reply({ error: e.message + '' })
     return
   }
+
 
   // TODO: authorization here
 
@@ -7684,10 +7698,17 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
   }, 300)
 
 
-  reply({ started: true })
+  reply({ started: request.runId })
 })
 
 self.addEventListener('install', function () {
+  self.clients.matchAll(/* search options */).then( (clients) => {
+    if (clients && clients.length) {
+      // you need to decide which clients you want to send the message to..
+      const client = clients[0];
+      client.postMessage({service: 'Backend service started\n'});
+    }
+  })
   /*
   if (name === 'BrowserService.prototype.chrome') {
     let current = chrome;
