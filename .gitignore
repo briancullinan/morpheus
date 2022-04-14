@@ -4,3 +4,10 @@
 
 /libs/darwin/*
 /build/
+# generated targets
+/driver/index.html
+/driver/driver.js
+/driver/morph.js
+/driver/morph.wasm
+/driver/morph-wasm.js
+

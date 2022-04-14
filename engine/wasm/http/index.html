@@ -28,10 +28,10 @@ function main() {
 	let newWin = newWindow()
 	sleep(3)
 	//let tab = newTab()
-	newWin.setPosition(
+	newWin.moveTo(
 		window.screenLeft + window.outerWidth / 2, 
 		window.screenTop)
-	newWin.setSize(
+	newWin.resizeTo(
 		window.outerWidth / 2, 
 		window.outerHeight)
 	// should now have a window on the right ->

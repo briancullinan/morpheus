@@ -32,7 +32,6 @@ async function restoreRunner(sender) {
 
 
 document.addEventListener('DOMContentLoaded', (sender) => {
-  restoreRunner()
   /*
   */
 
@@ -53,6 +52,8 @@ document.addEventListener('DOMContentLoaded', (sender) => {
   if(!document.getElementById("run-script")) {
     return
   }
+  
+  restoreRunner()
 
   document.addEventListener('click', function (evt) {
     let runScript = document.getElementById("run-script")
@@ -182,7 +183,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, reply) {
   if(typeof request.accessor != 'undefined') {
     awaitingAccessor = true
     accessorResult = null
-    typeKey = 'accessor'
+    window.postMessage({accessor: request.accessor})
     setDelay(function () { return !awaitingAccessor }, 3000)
       .then(function () {
         if(awaitingAccessor) {
@@ -202,5 +203,5 @@ chrome.runtime.onMessage.addListener(function(request, sender, reply) {
 
 
 
-restoreRunner()
+//restoreRunner()
 

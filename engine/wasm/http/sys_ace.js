@@ -338,7 +338,19 @@ function initAce() {
 
 window.addEventListener('message', function (request) {
   if(typeof request.data.accessor != 'undefined') {
-    debugger
+    switch(request.data.accessor) {
+      // safe to share?
+      case 'window.screenLeft':
+      case 'window.screenTop':
+      case 'window.outerHeight':
+      case 'window.outerWidth':
+      let propertyName = request.data.accessor.split('.')[1]
+      window['run-script'].innerHTML = window[propertyName]
+      break
+      
+      default:
+      debugger
+    }
     window['run-button'].click()
   } else if(typeof request.data.service != 'undefined') {
     ACE.downloaded = true

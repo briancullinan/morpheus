@@ -7561,6 +7561,7 @@ async function _setInterval(runContext, callback, msec) {
   setInterval(callback, msec)
 }
 
+// TODO: _Promise counter to detect when process is off, for async: 
 
 async function createEnvironment(sender, runContext) {
   // TODO: this is where we add Chrome security model,
@@ -7568,11 +7569,21 @@ async function createEnvironment(sender, runContext) {
   // A nice design was never explored.
   let thisWindow = {
     _accessor: async function (i, member, AST, ctx, callback) {
-      let response = await chrome.tabs.sendMessage(sender.tab.id, { accessor: 'window.' + member })
+      if(!member.object.name || !member.property.name
+        || member.object.name != 'window' /* safety? */) {
+        throw new Error('MemberExpression: Not implemented!')
+      }
+      // TODO: call tree? multiple level? 
+      let memberName = member.object.name + '.' + member.property.name
+      let response = await chrome.tabs.sendMessage(sender.tab.id, { accessor: memberName })
       if(typeof response.function != 'undefined') {
+        debugger
         return function () {
           debugger
         }
+      } else if (typeof response.object != 'undefined') {
+        // TODO: add an _accessor to Objects?
+        debugger
       } else if (typeof response.result != 'undefined') {
         return response.result
       } else if (typeof response.fail != 'undefined') {

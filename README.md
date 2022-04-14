@@ -3,7 +3,8 @@
 
 DEMO: https://briancullinan.github.io/morpheus
 
-TLDR; Morpheus can automate marketing contact, call centers tasks, web searches and scraping obviously, anything you use to test with web-driver, testing web apps, supplementing website features such as a lack of export feature or message logging.
+TLDR; Morpheus can automate marketing contact, call centers tasks, web searches and scraping obviously, anything you use to test with web-driver, testing web apps, supplementing website features such as a lack of export feature or message logging. We've never explored better designs because of Content-Security-Policy
+; we've engineered ourselves into a corner.
 
 In the movie the Matrix, Morpheus prevails by communicating with the right persons.
 Morpheus' purpose is to find The One. The One who shares the same goal.
@@ -28,6 +29,27 @@ I build it, let me know when it makes contact.
 7) auto-exec on remote cloud for mobile testing
 8) \mvjoin and follow remote player splines
 9) \sync IndexedDB file-system with a Github Gist after CAS
+
+
+## Content-Security-Policy:
+It's worth a brief technical overview of the code. `eval()` is a dangerous function that converts plain
+text into a callable procedure. This plugin doesn't use eval(), instead it includes an EMCAScript 2022+ 
+parser on the backend and stores variables in a special array. It's probably pretty slow, so don't try 
+anything more than 60 FPS with it.
+
+Through this, the management of specific Chrome features can be passed to the web browser context.
+Then a `run-access-token` can be granted through a popup dialog in the page. This is controlled by the
+frontend.js, and the code is run by backend.js. Some variables like local window can also share their
+state. This way, the backend code can call frontend code and update the engine or the editor or open
+a link when someone clicks on it in game. Bi-direction communication of immediate-asynchronous variables.
+
+This way, the plugin does not need `eval()` permissions, and the Content-Security-Policy does not need
+to be disabled like it commonly is in Automation Mode for running on localhost.
+
+
+## Privacy and protected information:
+We don't collect anything. All information is stored in your local browser. Morpheus can't be responsible
+for lost or stolen data.
 
 
 ## Use cases
