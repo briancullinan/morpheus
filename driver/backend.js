@@ -7285,7 +7285,9 @@ async function runStatement(i, AST, runContext) {
       } else {
         throw new Error('Function not declared: ' + AST[i].callee.name)
       }
-    
+      if(runContext.ended) {
+        return // bubble up
+      }
       if(!calleeFunc) {
         debugger
         throw new Error('CallExpression: Not implemented!')
@@ -7423,24 +7425,20 @@ async function runStatement(i, AST, runContext) {
       }
       return await runStatement(0, [AST[i].argument], runContext)
     } else
-    if(AST[i].type == 'BinaryExpression') {
-      //if() {
-
-      //} else {
-        throw new Error(AST[i].type + ': Not implemented!')
-      //}
-    } else
 
     // TODO: MATHS!
     if(AST[i].type == 'BinaryExpression') {
       let left
       if(AST[i].left.type == 'Identifier') {
-        if(!runContext.localVariables[AST[i].left]) {
-          throw new Error('Identifier not found: ' + AST[i].left)
+        if(!runContext.localVariables.hasOwnProperty(AST[i].left.name)) {
+          throw new Error('Identifier not found: ' + AST[i].left.name)
         }
         left = runContext.localVariables[AST[i].left]
+      } else 
+      if (AST[i].left.type == 'Literal') {
+        left = AST[i].left.value
       } else {
-        left = await runStatement(0, [AST[i].left])
+        left = await runStatement(0, [AST[i].left], runContext)
       }
       if(runContext.ended) {
         return
@@ -7448,12 +7446,15 @@ async function runStatement(i, AST, runContext) {
 
       let right
       if(AST[i].right.type == 'Identifier') {
-        if(!runContext.localVariables[AST[i].right]) {
-          throw new Error('Identifier not found: ' + AST[i].right)
+        if(!runContext.localVariables.hasOwnProperty(AST[i].right.name)) {
+          throw new Error('Identifier not found: ' + AST[i].right.name)
         }
         right = runContext.localVariables[AST[i].right]
+      } else 
+      if (AST[i].right.type == 'Literal') {
+        right = AST[i].right.value
       } else {
-        right = await runStatement(0, [AST[i].right])
+        right = await runStatement(0, [AST[i].right], runContext)
       }
 
       if(runContext.ended) {
