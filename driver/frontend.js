@@ -50,14 +50,12 @@ document.addEventListener('DOMContentLoaded', (sender) => {
           runId: runId,
         }, function (response) {
           if(typeof response.started != 'undefined') {
-            document.body.classList.remove('starting')
-            document.body.classList.add('running')
-            evt.target.classList.remove('running')
             if(runnerTimer) {
               clearInterval(runnerTimer)
             }
             runnerTimer = setInterval(checkOnRunner.bind(null, runId), 1000)
           }
+          processResponse(response) // in case of error
           return true
         })
         runScript.innerHTML = ''
@@ -90,7 +88,7 @@ function checkOnRunner(runId) {
     chrome.runtime.sendMessage({ 
       runId: runId,
     }, function (response) {
-      processResponse(response, true)
+      processResponse(response)
     })
   } catch (e) {
     window.postMessage({
@@ -103,7 +101,7 @@ function checkOnRunner(runId) {
 }
 
 
-function processResponse(request, trim) {
+function processResponse(request) {
   // clear status timer if an end result is received
   if(typeof request.error != 'undefined'
     || typeof request.result != 'undefined') {
@@ -113,11 +111,20 @@ function processResponse(request, trim) {
   }
 
   let typeKey
+  if(typeof request.started != 'undefined') {
+    typeKey = 'started'
+  } else
+  if(typeof request.accessor != 'undefined') {
+    typeKey = 'accessor'
+  } else
   if(typeof request.error != 'undefined') {
     typeKey = 'error'
   } else
   if(typeof request.console != 'undefined') {
     typeKey = 'console'
+  } else
+  if(typeof request.async != 'undefined') {
+    typeKey = 'async'
   } else
   if(typeof request.console != 'undefined') {
     typeKey = 'result'

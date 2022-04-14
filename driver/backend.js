@@ -7213,6 +7213,11 @@ async function collectParameters(params, runContext) {
 let WEBDRIVER_API = {
 }
 
+// TODO: add 
+// @Late
+// Syntax to use late binding, store the AST assignment in localVariables
+//   And when the variable is accesssed, check for the AST and runStatement()
+
 
 async function runCall(runContext, parameterDefinition, body, ...callArgs) {
   // assign to param names in next context
@@ -7336,6 +7341,10 @@ async function runStatement(i, AST, runContext) {
         throw new Error('MemberExpression: Not implemented!')
       }
 
+      if(typeof parent._accessor != 'undefined') {
+        debugger
+      }
+
       if(!parent || !parent.hasOwnProperty(property)) {
         throw new Error('Member access error: ' + property)
       } else {
@@ -7354,6 +7363,8 @@ async function runStatement(i, AST, runContext) {
       if(typeof runContext.localFunctions[AST[i].id.name] != 'undefined') {
         throw new Error('Function already declared! ' + AST[i].id.name)
       }
+      // TODO: add late binding
+
       return runContext.localVariables[AST[i].id.name] = await runStatement(0, [AST[i].init], runContext)
     } else 
     if(AST[i].type == 'AssignmentExpression') {
@@ -7404,6 +7415,7 @@ async function runStatement(i, AST, runContext) {
           throw new Error('ObjectExpression: Not implemented!')
         }
 
+        // TODO: add late binding
         if(prop.value.type != 'Identifier') {
           newObject[prop.key.name] = await runStatement(0, [prop.value], runContext)
           continue
@@ -7544,12 +7556,27 @@ async function _setTimeout(runContext, callback, msec) {
   runContext.async = true
   setTimeout(callback, msec)
 }
+async function _setInterval(runContext, callback, msec) {
+  runContext.async = true
+  setInterval(callback, msec)
+}
+
 
 async function createEnvironment(sender, runContext) {
   // TODO: this is where we add Chrome security model,
   //    this they decided "IT'S TOO DANGEROUS"
   // A nice design was never explored.
+  let thisWindow = {
+    _accessor: function (member, callback) {
+      chrome.tabs.sendMessage(sender.tab.id, { accessor: 'window.' + member }, function(response) {
+        callback(response.accessorResponse)
+      });
+    },
+    // window.screenLeft, window.outerHeight
+  }
   let env = {
+    thisWindow: thisWindow,
+    window: thisWindow,
     tabId: sender.tab.id,
     chrome: {
       tabs: {
@@ -7571,7 +7598,7 @@ async function createEnvironment(sender, runContext) {
       }
     },
     setTimeout: _setTimeout.bind(null, runContext),
-    setInterval: setInterval,
+    setInterval: _setInterval.bind(null, runContext),
     Promise: Promise, // TODO: bind promise to something like chromedriver does
   }
   Object.assign(runContext, {
@@ -7626,7 +7653,7 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
     console.log('script:', request.script)
     AST = acorn.loose.parse(
       '(function () {\n' + request.script + '\n})()\n'
-      , {ecmaVersion: 2020, locations: true})
+      , {ecmaVersion: 2020, locations: true, onComment: []})
   } catch (e) {
     // return parser errors right away
     console.log(e)
@@ -7645,6 +7672,10 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
     let result = await runBody(AST.body, runContext)
     if(runContext.ended) {
       // TODO: send async status?
+    } else if (runContext.async) {
+      chrome.tabs.sendMessage(sender.tab.id, { async: result + '' }, function(response) {
+
+      });
     } else {
       chrome.tabs.sendMessage(sender.tab.id, { result: result + '' }, function(response) {
 

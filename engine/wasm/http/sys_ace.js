@@ -16,6 +16,8 @@ let ACE = {
 }
 
 const NAMED_FUNCTION = /function\s+([a-z]+[ -~]*)\s*\(/
+const EXTENSION_ID = 'lnglmljjcpnpahmfpnfjkgjgmjhegihd';
+const EXTENSION_VERSION = '1.0'
 
 function newPlay() {
   let newButton = document.createElement('BUTTON')
@@ -27,6 +29,10 @@ function newPlay() {
 
 
 function processResponse(response) {
+  // never download if we get a response from extension
+  let request = response.data // call it this to match frontend.js
+  ACE.downloaded = true 
+
   if(!document.body.className.includes('running')) {
     ACE.lastLine = 0
   }
@@ -35,17 +41,23 @@ function processResponse(response) {
   || document.body.className.includes('result')) {
     document.body.classList.remove('running')
     document.body.classList.add('paused')
+  } else if(typeof request.started != 'undefined') {
+    document.body.classList.remove('starting')
+    document.body.classList.add('running')
+    window['run-button'].classList.remove('running')
   } else {
     // just console update could still be running
   }
 
   let updateText
-  if(typeof response.data.console != 'undefined') {
-    updateText = response.data.console
-  } else if(typeof response.data.error != 'undefined') {
-    updateText = response.data.error
-  } else if(typeof response.data.result != 'undefined') {
-    updateText = response.data.result
+  if(typeof request.console != 'undefined') {
+    updateText = request.console
+  } else if(typeof request.error != 'undefined') {
+    updateText = request.error
+  } else if(typeof request.result != 'undefined') {
+    updateText = request.result
+  } else if(typeof request.started != 'undefined') {
+    updateText = ''
   } else {
     debugger
   }
@@ -53,8 +65,8 @@ function processResponse(response) {
   let newLines = updateText.trim().split('\n')
   let prevLine = ACE.lastLine
   // if error has a line number, insert message below that line
-  if(response.data.line) {
-    prevLine = response.data.line
+  if(request.line) {
+    prevLine = request.line
     setTimeout(ace.gotoLine.bind(ace, prevLine), 100)
     // if the error occurs on a line inside the library
     if(prevLine < ACE.libraryLines && !ACE.libraryLoaded) {
@@ -81,7 +93,7 @@ function processResponse(response) {
     }
   }
   // add console output to bottom of code
-  if(!response.data.line) {
+  if(!request.line) {
     ACE.lastLine = prevLine
   }
   document.body.classList.remove('error')
@@ -102,33 +114,7 @@ function runBlock(start) {
   document.getElementById('run-button').classList.remove('paused')
   document.body.classList.add('starting')
   removeLineWidgets(void 0, 'ace_line')
-
-  setTimeout(function () {
-    if(document.body.className.includes('starting')) {
-      // maybe we don't have the plugin
-      if(!ACE.downloaded) {
-        let file = FS.virtual['morph-plugin.crx'].contents
-        let blob = new Blob([file], {type: 'application/x-chrome-extension'})
-        let exportUrl = URL.createObjectURL(blob);
-        const tempLink = document.createElement('A');
-        tempLink.style.display = 'none';
-        tempLink.href = exportUrl;
-        tempLink.setAttribute('download', 'morph-plugin.zip');
-        document.body.appendChild(tempLink);
-        tempLink.click();
-        ACE.downloaded = true
-        URL.revokeObjectURL(exportUrl);
-      }
-
-      if(ACE.downloaded) {
-        window['run-script'].innerHTML = 'Error connecting to DevTools service.'
-        document.body.classList.remove('starting')
-        document.body.classList.add('running')
-        document.body.classList.add('error')
-        runBlock(-1)
-      }
-    }
-  }, 3000)
+  setTimeout(emitDownload, 3000)
 
   if(!ACE.libraryCode) {
     initLibraries()
@@ -153,6 +139,46 @@ function runBlock(start) {
   ace.renderer.off('afterRender', renderLineWidgets)
 
 }
+
+
+
+async function emitDownload() {
+  if(!document.body.className.includes('starting')) {
+    return 
+  }
+
+  if(chrome && chrome.runtime) {
+    let response = await chrome.runtime.sendMessage(EXTENSION_ID, EXTENSION_VERSION)
+    if(response) {
+      return
+    }
+  }
+
+  // maybe we don't have the plugin
+  if(!ACE.downloaded) {
+    let file = FS.virtual['morph-plugin.crx'].contents
+    let blob = new Blob([file], {type: 'application/x-chrome-extension'})
+    let exportUrl = URL.createObjectURL(blob);
+    const tempLink = document.createElement('A');
+    tempLink.style.display = 'none';
+    tempLink.href = exportUrl;
+    tempLink.setAttribute('download', 'morph-plugin.zip');
+    document.body.appendChild(tempLink);
+    tempLink.click();
+    ACE.downloaded = true
+    URL.revokeObjectURL(exportUrl);
+  }
+
+  if(ACE.downloaded) {
+    window['run-script'].innerHTML = 'Error connecting to DevTools service.'
+    document.body.classList.remove('starting')
+    document.body.classList.add('running')
+    document.body.classList.add('error')
+    runBlock(-1)
+  }
+
+}
+
 
 
 
@@ -213,7 +239,7 @@ function initLineWidgets() {
 
 
 function createLineWidget(text, line, classes) {
-  if (!ace.session.lineWidgets) {
+  if (!ace.session || !ace.session.lineWidgets) {
     initLineWidgets()
   }
   if(ace.session.lineWidgets[line]) {
