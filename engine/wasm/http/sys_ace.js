@@ -49,7 +49,7 @@ function processResponse(response) {
   } else {
     debugger
   }
-  let isStatus = updateText == '.'
+  let isStatus = updateText.trim() == '.'
   let newLines = updateText.trim().split('\n')
   let prevLine = ACE.lastLine
   // if error has a line number, insert message below that line
@@ -73,8 +73,9 @@ function processResponse(response) {
       createLineWidget(newLines[j], prevLine++, 
         document.body.className.includes('error') ? ' line_error ' : '')
     }
+    // break
     if(isStatus && !ACE.statusLine) {
-      ACE.statusLine = ace.session.lineWidgets[prevLine]
+      ACE.statusLine = ace.session.lineWidgets[prevLine-1]
     } else if (isStatus) {
       ACE.statusLine.el.children[0].innerText += '.'
     }
