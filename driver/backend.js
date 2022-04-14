@@ -7296,7 +7296,7 @@ async function runStatement(i, AST, runContext) {
       try {
         let result;
         if(AST[i].type == 'NewExpression') {
-          result = new calleeFunc(...params)
+          result = await (new calleeFunc(...params))
         } else {
           result = await calleeFunc.apply(this, params)
         }
@@ -7423,7 +7423,8 @@ async function runStatement(i, AST, runContext) {
       if(!AST[i].argument) {
         throw new Error('AwaitExpression: Not implemented!')
       }
-      return await runStatement(0, [AST[i].argument], runContext)
+      let result = await runStatement(0, [AST[i].argument], runContext)
+      return result
     } else
 
     // TODO: MATHS!
@@ -7433,7 +7434,7 @@ async function runStatement(i, AST, runContext) {
         if(!runContext.localVariables.hasOwnProperty(AST[i].left.name)) {
           throw new Error('Identifier not found: ' + AST[i].left.name)
         }
-        left = runContext.localVariables[AST[i].left]
+        left = runContext.localVariables[AST[i].left.name]
       } else 
       if (AST[i].left.type == 'Literal') {
         left = AST[i].left.value
@@ -7449,7 +7450,7 @@ async function runStatement(i, AST, runContext) {
         if(!runContext.localVariables.hasOwnProperty(AST[i].right.name)) {
           throw new Error('Identifier not found: ' + AST[i].right.name)
         }
-        right = runContext.localVariables[AST[i].right]
+        right = runContext.localVariables[AST[i].right.name]
       } else 
       if (AST[i].right.type == 'Literal') {
         right = AST[i].right.value
@@ -7460,7 +7461,7 @@ async function runStatement(i, AST, runContext) {
       if(runContext.ended) {
         return
       }
-      if(AST[i].operator) {
+      if(AST[i].operator == '*') {
         return left * right
       } else {
         throw new Error(AST[i].type + ': Not implemented!')
@@ -7519,19 +7520,32 @@ async function runBody(AST, runContext) {
 
 
 function doError(err, runContext) {
-  runContext.ended = true
-  console.log('line: ' + (runContext.bubbleLine - 1), err)
-  chrome.tabs.sendMessage(runContext.senderId, { 
-      error: err.message + '',
-      // always subtract 1 because code is wrapping in a 1-line function above
-      line: runContext.bubbleLine - 1,
-  }, function(response) {
+  try {
+    runContext.ended = true
+    console.log('line: ' + (runContext.bubbleLine - 1), err)
+    chrome.tabs.sendMessage(runContext.senderId, { 
+        error: err.message + '',
+        // always subtract 1 because code is wrapping in a 1-line function above
+        line: runContext.bubbleLine - 1,
+    }, function(response) {
+  
+    });
+  } catch (e) {
+    if(e.message.includes('context invalidated')) {
 
-  });
+    } else {
+      debugger
+    }
+  }
 }
 
+// WHY DO THIS? Because setTimeout bubbles up, we don't want run context to continue
+async function _setTimeout(runContext, callback, msec) {
+  runContext.async = true
+  setTimeout(callback, msec)
+}
 
-async function createEnvironment(sender) {
+async function createEnvironment(sender, runContext) {
   // TODO: this is where we add Chrome security model,
   //    this they decided "IT'S TOO DANGEROUS"
   // A nice design was never explored.
@@ -7556,18 +7570,17 @@ async function createEnvironment(sender) {
         });
       }
     },
-    setTimeout: setTimeout,
+    setTimeout: _setTimeout.bind(null, runContext),
     setInterval: setInterval,
     Promise: Promise, // TODO: bind promise to something like chromedriver does
-
   }
-  return {
+  Object.assign(runContext, {
     bubbleLine: -1,
     localVariables: env,
     localFunctions: {},
     senderId: sender.tab.id,
     ended: false,
-  }
+  })
 }
 
 // ERROR: Refused to evaluate a string as JavaScript because 'unsafe-eval'
@@ -7624,8 +7637,8 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
   // TODO: authorization here
 
   setTimeout(async function () {
-    let runContext;
-    runContext =  await createEnvironment(sender)
+    let runContext = {};
+    await createEnvironment(sender, runContext)
     // attach debugger
     await attachDebugger(sender.tab.id)
     // run code from client
