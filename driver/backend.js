@@ -7404,10 +7404,14 @@ async function runStatement(i, AST, runContext) {
       // update client with variable informations
       let beforeLine = runContext.bubbleLine - 1
       let bubbleColumn = runContext.bubbleColumn
+      // WOW! IMAGINE THAT! SHOW VARIABLES BEFORE AND AFTER ASSIGNMENT! GOOGLE CHROME DEBUGGER!
       doAssign(AST[i].id.name, beforeLine, bubbleColumn, runContext)
       // TODO: add late binding
       let result = (runContext.localVariables[AST[i].id.name] 
           = await runStatement(0, [AST[i].init], runContext))
+      if(runContext.ended) { // error occcured in RUN context
+        return
+      }
       doAssign(AST[i].id.name, beforeLine, bubbleColumn, runContext)
       return result
     } else 
@@ -7593,8 +7597,21 @@ async function runBody(AST, runContext) {
 
 function doAssign(varName, lineNumber, bubbleColumn, runContext) {
   try {
+    let valueString = runContext.localVariables[varName]
+    if(typeof valueString == 'object' && valueString != null) {
+      // HEY GOOGLE CHROME DEBUGGER, LOOK AT THIS! 1 EXTRA LEVEL OF OBJECT VALUES SO I DON'T
+      //   HAVE TO SIT AROUND WAITING FOR THE STUPID IMMEDIATE BUBBLE TO POP UP
+      let properties = Object.getOwnPropertyNames(valueString)
+        .reduce((str, prop) => {
+          return (str + (str.length ? ', ' : '') + prop + ': ' 
+            + valueString[prop] + ' ')
+        }, '')
+      //let methods = Object.getPrototypeOf(valueString).methods
+      let prototypeName = (Object.getPrototypeOf(valueString) + '').replace('[object ', '[')
+      valueString = prototypeName + ' ' + '{' + properties + '}'
+    }
     chrome.tabs.sendMessage(runContext.senderId, { 
-      assign: new Array(bubbleColumn).fill(' ').join('') + varName + ' = ' + runContext.localVariables[varName] + '\n',
+      assign: new Array(bubbleColumn).fill(' ').join('') + varName + ' = ' + valueString + '\n',
       // always subtract 1 because code is wrapping in a 1-line function above
       line: lineNumber,
     }, function(response) {

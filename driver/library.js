@@ -81,10 +81,15 @@ function launchApp(id, callback, errCallback) {
 }
 
 
+async function moveWindow(id, x, y) {
+
+}
 
 async function newWindow() {
   let win = await chrome.windows.create()
-  return win
+  return Object.assign(win, {
+    moveTo: moveWindow.bind(null, win.id)
+  })
 }
 
 async function documentTitle(tabId) {

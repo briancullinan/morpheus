@@ -41,10 +41,32 @@ function processLineNumber(lineNumber) {
     setTimeout(ace.gotoLine.bind(ace, prevLine), 100)
   }
   // if the error occurs on a line inside the library
+  let widgetManager = ace.getSession().widgetManager
   if(prevLine < ACE.libraryLines && !ACE.libraryLoaded) {
     ACE.libraryLoaded = true
-    removeLineWidgets()
-    ace.setValue(ACE.libraryCode + ace.getValue())
+    let previousLength = ace.session.getLength()
+    let previousWidgets = []
+    for(let i = 0; i < previousLength; i++) {
+      let oldWidgets = widgetManager.getWidgetsAtRow(i)
+      oldWidgets.forEach(function (w) { 
+        previousWidgets[i] = w
+        widgetManager.removeLineWidget(w) 
+      })
+    }
+
+    let libraryCombinedCode = ACE.libraryCode + ace.getValue()
+    ace.setValue(libraryCombinedCode)
+
+    // Add widgets back in to new line
+    for(let i = 0; i < previousLength; i++) {
+      if(!previousWidgets[i]) {
+        continue
+      }
+      let newLine = previousWidgets[i].row + ACE.libraryLines - 1
+      previousWidgets[i].row = newLine
+      widgetManager.addLineWidget(previousWidgets[i]) 
+    }
+
     prevLine--;
   } else if (!ACE.libraryLoaded) {
     // if library code is not loaded, subtract
@@ -61,22 +83,28 @@ function processResponse(updateText, lineNumber, error) {
     return
   }
   let newLines = updateText.trim().split('\n')
-  let prevLine = ACE.lastLine
+  let prevLine
   // if error has a line number, insert message below that line
   if(typeof lineNumber == 'number') {
     prevLine = processLineNumber(lineNumber)
+  } else {
+    // WAS MEANING TO WRITE THIS SOONER
+    prevLine = ACE.lastLine - (ACE.libraryLoaded ? 1 : ACE.libraryLines)
   }
+
   for(let j = 0; j < newLines.length; j++) {
-    createLineWidget(newLines[j], prevLine++, error ? 'morph_error' : '')
+    let newWidget = createLineWidget(newLines[j], prevLine++, error ? 'morph_error' : '')
+    ace.getSession().widgetManager.addLineWidget(newWidget)
   }
   // add console output to bottom of code
   if(typeof lineNumber != 'number') {
     ACE.lastLine = prevLine
   }
-  ace.session._emit('changeFold', {data:{start:{row: prevLine}}});
 }
 
-
+function runAccessor() {
+  // TODO: some error checking?
+}
 
 
 function runBlock(start) {
@@ -86,7 +114,6 @@ function runBlock(start) {
   }
 
   document.body.classList.add('starting')
-  removeLineWidgets(void 0, 'ace_line')
   setTimeout(emitDownload, 3000)
 
   if(!ACE.libraryCode) {
@@ -108,9 +135,7 @@ function runBlock(start) {
       + ace.session.getLines(start, ACE.lastLine).join('\n')
       + '\nreturn ' + funcName + '();\n'
   }
-
-  ace.renderer.off('afterRender', renderLineWidgets)
-  //ace.focus()
+  
 }
 
 
@@ -154,138 +179,34 @@ async function emitDownload() {
 
 
 
-
-function removeLineWidgets(start, className) {
-  if(!ace.session.lineWidgets) {
-    return
-  }
-  let textLayer = document.getElementsByClassName('ace_text-layer')[0]
-  let numWidgets = 0
-  //let lastLine = ace.session.getFoldWidgetRange(start).end.row
-  for(let i = 0; i < ace.session.lineWidgets.length; i++) {
-    if(ace.session.lineWidgets[i] 
-      && (!className || ace.session.lineWidgets[i].el.className.includes(className))) {
-      if(ACE.statusLine == ace.session.lineWidgets[i]) {
-        ACE.statusLine = null
-      }
-      ace.session.lineWidgets[i].el.remove()
-      delete ace.session.lineWidgets[i].el
-      ace.session.lineWidgets[i] = void 0
-      ace.session._emit('changeFold', {data:{start:{row: i}}});
-      numWidgets++
-    }
-
-  }
-}
-
-
-
-////////////////////////////  render
-
-
-
-function renderLineWidgets() {
-  let numWidgets = 0
-
-  if(!ace.session.lineWidgets) {
-    return
-  }
-
-  let textLayer = document.getElementsByClassName('ace_text-layer')[0]
-  let start = ace.renderer.layerConfig.firstRow
-  let count = editor.clientHeight / ace.renderer.lineHeight
-  for(let i = 0; i < ace.session.lineWidgets.length; i++) {
-
-    if(ace.session.lineWidgets[i] && i >= start && i <= start + count) {
-      let newHelp = ace.session.lineWidgets[i].el
-      if(!newHelp.parentElement != textLayer) {
-        textLayer.insertBefore(newHelp, textLayer.children[0])
-      }
-
-      newHelp.style.top = ((i + 1 + numWidgets) * ace.renderer.lineHeight) + 'px'
-      newHelp.style.height = ace.session.lineWidgets[i].pixelHeight + 'px'
-      newHelp.style.left = '0px'
-      newHelp.style.display = 'block'
-      numWidgets++
-      if(ace.session.lineWidgets[i].flashTime) {
-        let t = Date.now() - ace.session.lineWidgets[i].flashTime
-        if(t < FADE_DURATION + FLASH_DURATION) {
-          if(newHelp.classList.contains('morph_flash'))
-            newHelp.classList.remove('morph_flash')
-        } else {
-          if(!newHelp.classList.contains('morph_flash'))
-            newHelp.classList.add('morph_flash')
-        }
-      }
-    } else if(ace.session.lineWidgets[i]
-      && ace.session.lineWidgets[i].el.style.display != 'none') {
-      ace.session.lineWidgets[i].el.style.display = 'none'
-      ace.session.lineWidgets[i].el.remove()
-      // No widget, update line with cursor!
-    } // else  // do line highlight seperately?
-
-
-
-  }
+// MAYBE A FUCKING WARNING HERE LIKE CALL STACK EXCEEDED?
+//   HOW ABOUT "FOR LOOP LENGTH EXCEEDED"? FUCKING AMAZING HOW AWFUL 
+//   PROGRAMMING IS, NO WONDER THERE'S BUGS
+// for(let i = 0; i < ace.session.lineWidgets.length; i++) {
+//   modified ace.session.lineWidgets 
+// C# HAS THIS WARNING MAYBE MY PROBLEM IS LANGUAGE
 
 
 
 
-  for(let i = 0; i < ace.session.lineWidgets.length; i++) {
-    // DO CURSOR LINES
-    // always update line colors
-    // TODO: Sys_Frame
-    if(i + numWidgets - start < textLayer.children.length) {
-      let referenceRow = textLayer.children[i + numWidgets - start]
-      if(statusWidgets[i] 
-        && Date.now() - statusWidgets[i] < FADE_DURATION + FLASH_DURATION) {
-        if(referenceRow.classList.contains('morph_error')) {
-          debugger
-        }
-        if(!referenceRow.classList.contains('morph_cursor'))
-          referenceRow.classList.add('morph_cursor')
-      } else {
-        if(referenceRow.classList.contains('morph_cursor'))
-          referenceRow.classList.remove('morph_cursor')
-      }
-    }
-  }
-
-  // TODO: static references \/
-  document.getElementsByClassName('ace_content')[0]
-    .height = (ace.session.getLength() + numWidgets + 2) * ace.renderer.lineHeight
-}
-
-
-
-
-
-
-
-
+// WHAT THE FUCK? HOW TO ACCESS ace.config.loadModule("./ext/error_marker") or line_widgets?
 function initLineWidgets() {
   ace.env.editor.execCommand('goToNextError')
-  let error = ace.session.lineWidgets[ace.getCursorPosition().row]
-  if(error && error.el) {
-    error.el.remove()
-    ace.session.lineWidgets[ace.getCursorPosition().row] = void 0
-  }
+  let widgetManager = ace.getSession().widgetManager
+  let errorRow = ace.getCursorPosition().row
+  let errorWidgets = widgetManager.getWidgetsAtRow(errorRow)
+  errorWidgets.forEach(function (w) { widgetManager.removeLineWidget(w) })
 }
 
 
 function createLineWidget(text, line, classes) {
-  let textLayer = document.getElementsByClassName('ace_text-layer')[0]
+  let textLayer = document.getElementsByClassName('ace_editor')[0]
   if (!ace.session || !ace.session.lineWidgets || !textLayer) {
     initLineWidgets()
   }
-  if(ace.session.lineWidgets[line]) {
-    ace.session.lineWidgets[line].el.remove()
-  }
-  ace.renderer.off('afterRender', renderLineWidgets)
-  ace.renderer.on('afterRender', renderLineWidgets)
   let newHelp = document.createElement('DIV')
   newHelp.className += ' ace_line ' + (classes || '')
-  newHelp.style.top = ((line + 1) * ace.renderer.lineHeight) + 'px'
+  //newHelp.style.top = ((line + 1) * ace.renderer.lineHeight) + 'px'
   let newWidget = {
     row: line,
     html: '<span class="ace_comment">' + text + '</span>',
@@ -293,16 +214,8 @@ function createLineWidget(text, line, classes) {
     pixelHeight: ace.renderer.lineHeight,
     rowCount: 1,
   }
-  ace.session.lineWidgets[line] = newWidget
   newHelp.innerHTML = newWidget.html
   // WHAT THE FUCK? LINE ISN'T SHOWING UP!!!
-  // CLASSIC!
-  if(!textLayer.children.length) {
-    textLayer.appendChild(newHelp)
-  } else {
-    textLayer.insertBefore(newHelp, textLayer.children[0])    
-  }
-  ace.session._emit('changeFold', {data:{start:{row: line}}});
   return newWidget
 }
 
@@ -315,7 +228,6 @@ function displayBlockCall(start, evt) {
     lastLine = ace.session.length()
   }
   createLineWidget(funcName + '();', lastLine, 'morph_hint')
-  ace.renderer.on('afterRender', renderLineWidgets)
 }
 
 
@@ -337,7 +249,6 @@ function updatePlay() {
       }
       ACE.playButtons[buttonCounter].onclick = runBlock.bind(null, i)
       ACE.playButtons[buttonCounter].onmouseover = displayBlockCall.bind(null, i)
-      ACE.playButtons[buttonCounter].onmouseout = removeLineWidgets.bind(null, i, 'morph_hint')
       ACE.playButtons[buttonCounter].style.display = 'block'
       //let top = document.getElementsByClassName('ace_gutter-layer')[0].children[].offsetTop
       //   ^ uhhh, relativeTop?
@@ -417,14 +328,14 @@ function onAccessor(request) {
     default:
     debugger
   }
-  window['run-button'].click()
+  window['run-accessor'].click()
 }
 
 
 function onFrontend() {
   window['run-script'].innerHTML = ACE.lastRunId
   document.body.classList.add('starting')
-  window['run-button'].click()
+  window['run-accessor'].click()
   ACE.downloaded = true
 }
 
@@ -464,7 +375,7 @@ function Ace_Frame() {
   try {
     let now = Date.now()
     if(now - previousTime > 100) {
-      renderLineWidgets()
+      //renderLineWidgets()
     }
 
   } catch (e) {
@@ -495,20 +406,22 @@ function onAssign(request) {
   if(prevLine < 0) {
     return // don't load status line while it's out of view
   }
-  if(!ace.session.lineWidgets[prevLine]
-    || !ace.session.lineWidgets[prevLine].el.className.includes('morph_assign')) {
-      createLineWidget(request.assign, prevLine, 'morph_assign')
+  let prevLineWidgets = ace.getSession().widgetManager.getWidgetsAtRow(prevLine)
+  if(!prevLineWidgets.length) {
+    let newWidget = createLineWidget((request.assign || '').replace(/\s*$/, ''), prevLine, 'morph_assign')
+    ace.getSession().widgetManager.addLineWidget(newWidget)
+    newWidget.flashTime = Date.now()
   } else {
+    // update existing assignment line
+    prevLineWidgets[0].el.children[0].innerText = (request.assign || '').replace(/\s*$/, '')
+    prevLineWidgets[0].flashTime = Date.now()
   }
-  ace.session.lineWidgets[prevLine].el.children[0].innerText = request.assign
   // sometimes assignments can update a lot
-  ace.session.lineWidgets[prevLine].flashTime = Date.now()
   // TODO: make a way to turn this off
-  ace.session._emit('changeFold', {data:{start:{row: prevLine}}});
 }
 
 
-window.addEventListener('message', function (message) {
+window.addEventListener('message', function (message, sender) {
   let request = message.data
   // never download if we get a response from extension
   ACE.downloaded = true 

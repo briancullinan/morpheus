@@ -34,22 +34,56 @@ async function restoreRunner(sender) {
   }
 }
 
+function runAccessor() {
+  if(awaitingAccessor) {
+    awaitingAccessor = false
+    if(runScript.innerHTML) {
+      accessorResult = JSON.parse(runScript.innerHTML)
+    } else {
+      accessorResult = null
+    }
+    return
+  } else {
+    throw new Error('Accessor isn\'t waiting!')
+  }
+
+}
+
+
+function runScript() {
+  let runScript = document.getElementById("run-script")
+  if(!document.body.className.includes('starting')) {
+    throw new Error('Document isn\'t starting')
+  }
+
+  try {
+    let runId = getRunId(20)
+    if(!runScript.innerHTML.length) {
+      throw new Error('No script!')
+    }
+    chrome.runtime.sendMessage({ 
+      script: runScript.innerHTML,
+      runId: runId,
+    }, processResponse)
+    runScript.innerHTML = ''
+  } catch (e) {
+    // reload the page!
+    if(e.message.includes('context invalidated')) {
+      document.location = document.location 
+      //  + (document.location.includes('?') ? '&' : '?')
+      //  + 'tzrl=' + Date.now()
+      return
+    }
+    throw e
+  }
+}
+
 
 document.addEventListener('DOMContentLoaded', (sender) => {
-  /*
-  */
 
+  // THIS IS FOR MAKING AN ELEMENT EYE-DROPPER TOOL, NOT STEALING PASSWORDS
   document.addEventListener('keypress', function (evt) {
-    // add magnanimus class-name uniquifier selection tool to every page
-    //const s = document.createElement('div');
-    //(document.body || document.documentElement).appendChild(s);
-    /*
-    const s = document.createElement('script');
-    s.setAttribute('type', 'text/javascript');
-    s.innerHTML = `
-      `;
-    (document.head || document.documentElement).appendChild(s);
-    */
+    runKeypress()
   })
 
   // don't bother other tabs for now
@@ -60,39 +94,32 @@ document.addEventListener('DOMContentLoaded', (sender) => {
   restoreRunner()
 
   document.addEventListener('click', function (evt) {
-    let runScript = document.getElementById("run-script")
-    if(awaitingAccessor) {
-      awaitingAccessor = false
-      if(runScript.innerHTML) {
-        accessorResult = JSON.parse(runScript.innerHTML)
-      } else {
-        accessorResult = null
-      }
-      return
-    }
-    if(!evt.target || !evt.target.className.includes('run-button')
-      || !document.body.className.includes('starting')) {
+    if(!evt.target) {
       return true
     }
-    try {
-      let runId = getRunId(20)
-      chrome.runtime.sendMessage({ 
-        script: runScript.innerHTML,
-        runId: runId,
-      }, processResponse)
-      runScript.innerHTML = ''
-    } catch (e) {
-      // reload the page!
-      if(e.message.includes('context invalidated')) {
-        document.location = document.location 
-        //  + (document.location.includes('?') ? '&' : '?')
-        //  + 'tzrl=' + Date.now()
-        return
-      }
-      throw e
+
+    if(evt.target.className.includes('run-button')) {
+      runScript()
+    } else if(evt.target.className.includes('run-accessor')) {
+      runAccessor()
     }
+
   })
 })
+
+
+function runKeypress() {
+  // add magnanimus class-name uniquifier selection tool to every page
+  //const s = document.createElement('div');
+  //(document.body || document.documentElement).appendChild(s);
+  /*
+  const s = document.createElement('script');
+  s.setAttribute('type', 'text/javascript');
+  s.innerHTML = `
+    `;
+  (document.head || document.documentElement).appendChild(s);
+  */
+}
 
 
 function getRunId(length) {
@@ -106,6 +133,7 @@ function getRunId(length) {
 
 
 async function checkOnRunner(runId) {
+  return
   try {
     chrome.runtime.sendMessage({ 
       runId: runId,

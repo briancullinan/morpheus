@@ -19,6 +19,7 @@
 	<div id="viewport-frame">
 		<textarea id="run-script"></textarea>
 		<button id="run-button" class="run-button" onclick="runBlock(-1)">&nbsp;</button>
+		<button id="run-accessor" class="run-accessor" onclick="runAccessor(-1)">&nbsp;</button>
 		<div id="editor">// after installing the plugin, DevTools can start
 // instructions: 
 // https://developer.chrome.com/docs/extensions/mv3/getstarted/#unpacked
@@ -27,7 +28,6 @@ function main() {
 	console.log(title)
 	let newWin = newWindow()
 	sleep(3)
-	//let tab = newTab()
 	newWin.moveTo(
 		window.screenLeft + window.outerWidth / 2, 
 		window.screenTop)
