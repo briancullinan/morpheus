@@ -14,19 +14,23 @@ let accessorResult = null
 
 
 async function restoreRunner(sender) {
-  // try to restore runner status
-  window.postMessage({
-    frontend: 'Worker service started\n'
-  })
-  awaitingAccessor = true
-  accessorResult = null
-  await setDelay(function () { return !awaitingAccessor }, 1000)
-  if(awaitingAccessor) {
-    awaitingAccessor = false
-  } else {
-    chrome.runtime.sendMessage({ 
-      frontend: accessorResult,
-    }, processResponse)
+  try {
+    // try to restore runner status
+    window.postMessage({
+      frontend: 'Worker service started\n'
+    })
+    awaitingAccessor = true
+    accessorResult = null
+    await setDelay(function () { return !awaitingAccessor }, 1000)
+    if(awaitingAccessor) {
+      awaitingAccessor = false
+    } else {
+      chrome.runtime.sendMessage({ 
+        frontend: accessorResult,
+      }, processResponse)
+    }
+  } catch (e) {
+    
   }
 }
 

@@ -7171,8 +7171,8 @@
 
 
 
-const DEFAULT_DELAY = 1500
-
+const DEFAULT_DELAY = 1000
+const DEFAULT_SHORT_DELAY = 100
 
 
 
@@ -7266,7 +7266,8 @@ async function runStatement(i, AST, runContext) {
     if(AST[i] && AST[i].loc) {
       if(runContext.bubbleLine != AST[i].loc.start.line) {
         runContext.bubbleLine = AST[i].loc.start.line
-        doStatus(runContext)
+        runContext.bubbleColumn = AST[i].loc.start.column
+        await doStatus(runContext, (!AST[i].callee || AST[i].callee.name != 'sleep'))
       }
     }
     if(AST[i].type == 'FunctionDeclaration') {
@@ -7279,11 +7280,18 @@ async function runStatement(i, AST, runContext) {
       }
       let result = (runContext.localFunctions[AST[i].id.name] 
           = runCall.bind(null, runContext, AST[i].params, AST[i].body))
-      //await new Promise(resolve => setTimeout(resolve, DEFAULT_DELAY))
       return result
     } else
     if(AST[i].type == 'ReturnStatement') {
-      return await runStatement(0, [AST[i].argument], runContext)
+      if(AST[i].argument.type == 'Identifier') {
+        if(runContext.localVariables.hasOwnProperty(AST[i].argument.name)) {
+          return runContext.localVariables[AST[i].argument.name]
+        } else {
+          throw new Error('Variable not declared: ' + AST[i].argument.name)
+        }
+      } else {
+        return await runStatement(0, [AST[i].argument], runContext)
+      }
     } else
     if(AST[i].type == 'CallExpression' || AST[i].type == 'NewExpression') {
       // collect variables
@@ -7328,9 +7336,11 @@ async function runStatement(i, AST, runContext) {
           result = await calleeFunc.apply(this, params)
         }
 
-        // automatically pause for a second on function calls outside of library
+        // automatically pause for a second on user functions
+        //   to allow users to observe the result of the API
         if(AST[i].callee.name != 'sleep'
           && beforeLine > runContext.libraryLines) {
+          console.log('LONG DELAY!!! ' + beforeLine)
           await new Promise(resolve => setTimeout(resolve, DEFAULT_DELAY))
         }
         return result
@@ -7392,11 +7402,13 @@ async function runStatement(i, AST, runContext) {
         throw new Error('Function already declared! ' + AST[i].id.name)
       }
       // update client with variable informations
-      doAssign(AST[i].id.name, runContext)
+      let beforeLine = runContext.bubbleLine - 1
+      let bubbleColumn = runContext.bubbleColumn
+      doAssign(AST[i].id.name, beforeLine, bubbleColumn, runContext)
       // TODO: add late binding
       let result = (runContext.localVariables[AST[i].id.name] 
           = await runStatement(0, [AST[i].init], runContext))
-      doAssign(AST[i].id.name, runContext)
+      doAssign(AST[i].id.name, beforeLine, bubbleColumn, runContext)
       return result
     } else 
     if(AST[i].type == 'AssignmentExpression') {
@@ -7540,6 +7552,7 @@ async function runStatement(i, AST, runContext) {
 
 async function runAssignment(left, right, runContext) {
   if(left === WEBDRIVER_API) {
+    runContext.libraryLoaded = true
     runContext.libraryLines = runContext.bubbleLine
     Object.assign(left, right)
   } else {
@@ -7578,12 +7591,12 @@ async function runBody(AST, runContext) {
   }
 }
 
-function doAssign(varName, runContext) {
+function doAssign(varName, lineNumber, bubbleColumn, runContext) {
   try {
     chrome.tabs.sendMessage(runContext.senderId, { 
-      assign: runContext.localVariables[varName],
+      assign: varName.padStart(bubbleColumn) + ' = ' + runContext.localVariables[varName] + '\n',
       // always subtract 1 because code is wrapping in a 1-line function above
-      line: runContext.bubbleLine - 1,
+      line: lineNumber,
     }, function(response) {
   
     });
@@ -7596,7 +7609,7 @@ function doAssign(varName, runContext) {
   }
 }
 
-function doStatus(runContext) {
+async function doStatus(runContext, doSleep) {
   try {
     chrome.tabs.sendMessage(runContext.senderId, { 
       status: '.',
@@ -7605,6 +7618,14 @@ function doStatus(runContext) {
     }, function(response) {
   
     });
+    console.log(runContext.bubbleLine)
+    // don't sleep on library functions
+    if(doSleep
+      && runContext.libraryLoaded 
+      && runContext.bubbleLine > runContext.libraryLines) {
+        console.log('DELAYING! ' + runContext.bubbleLine)
+      await new Promise(resolve => setTimeout(resolve, DEFAULT_SHORT_DELAY))
+    }
   } catch (e) {
     if(e.message.includes('context invalidated')) {
 
@@ -7707,6 +7728,9 @@ async function createEnvironment(sender, runContext) {
   }
   Object.assign(runContext, {
     bubbleLine: -1,
+    bubbleColumn: 0,
+    libraryLines: 0,
+    libraryLoaded: false,
     localVariables: env,
     localFunctions: {},
     senderId: sender.tab.id,

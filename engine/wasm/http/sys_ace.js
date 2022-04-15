@@ -19,6 +19,9 @@ let ACE = {
 const NAMED_FUNCTION = /function\s+([a-z]+[ -~]*)\s*\(/
 const EXTENSION_ID = 'lnglmljjcpnpahmfpnfjkgjgmjhegihd';
 const EXTENSION_VERSION = '1.0'
+const RGBA_REGEX = /rgba?\(([^\)]*)\)/
+const FADE_DURATION = 1000.0
+const FLASH_DURATION = 1000.0
 
 function newPlay() {
   let newButton = document.createElement('BUTTON')
@@ -54,6 +57,9 @@ function processLineNumber(lineNumber) {
 
 
 function processResponse(updateText, lineNumber, error) {
+  if (!ace.session || !ace.session.lineWidgets) {
+    return
+  }
   let newLines = updateText.trim().split('\n')
   let prevLine = ACE.lastLine
   // if error has a line number, insert message below that line
@@ -67,6 +73,7 @@ function processResponse(updateText, lineNumber, error) {
   if(typeof lineNumber != 'number') {
     ACE.lastLine = prevLine
   }
+  ace.session._emit('changeFold', {data:{start:{row: prevLine}}});
 }
 
 
@@ -94,7 +101,7 @@ function runBlock(start) {
       + '\nreturn main();'
     ACE.lastLine = ACE.libraryLines + ace.session.getLength()
   } else {
-    let funcName = ace.env.document.getLine(start).match(NAMED_FUNCTION)[1]
+    let funcName = NAMED_FUNCTION.exec(ace.env.document.getLine(start))[1]
     ACE.lastLine = ACE.libraryLines + ace.session.getFoldWidgetRange(start).end.row
     window['run-script'].innerHTML = 
       (!ACE.libraryLoaded ? ACE.libraryCode : '')
@@ -152,6 +159,8 @@ function removeLineWidgets(start, className) {
   if(!ace.session.lineWidgets) {
     return
   }
+  let textLayer = document.getElementsByClassName('ace_text-layer')[0]
+  let numWidgets = 0
   //let lastLine = ace.session.getFoldWidgetRange(start).end.row
   for(let i = 0; i < ace.session.lineWidgets.length; i++) {
     if(ace.session.lineWidgets[i] 
@@ -160,11 +169,23 @@ function removeLineWidgets(start, className) {
         ACE.statusLine = null
       }
       ace.session.lineWidgets[i].el.remove()
+      delete ace.session.lineWidgets[i].el
       ace.session.lineWidgets[i] = void 0
       ace.session._emit('changeFold', {data:{start:{row: i}}});
+      numWidgets++
+    }
+
+    if(i > ace.renderer.layerConfig.firstRow 
+      && i - numWidgets - start < textLayer.children.length) {
+      textLayer.children[i - numWidgets - start].style.backgroundColor = 'inherit'
     }
   }
 }
+
+
+
+////////////////////////////  render
+
 
 
 function renderLineWidgets() {
@@ -177,21 +198,64 @@ function renderLineWidgets() {
   let textLayer = document.getElementsByClassName('ace_text-layer')[0]
   let start = ace.renderer.layerConfig.firstRow
   let count = editor.clientHeight / ace.renderer.lineHeight
-  for(let i = start; i < start + count; i++) {
-    if(ace.session.lineWidgets[i]) {
+  for(let i = 0; i < ace.session.lineWidgets.length; i++) {
+    // DO CURSOR LINES
+    if(ace.session.lineWidgets[i]
+      // always update line colors
+      // TODO: Sys_Frame
+      && i + numWidgets - start < textLayer.children.length
+    ) {
+      let rgb = window.getComputedStyle( textLayer.children[4] ,null)
+        .getPropertyValue('background-color')
+      let rgbaSegments = RGBA_REGEX.exec(rgb)[1].split(',')
+      let t = Date.now() - ace.session.lineWidgets[i].flashTime
+
+      if(t < FADE_DURATION + FLASH_DURATION) {
+        if(t > FLASH_DURATION) {
+          rgbaSegments[3] = 1.0 - ((t - FLASH_DURATION) / FADE_DURATION) + ''
+        } else {
+          rgbaSegments[3] = '1'
+        }
+        textLayer.children[i + numWidgets - start].style.backgroundColor
+          = 'rgba(' + rgbaSegments.join(',') + ')'
+      } else {
+        textLayer.children[i + numWidgets - start].style.backgroundColor = 'transparent'
+      }
+    }
+
+    if(ace.session.lineWidgets[i]
+      && ace.session.lineWidgets[i].el.classList.contains('morph_cursor')) {
+      continue;
+    }
+
+
+    if(ace.session.lineWidgets[i] && i >= start && i <= start + count) {
       let newHelp = ace.session.lineWidgets[i].el
-      textLayer.insertBefore(newHelp, textLayer.children[i - start])
+      if(!newHelp.parentElement != textLayer) {
+        let referenceChild = textLayer.children[i + numWidgets - start + 1]
+        textLayer.insertBefore(newHelp, referenceChild)
+      }
       newHelp.style.top = ((i + 1 + numWidgets) * ace.renderer.lineHeight) + 'px'
       newHelp.style.height = ace.session.lineWidgets[i].pixelHeight + 'px'
       newHelp.style.left = '0px'
       newHelp.style.display = 'block'
       numWidgets++
-    }
+    } else if(ace.session.lineWidgets[i]) {
+      ace.session.lineWidgets[i].el.style.display = 'none'
+      ace.session.lineWidgets[i].el.remove()
+      // No widget, update line with cursor!
+    } // else  // do line highlight seperately?
   }
   // TODO: static references \/
   document.getElementsByClassName('ace_content')[0]
     .height = (ace.session.getLength() + numWidgets + 2) * ace.renderer.lineHeight
 }
+
+
+
+
+
+
 
 
 function initLineWidgets() {
@@ -233,7 +297,7 @@ function createLineWidget(text, line, classes) {
 
 function displayBlockCall(start, evt) {
   let lastLine = ace.session.getFoldWidgetRange(start).end.row
-  let funcName = ace.env.document.getLine(start).match(NAMED_FUNCTION)[1]
+  let funcName = NAMED_FUNCTION.exec(ace.env.document.getLine(start))[1]
   if(lastLine < 0) {
     lastLine = ace.session.length()
   }
@@ -249,6 +313,7 @@ function updatePlay() {
   let buttonCounter = 0
   let start = ace.renderer.layerConfig.firstRow
   let count = ace.renderer.layerConfig.lastRow - start
+  //let numWidgets = 0
   for(let i = start; i < start + count; i++) {
     if(ace.session.foldWidgets[i] == 'start' 
       // only match functions with names
@@ -264,6 +329,9 @@ function updatePlay() {
       //let top = document.getElementsByClassName('ace_gutter-layer')[0].children[].offsetTop
       //   ^ uhhh, relativeTop?
       ACE.playButtons[buttonCounter].style.top = ((i - start) * ace.renderer.lineHeight) + 'px'
+      //if(ace.session.lineWidgets[i]) {
+      //  numWidgets++;
+      //}
       buttonCounter++
     }
   }
@@ -355,29 +423,91 @@ function onStarted(request) {
   window['run-button'].classList.remove('running')
 }
 
+
 function onStatus(request) {
+  getLimitedLine(request)
+return
+
+  if(!ACE.statusLine) {
+    createLineWidget('.', 0, 'morph_cursor')
+    ACE.statusLine = ace.session.lineWidgets[0]
+  }
+
+  if(prevLine < 0) {
+    // skip updating highlighted lines
+    return prevLine
+  }
+
+  let start = ace.renderer.layerConfig.firstRow
+  if(prevLine < start) {
+    return prevLine
+  }
+
+  let textLayer = document.getElementsByClassName('ace_text-layer')[0]
+  if(!textLayer) {
+    return prevLine
+  }
+
+  let loc = 0
+  let c = 0
+  for(; c < textLayer.children.length; c++) {
+    if(textLayer.children[c].className.includes('morph_assign')) {
+      continue
+    } else if (loc == prevLine - start) {
+      break
+    } else {
+      loc++
+    }
+  }
+
+  if(c == textLayer.children.length) {
+    return prevLine
+  }
+
+  if(!ace.session.lineWidgets[prevLine]) {
+    createLineWidget('.', prevLine, 'morph_cursor')
+  }
+  ace.session.lineWidgets[prevLine].pixelHeight = 0
+  ace.session.lineWidgets[prevLine].flashTime = Date.now()
+  ace.session._emit('changeFold', {data:{start:{row: prevLine}}});
+  return prevLine
+}
+
+
+function getLimitedLine(request) {
   let prevLine = request.line
   if(!ACE.libraryLoaded) {
     prevLine -= ACE.libraryLines
   } else {
     prevLine--;
   }
+  ACE.cursorLine = prevLine
+  if(prevLine >= 0) {
+    ACE.currentLine = prevLine
+  }
+
+  return prevLine
+}
+
+
+function onAssign(request) {
+  let prevLine = getLimitedLine(request)
   // TODO: status line always out of view because sleep is in library.js
   if(prevLine < 0) {
     return // don't load status line while it's out of view
   }
-  if(!ACE.statusLine) {
-    createLineWidget('.', prevLine, 'morph_cursor')
-    ACE.statusLine = ace.session.lineWidgets[prevLine]
+  if(!ace.session.lineWidgets[prevLine]
+    || !ace.session.lineWidgets[prevLine].el.className.includes('morph_assign')) {
+      createLineWidget(request.assign, prevLine, 'morph_flash morph_assign')
+  } else {
   }
-  ACE.statusLine.el.children[0].innerText += '.'
-  ace.session.lineWidgets[ACE.statusLine.row] = void 0
-  ace.session._emit('changeFold', {data:{start:{row: ACE.statusLine.row}}});
-  ACE.statusLine.row = prevLine // so it can keep removing itself as the program cursor moves
-  ace.session.lineWidgets[prevLine] = ACE.statusLine
+  ace.session.lineWidgets[prevLine].el.children[0].innerText = request.assign
+  // sometimes assignments can update a lot
+  ace.session.lineWidgets[prevLine].flashTime = Date.now()
+  // TODO: make a way to turn this off
+  ace.session.lineWidgets[prevLine].el.classList.add('morph_flash')
   ace.session._emit('changeFold', {data:{start:{row: prevLine}}});
 }
-
 
 
 window.addEventListener('message', function (message) {
@@ -421,7 +551,7 @@ window.addEventListener('message', function (message) {
     onStatus(request)
   } else 
   if(typeof request.assign != 'undefined') {
-    onStatus(request)
+    onAssign(request)
   } else {
     debugger
   }

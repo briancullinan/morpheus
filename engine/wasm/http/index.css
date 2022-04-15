@@ -13,16 +13,35 @@ body > img {
   visibility: hidden;
 }
 
+.running .ace_line {
+  transition: color 1s ease, background-color 1s ease;
+}
+.runner .ace_line:not(.morph_flash) {
+  background-color: transparent;
+}
+.runner .ace_line:not(.morph_flash) .ace_comment {
+  color: #75715E;
+}
+
+
 .morph_error {
-  background: #902020;
+  background-color: #902020;
 }
 .morph_error .ace_comment {
   font-weight: bold;
   color: #A0D0A0;
 }
 .morph_cursor {
-  background: #206020;
+  background-color: #206020;
+}
+.morph_cursor .ace_comment {
   color: #D0A0D0;
+}
+.morph_flash {
+  background-color: #B09020;
+}
+.morph_flash .ace_comment {
+  color: #202060;
 }
 
 .run-button {
@@ -63,7 +82,7 @@ body.paused .run-button:active,
 body.paused .run-button:focus,
 .run-button {
   border-color: transparent transparent transparent #208020;
-  transition: 100ms height ease,  100ms border ease,  100ms color ease;
+  transition: border 200ms ease, color 1s ease;
   cursor: pointer;
   animation: none;
   border-style: solid;
