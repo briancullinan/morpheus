@@ -354,6 +354,9 @@ function Sys_Frame() {
 		Q3e.inFrame = true
 		Q3e.running = !Q3e.running
 		try {
+			if(typeof window.ace != 'undefined') {
+				Ace_Frame()
+			}
 			Com_Frame(Q3e.running)
 		} catch (e) {
 			if(!Q3e.exited && e.message == 'longjmp') {

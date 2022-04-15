@@ -196,33 +196,12 @@ function renderLineWidgets() {
   let count = editor.clientHeight / ace.renderer.lineHeight
   for(let i = 0; i < ace.session.lineWidgets.length; i++) {
 
-
-    // DO CURSOR LINES
-    // always update line colors
-    // TODO: Sys_Frame
-    if(i + numWidgets - start + 1 < textLayer.children.length) {
-      let referenceChild = textLayer.children[i + numWidgets - start + 1]
-      if(statusWidgets[i]) {
-        let t = Date.now() - statusWidgets[i]
-        if(t < FADE_DURATION + FLASH_DURATION) {
-          referenceChild.classList.add('morph_cursor')
-        } else {
-          referenceChild.classList.remove('morph_cursor')
-        }
-      }
-    }
-
-
-    if(!ace.session.lineWidgets[i]) {
-      continue
-    }
-
-    if(i >= start && i <= start + count) {
+    if(ace.session.lineWidgets[i] && i >= start && i <= start + count) {
       let newHelp = ace.session.lineWidgets[i].el
       if(!newHelp.parentElement != textLayer) {
-        let referenceChild = textLayer.children[i + numWidgets - start + 1]
-        textLayer.insertBefore(newHelp, referenceChild)
+        textLayer.insertBefore(newHelp, textLayer.children[0])
       }
+
       newHelp.style.top = ((i + 1 + numWidgets) * ace.renderer.lineHeight) + 'px'
       newHelp.style.height = ace.session.lineWidgets[i].pixelHeight + 'px'
       newHelp.style.left = '0px'
@@ -231,19 +210,47 @@ function renderLineWidgets() {
       if(ace.session.lineWidgets[i].flashTime) {
         let t = Date.now() - ace.session.lineWidgets[i].flashTime
         if(t < FADE_DURATION + FLASH_DURATION) {
-          newHelp.classList.remove('morph_flash')
+          if(newHelp.classList.contains('morph_flash'))
+            newHelp.classList.remove('morph_flash')
         } else {
-          newHelp.classList.add('morph_flash')
+          if(!newHelp.classList.contains('morph_flash'))
+            newHelp.classList.add('morph_flash')
         }
       }
-    } else {
+    } else if(ace.session.lineWidgets[i]
+      && ace.session.lineWidgets[i].el.style.display != 'none') {
       ace.session.lineWidgets[i].el.style.display = 'none'
       ace.session.lineWidgets[i].el.remove()
       // No widget, update line with cursor!
     } // else  // do line highlight seperately?
 
 
+
   }
+
+
+
+
+  for(let i = 0; i < ace.session.lineWidgets.length; i++) {
+    // DO CURSOR LINES
+    // always update line colors
+    // TODO: Sys_Frame
+    if(i + numWidgets - start < textLayer.children.length) {
+      let referenceRow = textLayer.children[i + numWidgets - start]
+      if(statusWidgets[i] 
+        && Date.now() - statusWidgets[i] < FADE_DURATION + FLASH_DURATION) {
+        if(referenceRow.classList.contains('morph_error')) {
+          debugger
+        }
+        if(!referenceRow.classList.contains('morph_cursor'))
+          referenceRow.classList.add('morph_cursor')
+      } else {
+        if(referenceRow.classList.contains('morph_cursor'))
+          referenceRow.classList.remove('morph_cursor')
+      }
+    }
+  }
+
   // TODO: static references \/
   document.getElementsByClassName('ace_content')[0]
     .height = (ace.session.getLength() + numWidgets + 2) * ace.renderer.lineHeight
@@ -267,7 +274,8 @@ function initLineWidgets() {
 
 
 function createLineWidget(text, line, classes) {
-  if (!ace.session || !ace.session.lineWidgets) {
+  let textLayer = document.getElementsByClassName('ace_text-layer')[0]
+  if (!ace.session || !ace.session.lineWidgets || !textLayer) {
     initLineWidgets()
   }
   if(ace.session.lineWidgets[line]) {
@@ -287,6 +295,13 @@ function createLineWidget(text, line, classes) {
   }
   ace.session.lineWidgets[line] = newWidget
   newHelp.innerHTML = newWidget.html
+  // WHAT THE FUCK? LINE ISN'T SHOWING UP!!!
+  // CLASSIC!
+  if(!textLayer.children.length) {
+    textLayer.appendChild(newHelp)
+  } else {
+    textLayer.insertBefore(newHelp, textLayer.children[0])    
+  }
   ace.session._emit('changeFold', {data:{start:{row: line}}});
   return newWidget
 }
@@ -381,10 +396,6 @@ function onError(request) {
 
   document.body.classList.remove('running')
   document.body.classList.add('paused')
-  if(ACE.refreshTimer) {
-    this.clearInterval(ACE.refreshTimer)
-    ACE.refreshTimer = null
-  }
   processResponse(request.error, request.line, true)
 }
 
@@ -423,9 +434,6 @@ function onStarted(request) {
   document.body.classList.add('running')
   ACE.lastRunId = request.started
   window['run-button'].classList.remove('running')
-  if(!ACE.refreshTimer) {
-    ACE.refreshTimer = setInterval(renderLineWidgets, 100)
-  }
 }
 
 
@@ -436,12 +444,32 @@ let statusWidgets = [
 function onStatus(request) {
   let prevLine = getLimitedLine(request)
 
-  if(!ACE.statusLine) {
-    createLineWidget('.', 0, 'morph_cursor')
-    ACE.statusLine = ace.session.lineWidgets[0]
-  }
+  //if(!ACE.statusLine) {
+  //  createLineWidget('.', 0, 'morph_cursor')
+  //  ACE.statusLine = ace.session.lineWidgets[0]
+  //}
 
   statusWidgets[prevLine] = Date.now()
+}
+
+
+
+
+// TODO: !!!!!!!!!!!!!!! This is one of those dangerous consequential leaves
+//   That should really have extensive library testing in a miriad of existing 
+//   projects to test against, but alas, I'm only one
+let previousTime = 0
+// TODO: 10FPS for text editor? Replace with engine renderer and entities for files/flying
+function Ace_Frame() {
+  try {
+    let now = Date.now()
+    if(now - previousTime > 100) {
+      renderLineWidgets()
+    }
+
+  } catch (e) {
+    debugger
+  }
 }
 
 
@@ -515,10 +543,6 @@ window.addEventListener('message', function (message) {
   if(typeof request.result != 'undefined') {
     document.body.classList.remove('running')
     document.body.classList.add('paused')
-    if(ACE.refreshTimer) {
-      this.clearInterval(ACE.refreshTimer)
-      ACE.refreshTimer = null
-    }
     processResponse(request.result, request.line, false)
   } else 
   if(typeof request.status != 'undefined') {
