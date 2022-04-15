@@ -175,10 +175,6 @@ function removeLineWidgets(start, className) {
       numWidgets++
     }
 
-    if(i > ace.renderer.layerConfig.firstRow 
-      && i - numWidgets - start < textLayer.children.length) {
-      textLayer.children[i - numWidgets - start].style.backgroundColor = 'inherit'
-    }
   }
 }
 
@@ -199,37 +195,29 @@ function renderLineWidgets() {
   let start = ace.renderer.layerConfig.firstRow
   let count = editor.clientHeight / ace.renderer.lineHeight
   for(let i = 0; i < ace.session.lineWidgets.length; i++) {
-    // DO CURSOR LINES
-    if(ace.session.lineWidgets[i]
-      // always update line colors
-      // TODO: Sys_Frame
-      && i + numWidgets - start < textLayer.children.length
-    ) {
-      let rgb = window.getComputedStyle( textLayer.children[4] ,null)
-        .getPropertyValue('background-color')
-      let rgbaSegments = RGBA_REGEX.exec(rgb)[1].split(',')
-      let t = Date.now() - ace.session.lineWidgets[i].flashTime
 
-      if(t < FADE_DURATION + FLASH_DURATION) {
-        if(t > FLASH_DURATION) {
-          rgbaSegments[3] = 1.0 - ((t - FLASH_DURATION) / FADE_DURATION) + ''
+
+    // DO CURSOR LINES
+    // always update line colors
+    // TODO: Sys_Frame
+    if(i + numWidgets - start + 1 < textLayer.children.length) {
+      let referenceChild = textLayer.children[i + numWidgets - start + 1]
+      if(statusWidgets[i]) {
+        let t = Date.now() - statusWidgets[i]
+        if(t < FADE_DURATION + FLASH_DURATION) {
+          referenceChild.classList.add('morph_cursor')
         } else {
-          rgbaSegments[3] = '1'
+          referenceChild.classList.remove('morph_cursor')
         }
-        textLayer.children[i + numWidgets - start].style.backgroundColor
-          = 'rgba(' + rgbaSegments.join(',') + ')'
-      } else {
-        textLayer.children[i + numWidgets - start].style.backgroundColor = 'transparent'
       }
     }
 
-    if(ace.session.lineWidgets[i]
-      && ace.session.lineWidgets[i].el.classList.contains('morph_cursor')) {
-      continue;
+
+    if(!ace.session.lineWidgets[i]) {
+      continue
     }
 
-
-    if(ace.session.lineWidgets[i] && i >= start && i <= start + count) {
+    if(i >= start && i <= start + count) {
       let newHelp = ace.session.lineWidgets[i].el
       if(!newHelp.parentElement != textLayer) {
         let referenceChild = textLayer.children[i + numWidgets - start + 1]
@@ -240,11 +228,21 @@ function renderLineWidgets() {
       newHelp.style.left = '0px'
       newHelp.style.display = 'block'
       numWidgets++
-    } else if(ace.session.lineWidgets[i]) {
+      if(ace.session.lineWidgets[i].flashTime) {
+        let t = Date.now() - ace.session.lineWidgets[i].flashTime
+        if(t < FADE_DURATION + FLASH_DURATION) {
+          newHelp.classList.remove('morph_flash')
+        } else {
+          newHelp.classList.add('morph_flash')
+        }
+      }
+    } else {
       ace.session.lineWidgets[i].el.style.display = 'none'
       ace.session.lineWidgets[i].el.remove()
       // No widget, update line with cursor!
     } // else  // do line highlight seperately?
+
+
   }
   // TODO: static references \/
   document.getElementsByClassName('ace_content')[0]
@@ -383,6 +381,10 @@ function onError(request) {
 
   document.body.classList.remove('running')
   document.body.classList.add('paused')
+  if(ACE.refreshTimer) {
+    this.clearInterval(ACE.refreshTimer)
+    ACE.refreshTimer = null
+  }
   processResponse(request.error, request.line, true)
 }
 
@@ -421,56 +423,25 @@ function onStarted(request) {
   document.body.classList.add('running')
   ACE.lastRunId = request.started
   window['run-button'].classList.remove('running')
+  if(!ACE.refreshTimer) {
+    ACE.refreshTimer = setInterval(renderLineWidgets, 100)
+  }
 }
 
 
+let statusWidgets = [
+
+]
+
 function onStatus(request) {
-  getLimitedLine(request)
-return
+  let prevLine = getLimitedLine(request)
 
   if(!ACE.statusLine) {
     createLineWidget('.', 0, 'morph_cursor')
     ACE.statusLine = ace.session.lineWidgets[0]
   }
 
-  if(prevLine < 0) {
-    // skip updating highlighted lines
-    return prevLine
-  }
-
-  let start = ace.renderer.layerConfig.firstRow
-  if(prevLine < start) {
-    return prevLine
-  }
-
-  let textLayer = document.getElementsByClassName('ace_text-layer')[0]
-  if(!textLayer) {
-    return prevLine
-  }
-
-  let loc = 0
-  let c = 0
-  for(; c < textLayer.children.length; c++) {
-    if(textLayer.children[c].className.includes('morph_assign')) {
-      continue
-    } else if (loc == prevLine - start) {
-      break
-    } else {
-      loc++
-    }
-  }
-
-  if(c == textLayer.children.length) {
-    return prevLine
-  }
-
-  if(!ace.session.lineWidgets[prevLine]) {
-    createLineWidget('.', prevLine, 'morph_cursor')
-  }
-  ace.session.lineWidgets[prevLine].pixelHeight = 0
-  ace.session.lineWidgets[prevLine].flashTime = Date.now()
-  ace.session._emit('changeFold', {data:{start:{row: prevLine}}});
-  return prevLine
+  statusWidgets[prevLine] = Date.now()
 }
 
 
@@ -498,14 +469,13 @@ function onAssign(request) {
   }
   if(!ace.session.lineWidgets[prevLine]
     || !ace.session.lineWidgets[prevLine].el.className.includes('morph_assign')) {
-      createLineWidget(request.assign, prevLine, 'morph_flash morph_assign')
+      createLineWidget(request.assign, prevLine, 'morph_assign')
   } else {
   }
   ace.session.lineWidgets[prevLine].el.children[0].innerText = request.assign
   // sometimes assignments can update a lot
   ace.session.lineWidgets[prevLine].flashTime = Date.now()
   // TODO: make a way to turn this off
-  ace.session.lineWidgets[prevLine].el.classList.add('morph_flash')
   ace.session._emit('changeFold', {data:{start:{row: prevLine}}});
 }
 
@@ -545,6 +515,10 @@ window.addEventListener('message', function (message) {
   if(typeof request.result != 'undefined') {
     document.body.classList.remove('running')
     document.body.classList.add('paused')
+    if(ACE.refreshTimer) {
+      this.clearInterval(ACE.refreshTimer)
+      ACE.refreshTimer = null
+    }
     processResponse(request.result, request.line, false)
   } else 
   if(typeof request.status != 'undefined') {

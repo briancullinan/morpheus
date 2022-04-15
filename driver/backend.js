@@ -7264,9 +7264,9 @@ async function runStatement(i, AST, runContext) {
   }
   try {
     if(AST[i] && AST[i].loc) {
+      runContext.bubbleColumn = AST[i].loc.start.column
       if(runContext.bubbleLine != AST[i].loc.start.line) {
         runContext.bubbleLine = AST[i].loc.start.line
-        runContext.bubbleColumn = AST[i].loc.start.column
         await doStatus(runContext, (!AST[i].callee || AST[i].callee.name != 'sleep'))
       }
     }
@@ -7594,7 +7594,7 @@ async function runBody(AST, runContext) {
 function doAssign(varName, lineNumber, bubbleColumn, runContext) {
   try {
     chrome.tabs.sendMessage(runContext.senderId, { 
-      assign: varName.padStart(bubbleColumn) + ' = ' + runContext.localVariables[varName] + '\n',
+      assign: new Array(bubbleColumn).fill(' ').join('') + varName + ' = ' + runContext.localVariables[varName] + '\n',
       // always subtract 1 because code is wrapping in a 1-line function above
       line: lineNumber,
     }, function(response) {

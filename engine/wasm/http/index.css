@@ -14,12 +14,16 @@ body > img {
 }
 
 .running .ace_line {
-  transition: color 1s ease, background-color 1s ease;
+  transition: background-color 200ms ease;
 }
-.runner .ace_line:not(.morph_flash) {
+.runner .ace_line .ace_comment {
+  transition: color 200ms ease;
+}
+
+.started .ace_line.morph_flash {
   background-color: transparent;
 }
-.runner .ace_line:not(.morph_flash) .ace_comment {
+.started .ace_line.morph_flash .ace_comment {
   color: #75715E;
 }
 
@@ -37,10 +41,10 @@ body > img {
 .morph_cursor .ace_comment {
   color: #D0A0D0;
 }
-.morph_flash {
+.morph_assign {
   background-color: #B09020;
 }
-.morph_flash .ace_comment {
+.morph_assign .ace_comment {
   color: #202060;
 }
 
@@ -82,7 +86,7 @@ body.paused .run-button:active,
 body.paused .run-button:focus,
 .run-button {
   border-color: transparent transparent transparent #208020;
-  transition: border 200ms ease, color 1s ease;
+  transition: border 200ms ease, color 200ms ease;
   cursor: pointer;
   animation: none;
   border-style: solid;
@@ -224,7 +228,6 @@ body .run-button.small:hover {
 #viewport-frame canvas {
   background-color: rgba(0, 0, 0, 0.0);
   height: 100%;
-  transition: background-color 1s ease-in-out;
   width: 50%;
   height: 100%;
   flex-grow: 1;
@@ -324,7 +327,6 @@ body.no-gl #editor {
   top:0;
   left:0;
   z-index: -1;
-  transition: opacity 1s ease-in-out;
   opacity: 1.0;
 }
 
