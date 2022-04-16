@@ -29,7 +29,7 @@ function newPlay() {
 	newButton.className += ' run-button small '
 	document.body.appendChild(newButton)
 	ACE.playButtons.push(newButton)
-	ACE.playCount++
+	++ACE.playCount
 }
 
 
@@ -47,7 +47,7 @@ function processLineNumber(lineNumber) {
 		ACE.libraryLoaded = true
 		let previousLength = ace.session.getLength()
 		let previousWidgets = []
-		for(let i = 0; i < previousLength; i++) {
+		for(let i = 0; i < previousLength; ++i) {
 			let oldWidgets = widgetManager.getWidgetsAtRow(i)
 			oldWidgets.forEach(function (w) { 
 				previousWidgets[i] = w
@@ -64,7 +64,7 @@ function processLineNumber(lineNumber) {
 
 
 		// Add widgets back in to new line
-		for(let i = 0; i < previousLength; i++) {
+		for(let i = 0; i < previousLength; ++i) {
 			if(!previousWidgets[i]) {
 				continue
 			}
@@ -88,6 +88,9 @@ function processResponse(updateText, lineNumber, error) {
 	if (!ace.session || !ace.session.lineWidgets) {
 		return
 	}
+
+return
+
 	let newLines = updateText.trim().split('\n')
 	let prevLine
 	// if error has a line number, insert message below that line
@@ -98,8 +101,8 @@ function processResponse(updateText, lineNumber, error) {
 		prevLine = ACE.lastLine - (ACE.libraryLoaded ? 1 : ACE.libraryLines)
 	}
 
-	for(let j = 0; j < newLines.length; j++) {
-		let newWidget = createLineWidget(newLines[j], prevLine++, error ? 'morph_error' : '')
+	for(let j = 0; j < newLines.length; ++j) {
+		let newWidget = createLineWidget(newLines[j], ++prevLine, error ? 'morph_error' : '')
 		ace.getSession().widgetManager.addLineWidget(newWidget)
 	}
 	// add console output to bottom of code
@@ -130,12 +133,13 @@ function runBlock(start) {
 	}
 
 	if(start == -1) {
+		let value = window.ace.getValue()
 		window['run-script'].value = 
 			// because library inserted into page on error
 			(!ACE.libraryLoaded ? ACE.libraryCode : '')
-			+ window.ace.getValue()
-			+ '\nreturn main();'
+			+ value + '\nreturn main();'
 		ACE.lastLine = ACE.libraryLines + ace.session.getLength()
+			- getEmptyLines(value)
 	} else {
 		let funcName = NAMED_FUNCTION.exec(ace.env.document.getLine(start))[1]
 		ACE.lastLine = ACE.libraryLines + ace.session.getFoldWidgetRange(start).end.row
@@ -191,7 +195,7 @@ async function emitDownload() {
 // MAYBE A FUCKING WARNING HERE LIKE CALL STACK EXCEEDED?
 //   HOW ABOUT "FOR LOOP LENGTH EXCEEDED"? FUCKING AMAZING HOW AWFUL 
 //   PROGRAMMING IS, NO WONDER THERE'S BUGS
-// for(let i = 0; i < ace.session.lineWidgets.length; i++) {
+// for(let i = 0; i < ace.session.lineWidgets.length; ++i) {
 //   modified ace.session.lineWidgets 
 // C# HAS THIS WARNING MAYBE MY PROBLEM IS LANGUAGE
 
@@ -240,14 +244,14 @@ function displayBlockCall(start, evt) {
 
 
 function updatePlay() {
-	if (!ace.session.lineWidgets) {
-		initLineWidgets()
+	if (!ace.session || !ace.session.lineWidgets) {
+		return
 	}
 	let buttonCounter = 0
 	let start = ace.renderer.layerConfig.firstRow
 	let count = ace.renderer.layerConfig.lastRow - start
 	//let numWidgets = 0
-	for(let i = start; i < start + count; i++) {
+	for(let i = start; i < start + count; ++i) {
 		if(ace.session.foldWidgets[i] == 'start' 
 			// only match functions with names
 			&& ace.session.getLine(i).match(NAMED_FUNCTION)
@@ -261,13 +265,10 @@ function updatePlay() {
 			//let top = document.getElementsByClassName('ace_gutter-layer')[0].children[].offsetTop
 			//   ^ uhhh, relativeTop?
 			ACE.playButtons[buttonCounter].style.top = ((i - start) * ace.renderer.lineHeight) + 'px'
-			//if(ace.session.lineWidgets[i]) {
-			//  numWidgets++;
-			//}
-			buttonCounter++
+			++buttonCounter
 		}
 	}
-	for(let j = buttonCounter; j < ACE.playCount; j++) {
+	for(let j = buttonCounter; j < ACE.playCount; ++j) {
 		ACE.playButtons[j].style.display = 'none'
 	}
 }
@@ -287,19 +288,41 @@ function initLibraries() {
 
 }
 
+function getEmptyLines(value)
+ {
+	return value.match(/\s*$/)[0].split('\n').length
+ }
 
 function initAce() {
 	// TODO: on native sys_open index.html and use engine as proxy, cebsocket
 	window.ace = ace.edit('editor')
 	ace.setFontSize(16)
 	ace.setTheme('ace/theme/monokai')
+	ace.setOption('minLines', 1000)
 	ace.session.setTabSize(2)
 	ace.session.setMode('ace/mode/javascript')
 	ace.session.setUseWorker(false)
 	// add play buttons to individual function blocks for ease of use
 	ace.on('focus', function () { INPUT.editorActive = true })
 	ace.on('blur', function () { INPUT.editorActive = false })
-	ace.renderer.on('afterRender', updatePlay)
+
+	ace.renderer.on('afterRender', function wtfLines () {
+		let textLayer = document.getElementsByClassName('ace_content')[0]
+		if(!textLayer) {
+			return
+		}
+		let virtualLineCount = Math.ceil(textLayer.clientHeight / ace.renderer.lineHeight)
+		let value = ace.getValue()
+		let numExistingExtraLines = getEmptyLines(value)
+		//ace.session.getLength()
+		if(numExistingExtraLines < virtualLineCount) {
+			let addLineCount = virtualLineCount - numExistingExtraLines + 1
+			ace.session.replace({
+				start: value.length - 2, 
+				end: value.length - 1
+			}, new Array(addLineCount).fill('\n').join(''));
+		}
+	})
 
 }
 
@@ -399,7 +422,7 @@ function renderCursorLines() {
 	let start = ace.renderer.layerConfig.firstRow
 	let count = ace.renderer.layerConfig.lastRow - start
 	//let numWidgets = 0
-	for(let i = start; i < start + count; i++) {
+	for(let i = start; i < start + count; ++i) {
 		// DO CURSOR LINES
 		// always update line colors
 		if(i - start < textLayer.children.length) {
@@ -463,6 +486,10 @@ function onAssign(request) {
 	if(prevLine < 0) {
 		return // don't load status line while it's out of view
 	}
+	if (!ace.session || !ace.session.lineWidgets) {
+		initLineWidgets()
+	}
+	
 	let prevLineWidgets = ace.getSession().widgetManager.getWidgetsAtRow(prevLine)
 	if(!prevLineWidgets.length) {
 		let newWidget = createLineWidget((request.assign || '').replace(/\s*$/, ''), prevLine, 'morph_assign')

@@ -7218,16 +7218,9 @@ let WEBDRIVER_API = {
 
 
 
-async function runCall(outerContext, runContext, functionName, parameterDefinition, body, ...callArgs) {
+async function runCall(runContext, functionName, parameterDefinition, body, ...callArgs) {
 	// assign to param names in next context
-	let startVars = runContext.localVariables
-
-	// restore outer scope
-	let callStack = Object.assign({}, outerContext.localFunctions)
-	Object.assign(callStack, runContext.localFunctions)
-	Object.assign(callStack, outerContext.localVariables)
-	// replace with current context
-	Object.assign(callStack, runContext.localVariables)
+	let startVars = Object.assign({}, runContext.localVariables)
 
 	let beforeLine = runContext.bubbleLine - 1 // -1 for wrapper function
 	runContext.bubbleStack.push(functionName + ' . ' + beforeLine)
@@ -7239,15 +7232,15 @@ async function runCall(outerContext, runContext, functionName, parameterDefiniti
 		if(l == callArgs.length) {
 			continue;
 		}
-		callStack[parameterDefinition[l].name] = callArgs[l]
+		runContext.localVariables[parameterDefinition[l].name] = callArgs[l]
 	}
 
 	// run new command context
-	runContext.localVariables = callStack
 	let result = await runStatement(0, [body], runContext)
 
+	Object.assign(runContext.localVariables, startVars) // reset references
+	// TODO: LEAKY SCOPE, remove unnamed variables from previous scope
 
-	runContext.localVariables = startVars
 	runContext.bubbleStack.pop()
 
 	return result
@@ -7280,9 +7273,8 @@ async function runStatement(i, AST, runContext) {
 			++functionCounter
 			// because localvars and line numbers are updated, 
 			//   we restore the context the function was created on
-			let outerContext = Object.assign({}, runContext) 
 			let result = (runContext.localFunctions[AST[i].id.name] 
-					= runCall.bind(null, outerContext, runContext, AST[i].id.name, AST[i].params, AST[i].body))
+					= runCall.bind(null, runContext, AST[i].id.name, AST[i].params, AST[i].body))
 			return result
 		} else
 		if(AST[i].type == 'ReturnStatement') {
@@ -7357,13 +7349,14 @@ async function runStatement(i, AST, runContext) {
 			|| AST[i].type == 'ArrowFunctionExpression') {
 			let inlineName
 			if(AST[i].id) {
-				inlineName = AST[i].id.name
+				inlineName = 'inline ' + AST[i].id.name
 			} else {
-				inlineName = 'inline func ' + (++functionCounter)
+				inlineName = 'inline ' 
+					+ (AST[i].type == 'ArrowFunctionExpression' ? 'lambda ' : 'func ') 
+					+ (++functionCounter)
 			}
-			let outerContext = Object.assign({}, runContext) 
 			let result = (runContext.localFunctions[inlineName] 
-				= runCall.bind(null, outerContext, runContext, inlineName, AST[i].params, AST[i].body))
+				= runCall.bind(null, runContext, inlineName, AST[i].params, AST[i].body))
 			return result
 		} else
 		if(AST[i].type == 'BlockStatement') {
@@ -7418,29 +7411,27 @@ async function runStatement(i, AST, runContext) {
 			// update client with variable informations
 			let beforeLine = runContext.bubbleLine - 1
 			let bubbleColumn = runContext.bubbleColumn
-			// WOW! IMAGINE THAT! SHOW VARIABLES BEFORE AND AFTER ASSIGNMENT! GOOGLE CHROME DEBUGGER!
-			doAssign(AST[i].id.name, beforeLine, bubbleColumn, runContext)
 			// TODO: add late binding
-			let result = (runContext.localVariables[AST[i].id.name] 
+			let result
+			if(AST[i].init.type == 'Literal') {
+				result = (runContext.localVariables[AST[i].id.name] = await AST[i].init.value)
+			} else {
+				// WOW! IMAGINE THAT! SHOW VARIABLES BEFORE AND AFTER ASSIGNMENT! GOOGLE CHROME DEBUGGER!
+				doAssign(AST[i].id.name, beforeLine, bubbleColumn, runContext)
+				result = (runContext.localVariables[AST[i].id.name] 
 					= await runStatement(0, [AST[i].init], runContext))
+			}
 			if(runContext.ended) { // error occcured in RUN context
 				return
 			}
 			doAssign(AST[i].id.name, beforeLine, bubbleColumn, runContext)
 			return result
 		} else 
+			// TODO: WHAT IS THIS? func(varName = default?)
 		if(AST[i].type == 'AssignmentExpression') {
 			let right
 			if(AST[i].right.type == 'Identifier') {
 				throw new Error('AssignmentExpression: Not implemented!')
-			} else 
-			if(AST[i].right.type == 'BinaryExpression') {
-				// CREATE INLINE LAMBDA!
-				if(AST[i].right.left.name.charCodeAt(0) == 0x2716) {
-					right = runCall
-				} else {
-					throw new Error('AssignmentExpression: Not implemented!')
-				}
 			} else {
 				right = await runStatement(0, [AST[i].right], runContext)
 			}
@@ -7450,14 +7441,7 @@ async function runStatement(i, AST, runContext) {
 
 			let left
 			if(AST[i].left.type == 'Identifier') {
-				// CREATE INLINE LAMBDA!
-				if(right == runCall) {
-					let outerContext = Object.assign({}, runContext) 
-					inlineName = 'lambda func ' + (++functionCounter)
-					return right.bind(null, outerContext, runContext, inlineName, [AST[i].left])
-				} else {
-					throw new Error('AssignmentExpression: Not implemented!')
-				}
+				throw new Error('AssignmentExpression: Not implemented!')
 			} else {
 				left = await runStatement(0, [AST[i].left], runContext)
 			}
@@ -7554,11 +7538,59 @@ async function runStatement(i, AST, runContext) {
 			} else
 			if(AST[i].operator == '^') {
 				return left ^ right
+			} else
+			if(AST[i].operator == '<') {
+				return left < right
+			} else
+			if(AST[i].operator == '>') {
+				return left > right
+			} else
+			if(AST[i].operator == '<=') {
+				return left <= right
+			} else
+			if(AST[i].operator == '>=') {
+				return left >= right
 			} else {
 				throw new Error(AST[i].type + ': Not implemented!')
 			}
 		} else
-		{
+		if(AST[i].type == 'ForStatement') {
+			runLoop(AST[i], runContext)
+		} else
+
+		if(AST[i].type == 'UpdateExpression') {
+			if(!AST[i].argument || AST[i].argument.type != 'Identifier') {
+				throw new Error(AST[i].type + ': Not implemented!')
+			}
+			if(!runContext.localVariables.hasOwnProperty(AST[i].argument.name)) {
+				throw new Error('Identifier not found: ' + AST[i].argument.name)
+			}
+			let argVal = runContext.localVariables[AST[i].argument.name]
+			if(AST[i].operator == '--') {
+				if(AST[i].prefix) {
+					argVal = --runContext.localVariables[AST[i].argument.name]
+				} else {
+					--runContext.localVariables[AST[i].argument.name]
+				}
+			} else
+			if(AST[i].operator == '++') {
+				if(AST[i].prefix) {
+					argVal = ++runContext.localVariables[AST[i].argument.name]
+				} else {
+					++runContext.localVariables[AST[i].argument.name]
+				}
+			} else {
+				throw new Error(AST[i].type + ': Not implemented!')
+			}
+			let beforeLine = runContext.bubbleLine - 1
+			let bubbleColumn = runContext.bubbleColumn
+			doAssign(AST[i].argument.name, beforeLine, bubbleColumn, runContext)
+			return argVal
+
+
+
+
+		} else {
 			debugger
 			throw new Error(AST[i].type + ': Not implemented!')
 		}
@@ -7567,6 +7599,44 @@ async function runStatement(i, AST, runContext) {
 		doError(e, runContext)
 		return
 	}
+}
+
+
+async function runLoop(AST, runContext) {
+	let result
+	let init = await runStatement(0, [AST.init], runContext)
+	if(runContext.ended) {
+		return
+	}
+
+// SO I'M NOT A HYPOCRITE LETS PUT SOME REASONABLE BOUNDS!
+	// TODO: turn off safety feature with an attribute @LongLoops
+	let safety = 10000
+	for(;safety > 0; safety--) {
+		if(AST.body.type != 'BlockStatement') {
+			throw new Error('ForStatement: Not implemented!')
+		}
+		let test = await runStatement(0, [AST.test], runContext)
+		if(runContext.ended) {
+			return
+		}
+		if(!test) {
+			break;
+		}
+		result = await runStatement(0, [AST.body], runContext)
+		if(runContext.ended) {
+			return
+		}
+		let update = await runStatement(0, [AST.update], runContext)
+		if(runContext.ended) {
+			return
+		}
+	}
+
+	if(safety == 0) {
+		throw new Error('Long running for loop!')
+	}
+	return result
 }
 
 
@@ -7586,16 +7656,24 @@ async function runBody(AST, runContext) {
 	if(runContext.ended) {
 		throw new Error('context ended!')
 	}
+
+	// restore outer scope when context was created
+	//Object.assign(callStack, runContext.localFunctions)
+	//Object.assign(callStack, outerContext.localVariables)
+	// replace with current context
+	//Object.assign(callStack, runContext.localVariables)
+
+
 	// any time a setTimer is use the callStack will be reset
 	//   which means error messaging must intercept here not to
 	//   ruin out worker process
 	try {
 			// doesn't need to be fast, because async DevTools calls, are not fast
 		let result
-		let start = runContext.localFunctions
-		runContext.localFunctions = Object.assign({}, runContext.localFunctions)
-		let startVars = runContext.localVariables
-		runContext.localVariables = Object.assign({}, runContext.localVariables)
+		let startFuncs = Object.assign({}, runContext.localFunctions)
+		//runContext.localFunctions = 
+		let startVars = Object.assign({}, runContext.localVariables)
+		//runContext.localVariables = 
 		for(let i = 0; i < AST.length; i++) {
 			result = await runStatement(i, AST, runContext)
 			if(runContext.ended) {
@@ -7603,8 +7681,11 @@ async function runBody(AST, runContext) {
 			}
 		}
 		// remove anything created in the past context
-		runContext.localFunctions = start
-		runContext.localVariables = startVars
+		Object.assign(runContext.localFunctions, startFuncs)
+		Object.assign(runContext.localVariables, startVars)
+		// TODO: LEAKY SCOPE, this way we keep the same object the whole time
+		//runContext.localFunctions = start
+		//runContext.localVariables = startVars
 		return result
 	} catch (e) {
 		doError(e, runContext)

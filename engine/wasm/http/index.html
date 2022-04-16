@@ -23,7 +23,7 @@
 		<div id="editor">// after installing the plugin, DevTools can start
 // instructions: 
 // https://developer.chrome.com/docs/extensions/mv3/getstarted/#unpacked
-function main() {
+function createWindow() {
 	let title = documentTitle()
 	console.log(title)
 	let newWin = newWindow()
@@ -39,6 +39,13 @@ function main() {
 	navigateTo('https://quake.games')
 	screenshot()
 }
+
+function main() {
+	for(let i = 0; i &lt; 1000; i++) {
+		console.log(i)
+	}
+}
+
 
 </div>
 	<canvas></canvas>
