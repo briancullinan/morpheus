@@ -7554,8 +7554,12 @@ async function runStatement(i, AST, runContext) {
 				throw new Error(AST[i].type + ': Not implemented!')
 			}
 		} else
+
+		// WTF I KEEP MISSING RETURN AWAIT?!!! NEED TO WRITE AN AST IN PROLOG
+		//   THEN WRITE PROLOG PARSER IN JAVASCRIPT TO EVALUATE MATCHING AST
+		//   TREE FROM ACORN/BISON/ANTLR
 		if(AST[i].type == 'ForStatement') {
-			runLoop(AST[i], runContext)
+			return await runLoop(AST[i], runContext)
 		} else
 
 		if(AST[i].type == 'UpdateExpression') {
@@ -7565,6 +7569,7 @@ async function runStatement(i, AST, runContext) {
 			if(!runContext.localVariables.hasOwnProperty(AST[i].argument.name)) {
 				throw new Error('Identifier not found: ' + AST[i].argument.name)
 			}
+
 			let argVal = runContext.localVariables[AST[i].argument.name]
 			if(AST[i].operator == '--') {
 				if(AST[i].prefix) {
@@ -7587,10 +7592,12 @@ async function runStatement(i, AST, runContext) {
 			doAssign(AST[i].argument.name, beforeLine, bubbleColumn, runContext)
 			return argVal
 
+		} else 
 
 
 
-		} else {
+
+		{
 			debugger
 			throw new Error(AST[i].type + ': Not implemented!')
 		}

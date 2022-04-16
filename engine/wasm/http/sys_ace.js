@@ -486,6 +486,7 @@ function onAssign(request) {
 	if(prevLine < 0) {
 		return // don't load status line while it's out of view
 	}
+	
 	if (!ace.session || !ace.session.lineWidgets) {
 		initLineWidgets()
 	}
