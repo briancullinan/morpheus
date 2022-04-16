@@ -81,14 +81,17 @@ function launchApp(id, callback, errCallback) {
 }
 
 
-async function moveWindow(id, x, y) {
-
+function makeMoveWindow(id, x, y) {
+  return async function (x, y) {
+    // do a thing with id
+    console.log('Moving Window: ' + id)
+  }
 }
 
 async function newWindow() {
   let win = await chrome.windows.create()
   return Object.assign(win, {
-    moveTo: moveWindow.bind(null, win.id)
+    moveTo: makeMoveWindow(win.id)
   })
 }
 

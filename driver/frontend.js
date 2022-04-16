@@ -37,8 +37,8 @@ async function restoreRunner(sender) {
 function runAccessor() {
   if(awaitingAccessor) {
     awaitingAccessor = false
-    if(runScript.innerHTML) {
-      accessorResult = JSON.parse(runScript.innerHTML)
+    if(runScript.value) {
+      accessorResult = JSON.parse(runScript.value)
     } else {
       accessorResult = null
     }
@@ -58,14 +58,14 @@ function runScript() {
 
   try {
     let runId = getRunId(20)
-    if(!runScript.innerHTML.length) {
+    if(!runScript.value.length) {
       throw new Error('No script!')
     }
     chrome.runtime.sendMessage({ 
-      script: runScript.innerHTML,
+      script: runScript.value,
       runId: runId,
     }, processResponse)
-    runScript.innerHTML = ''
+    runScript.value = ''
   } catch (e) {
     // reload the page!
     if(e.message.includes('context invalidated')) {
@@ -74,7 +74,6 @@ function runScript() {
       //  + 'tzrl=' + Date.now()
       return
     }
-    throw e
   }
 }
 
@@ -169,44 +168,14 @@ function processResponse(request) {
     }
   }
 
-  let typeKey
   if(typeof request.started != 'undefined') {
     if(runnerTimer) {
       clearInterval(runnerTimer)
     }
     runnerTimer = setInterval(checkOnRunner.bind(null, request.started), 1000)
-    typeKey = 'started'
-  } else
-  if(typeof request.error != 'undefined') {
-    typeKey = 'error'
-  } else
-  if(typeof request.console != 'undefined') {
-    typeKey = 'console'
-  } else
-  if(typeof request.async != 'undefined') {
-    typeKey = 'async'
-  } else
-  if(typeof request.assign != 'undefined') {
-    typeKey = 'assign'
-  } else
-  if(typeof request.console != 'undefined') {
-    typeKey = 'result'
-  } else
-  if(typeof request.warning != 'undefined') {
-    typeKey = 'warning'
-  } else
-  if(typeof request.status != 'undefined') {
-    typeKey = 'status'
-  } else {
-    throw new Error('Not implemented!')
   }
 
-  let newMessage = {
-    line: request.line,
-    type: typeKey,
-  }
-  newMessage[typeKey] = request[typeKey] + '\n'
-  window.postMessage(newMessage)
+  window.postMessage(request)
 }
 
 
