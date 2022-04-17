@@ -82,9 +82,11 @@ function launchApp(id, callback, errCallback) {
 
 
 function makeMoveWindow(id, x, y) {
-  return async function (x, y) {
+  return function (x, y) {
     // do a thing with id
-    console.log('Moving Window: ' + id)
+    let win = chrome.windows.get(id)
+    win.left = x
+    win.top = y
   }
 }
 
