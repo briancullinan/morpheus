@@ -118,7 +118,10 @@ typedef struct {
 
 	qboolean (*CanMinimize)( void ); // == fbo enabled
 
-	const glconfig_t *(*GetConfig)( void );
+#ifndef USE_VID_FAST
+	const 
+#endif
+	glconfig_t *(*GetConfig)( void );
 
 	void	(*VertexLighting)( qboolean allowed );
 	void	(*SyncRender)( void );

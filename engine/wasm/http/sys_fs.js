@@ -67,6 +67,7 @@ function readAll() {
   let hadDefault = false
   let startTime = Date.now()
   Q3e.fs_loading = 1
+  // FIX FOR "QKEY could not open" ERROR
   FS.virtual['home'] = {
     timestamp: new Date(),
     mode: FS_DIR,

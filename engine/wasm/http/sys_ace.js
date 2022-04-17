@@ -21,8 +21,8 @@ const NAMED_FUNCTION = /function\s+([a-z]+[ -~]*)\s*\(/
 const EXTENSION_ID = 'lnglmljjcpnpahmfpnfjkgjgmjhegihd';
 const EXTENSION_VERSION = '1.0'
 const RGBA_REGEX = /rgba?\(([^\)]*)\)/
-const FADE_DURATION = 1000.0
-const FLASH_DURATION = 1000.0
+const FADE_DURATION = 300.0
+const FLASH_DURATION = 700.0
 
 function newPlay() {
 	let newButton = document.createElement('BUTTON')
@@ -37,9 +37,6 @@ function processLineNumber(lineNumber) {
 	let prevLine = lineNumber
 	if(!lineNumber) { // startup error message?
 		return lineNumber
-	}
-	if(ace.gotoLine) {
-		setTimeout(ace.gotoLine.bind(ace, prevLine), 100)
 	}
 	// if the error occurs on a line inside the library
 	let widgetManager = ace.getSession().widgetManager
@@ -80,6 +77,11 @@ function processLineNumber(lineNumber) {
 	} else {
 		prevLine--;
 	}
+
+	// scroll to the line when an error occurs
+	if(ace.gotoLine) {
+		setTimeout(ace.gotoLine.bind(ace, prevLine), 100)
+	}
 	return prevLine
 }
 
@@ -89,6 +91,7 @@ function processResponse(updateText, lineNumber, error) {
 		return
 	}
 
+	debugger
 return
 
 	let newLines = updateText.trim().split('\n')
@@ -137,7 +140,7 @@ function runBlock(start) {
 		window['run-script'].value = 
 			// because library inserted into page on error
 			(!ACE.libraryLoaded ? ACE.libraryCode : '')
-			+ value + '\nreturn main();'
+			+ value.replace(/\s*$/, '') + '\nreturn main();'
 		ACE.lastLine = ACE.libraryLines + ace.session.getLength()
 			- getEmptyLines(value)
 	} else {
@@ -145,7 +148,7 @@ function runBlock(start) {
 		ACE.lastLine = ACE.libraryLines + ace.session.getFoldWidgetRange(start).end.row
 		window['run-script'].value = 
 			(!ACE.libraryLoaded ? ACE.libraryCode : '')
-			+ ace.session.getLines(start, ACE.lastLine).join('\n')
+			+ ace.session.getLines(start, ACE.lastLine).join('\n').replace(/\s*$/, '')
 			+ '\nreturn ' + funcName + '();\n'
 	}
 
@@ -339,7 +342,7 @@ function onError(request) {
 	document.body.classList.remove('running')
 	document.body.classList.add('paused')
 	if (!ace.session || !ace.session.lineWidgets) {
-		return
+		initLineWidgets()
 	}
 	let newLines = request.error.replace(/\s*$/, '')
 	// if error has a line number, insert message below that line
@@ -437,6 +440,20 @@ function renderCursorLines() {
 			} else {
 				if(referenceRow.classList.contains('morph_cursor'))
 					referenceRow.classList.remove('morph_cursor')
+			}
+		}
+
+		if(ace.session.lineWidgets[i]) {
+			if(ace.session.lineWidgets[i].flashTime) {
+				let referenceRow = ace.session.lineWidgets[i].el
+				if(Date.now() - ace.session.lineWidgets[i].flashTime < FADE_DURATION + FLASH_DURATION) {
+					if(referenceRow.classList.contains('morph_flash'))
+						referenceRow.classList.remove('morph_flash')
+				} else {
+					// add flash to switch off
+					if(!referenceRow.classList.contains('morph_flash'))
+						referenceRow.classList.add('morph_flash')
+				}
 			}
 		}
 	}

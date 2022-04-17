@@ -159,8 +159,7 @@ driver/index.html:
 	$(call DO_SAFE_MOVE,$(BUILD_DIR)/morph.html,$@)
 
 DRIVER_OBJS       := driver/morph.js driver/index.html driver/redpill.png \
-										driver/backend.js driver/frontend.js driver/manifest.json \
-										$(BUILD_DIR)/morph.wasm 
+										driver/backend.js driver/frontend.js driver/manifest.json
 
 ifdef DO_RELEASE
 # TODO: put approved plugin back here to build Github Pages index.html.
@@ -224,6 +223,7 @@ endif
 driver/morph-plugin.zip: $(DRIVER_OBJS)
 	$(Q)$(COPY) $(BUILD_DIR)/morph.wasm driver/morph.wasm
 	$(Q)cd driver && $(ZIP) -FSr -o $(notdir $@) $(subst driver/,,$(DRIVER_OBJS)) 
+	$(Q)cd build && $(ZIP) -o ../driver/morph-plugin.zip morph.wasm
 
 github.pages: 
 

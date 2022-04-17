@@ -69,6 +69,7 @@ function GLimp_StartDriverAndSetMode(mode, modeFS, fullscreen, fallback) {
 function updateVideoCmd () {
   Q3e.canvas.setAttribute('width', Q3e.canvas.clientWidth)
   Q3e.canvas.setAttribute('height', Q3e.canvas.clientHeight)
+  // THIS IS THE NEW VID_RESTART FAST HACK
   HEAP32[INPUT.updateWidth>>2] = Q3e.canvas.width
   HEAP32[INPUT.updateHeight>>2] = Q3e.canvas.height
   Cvar_Set(stringToAddress('r_customWidth'), stringToAddress('' + Q3e.canvas.clientWidth))
