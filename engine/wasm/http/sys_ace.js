@@ -388,7 +388,7 @@ function onAccessor(request) {
 
 
 function onFrontend() {
-	window['run-script'].value = ACE.lastRunId || ''
+	window['run-script'].value = '"' + (ACE.lastRunId || '') + '"'
 	document.body.classList.add('starting')
 	window['run-accessor'].click()
 	ACE.downloaded = true

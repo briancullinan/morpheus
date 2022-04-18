@@ -7440,7 +7440,20 @@ async function runStatement(i, AST, runContext) {
 				let result;
 				currentContext = runContext
 				if(AST[i].type == 'NewExpression') {
-					result = await (new calleeFunc(...params))
+					if(calleeFunc == _Promise) {
+						result = Promise.resolve().then(d => {
+							runContext.asyncRunners++
+							return d
+						}).then(internalResolve).catch(e => {
+							runContext.asyncRunners--
+							throw e
+						}).then(d => {
+							runContext.asyncRunners--
+							return d
+						})
+					} else {
+						result = await (new calleeFunc(...params))
+					}
 				} else if (typeof calleeFunc == 'function') {
 					result = await calleeFunc.apply(this, params)
 				} else {
@@ -7963,12 +7976,7 @@ function _clearInterval(runContext, id) {
 //      in-case javascript is checking for a promise type in the application.
 // TODO: _Promise counter to detect when process is off, for async:
 function _Promise(runContext, resolve) {
-	runContext.async = true
-	runContext.asyncRunners++
-	return Promise.apply(this, function (data) {
-		runContext.asyncRunners--
-		return resolve(data)
-	})
+
 }
 
 async function createEnvironment(sender, runContext) {
@@ -8151,7 +8159,7 @@ let threads = {
 
 // INTERESTING FOR CODE REVEIWS, HABIT OF EXTRACTING DOUBLE NEGATIVES?
 function isStillRunning(runContext) {
-	if(!runContext.paused || !runContext.ended) {
+	if(!runContext.paused && !runContext.ended) {
 		return true
 	}
 	return false
@@ -8221,7 +8229,6 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
 			if(!isStillRunning(runContext)) {
 				// TODO: send async status?
 			} else if (runContext.async) {
-				debugger
 				chrome.tabs.sendMessage(sender.tab.id, { async: request.runId }, function(response) {
 
 				});
@@ -8293,7 +8300,9 @@ chrome.webNavigation.onCommitted.addListener(function(details) {
 			let rightStr = details.url.replace(/https|http|\//ig, '')
 			if(!leftStr.localeCompare(rightStr)) {
 				// WE KNOW THE REQUEST CAME FROM A SCRIPT AND NOT FROM THE USER
-			} else {
+				threads[runIds[i]].documentId = details.parentDocumentId || details.documentId
+			} else if(details.documentId != threads[runIds[i]].documentId
+				&& details.parentDocumentId != threads[runIds[i]].documentId) {
 				debugger
 				threads[runIds[i]].paused = true
 				// ^ more important
