@@ -7226,7 +7226,7 @@ async function runCall(runContext, functionName, parameterDefinition, body, ...c
 	// run new command context
 	let result = await runStatement(0, [body], runContext)
 
-	Object.assign(runContext.localVariables, startVars) // reset references
+	//Object.assign(runContext.localVariables, startVars) // reset references
 	// TODO: LEAKY SCOPE, remove unnamed variables from previous scope
 
 	runContext.bubbleStack.pop()
@@ -7319,6 +7319,8 @@ async function runBinary(AST, runContext) {
 	}
 }
 
+
+let currentContext
 
 async function runStatement(i, AST, runContext) {
 	if(runContext.ended) {
@@ -7434,6 +7436,7 @@ async function runStatement(i, AST, runContext) {
 			let beforeLine = runContext.bubbleLine
 			try {
 				let result;
+				currentContext = runContext
 				if(AST[i].type == 'NewExpression') {
 					result = await (new calleeFunc(...params))
 				} else if (typeof calleeFunc == 'function') {
@@ -7530,6 +7533,14 @@ async function runStatement(i, AST, runContext) {
 			}
 			return newObject
 		} else
+		if(AST[i].type == 'UnaryExpression') {
+			if(AST[i].operator = 'void') {
+				return void (await runStatement(0, [AST[i].argument], runContext))
+			} else {
+				throw new Error(AST[i].type + ': Not implemented!')
+			}
+		} else 
+
 
 
 		{
@@ -7710,8 +7721,8 @@ async function runBody(AST, runContext) {
 			return
 		}
 		// remove anything created in the past context
-		Object.assign(runContext.localFunctions, startFuncs)
-		Object.assign(runContext.localVariables, startVars)
+		//Object.assign(runContext.localFunctions, startFuncs)
+		//Object.assign(runContext.localVariables, startVars)
 		// TODO: LEAKY SCOPE, this way we keep the same object the whole time
 		//runContext.localFunctions = start
 		//runContext.localVariables = startVars
@@ -7754,6 +7765,18 @@ function doProperty(value, noRecurse) {
 		return value + ''
 	}
 }
+
+
+
+
+function doConsole(tabId, ...args) {
+	console.log(args)
+	let consoleStrings = args.map(a => doProperty(a)).join ('\n')
+	chrome.tabs.sendMessage(tabId, { console: consoleStrings }, function(response) {
+
+	});
+}
+
 
 
 function doAssign(varName, lineNumber, bubbleColumn, runContext) {
@@ -7881,19 +7904,15 @@ async function createEnvironment(sender, runContext) {
 		},
 		module: WEBDRIVER_API,
 		console: {
-			log: function (...args) {
-				console.log(args)
-				chrome.tabs.sendMessage(sender.tab.id, { console: args.join('\n') }, function(response) {
-
-				});
-			}
+			log: doConsole.bind(console, sender.tab.id)
 		},
 		// TODO: micro-manage garbage collection?
 		Object: Object,
 		setTimeout: _setTimeout.bind(null, runContext),
 		setInterval: _setInterval.bind(null, runContext),
 		Promise: Promise, // TODO: bind promise to something like chromedriver does
-		setWindowBounds: setWindowBounds
+		setWindowBounds: setWindowBounds,
+		navigateTo: navigateTo,
 
 	}
 	Object.assign(runContext, {
@@ -7938,7 +7957,7 @@ async function attachDebugger(tabId) {
 
 }
 
-async function setWindowBounds(windowId, tabs, x, y) {
+async function setWindowBounds(windowId, tabs, x, y, w, h) {
 	try {
 		/*
 		let targetTabs = await chrome.tabs.query({windowId: windowId})
@@ -7953,36 +7972,47 @@ async function setWindowBounds(windowId, tabs, x, y) {
 		if(targets[0] && !targets[0].attached) {
 			await attachDebugger(targetId)
 		}
-		let tab
-		tab = await chrome.tabs.get(targetId)
-		tab.left = x
-		tab.top = y
-		/*
-		Debugger.evaluateOnCallFrame
-		let bounds = await chrome.debugger.sendCommand({
-			tabId: targetId
-		}, 'Runtime.evaluate', {
-			expression: 'console.error(\'this is a test\'); window.moveTo(' + x + ', ' + y + ');'
-		})
-		let bounds = await chrome.debugger.sendCommand({
-			tabId: targetId
-		}, 'Browser.setWindowBounds', {
-			bounds: { normal: {
-				x, y
-			}}
-		})
-		*/
+		if(typeof x != 'undefined' && typeof y != 'undefined') {
+			await chrome.windows.update(windowId, {
+				left: x,
+				top: y,
+			})
+		}
 
-
+		if(typeof w != 'undefined' && typeof h != 'undefined') {
+			await chrome.windows.update(windowId, {
+				height: h,
+				width: w,
+			})
+		}
 		//let processId = await chrome.processes.getProcessIdForTab(targetId)
-		debugger
 
-		return bounds
+		return await chrome.windows.get(windowId)
 	} catch (e) {
 		debugger
 		console.log(e)
 		throw new Error('Protocol error: setWindowBounds(...)')
 	}
+}
+
+
+async function navigateTo(url) {
+	if(!currentContext) {
+		throw new Error('Tab context not set.')
+	}
+	let targetId = currentContext.localVariables.tabId
+	let targets = (await chrome.debugger.getTargets())
+		.filter(t => t.tabId == targetId)
+	if(targets[0] && !targets[0].attached) {
+		await attachDebugger(targetId)
+	}
+	let dom = await chrome.debugger.sendCommand({
+		tabId: targetId
+	}, 'Runtime.evaluate', {
+//	}, 'Debugger.evaluateOnCallFrame', {
+		expression: 'window.location = "' + url + '";'
+	})
+
 }
 
 let threads = {

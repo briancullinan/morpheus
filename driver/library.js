@@ -86,13 +86,21 @@ function makeMoveTo(id, tabs) {
   }
 }
 
+function makeResizeTo(id, tabs) {
+  return function (w, h) {
+    return setWindowBounds(id, tabs, void 0, void 0, w, h)
+  }
+}
+
 async function newWindow() {
   let win = await chrome.windows.create({
     url: 'http://www.google.com'
   })
-  //chrome.browser.openTab(
+  tabId = win.tabs[0].id
+  console.log(win.tabs[0])
   return Object.assign(win, {
-    moveTo: makeMoveTo(win.id, win.tabs)
+    moveTo: makeMoveTo(win.id, win.tabs),
+    resizeTo: makeResizeTo(win.id, win.tabs),
   })
 }
 
