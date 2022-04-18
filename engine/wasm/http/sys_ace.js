@@ -353,6 +353,15 @@ function onError(request) {
 	} else {
 		ACE.errorWidget.el.children[0].innerText = newLines
 	}
+	if(typeof request.locals != 'undefined') {
+		let lines = Object.keys(request.locals)
+		for(let j = 0; j < lines.length; j++) {
+			onAssign({
+				assign: request.locals[lines[j]],
+				line: lines[j],
+			})
+		}
+	}
 	ACE.errorWidget.stack = request.stack
 }
 
@@ -379,7 +388,7 @@ function onAccessor(request) {
 
 
 function onFrontend() {
-	window['run-script'].value = ACE.lastRunId
+	window['run-script'].value = ACE.lastRunId || ''
 	document.body.classList.add('starting')
 	window['run-accessor'].click()
 	ACE.downloaded = true
@@ -390,6 +399,9 @@ function onStarted(request) {
 	document.body.classList.remove('starting')
 	document.body.classList.add('running')
 	ACE.lastRunId = request.started
+	if(!ACE.lastRunId) {
+		throw new Error('goddamnit')
+	}
 	window['run-button'].classList.remove('running')
 }
 
@@ -509,14 +521,23 @@ function onAssign(request) {
 	}
 	
 	let prevLineWidgets = ace.getSession().widgetManager.getWidgetsAtRow(prevLine)
-	if(!prevLineWidgets.length) {
+	// look for existing assign widget
+	let found = false
+	let i = 0
+	for(; i < prevLineWidgets.length; i++) {
+		if(prevLineWidgets[i].el.className.includes('morph_assign')) {
+			found = true
+			break
+		}
+	}
+	if(!found) {
 		let newWidget = createLineWidget((request.assign || '').replace(/\s*$/, ''), prevLine, 'morph_assign')
 		ace.getSession().widgetManager.addLineWidget(newWidget)
 		newWidget.flashTime = Date.now()
 	} else {
 		// update existing assignment line
-		prevLineWidgets[0].el.children[0].innerText = (request.assign || '').replace(/\s*$/, '')
-		prevLineWidgets[0].flashTime = Date.now()
+		prevLineWidgets[i].el.children[0].innerText = (request.assign || '').replace(/\s*$/, '')
+		prevLineWidgets[i].flashTime = Date.now()
 	}
 	// sometimes assignments can update a lot
 	// TODO: make a way to turn this off
@@ -562,7 +583,12 @@ window.addEventListener('message', function (message) {
 	if(typeof request.started != 'undefined') {
 		onStarted(request)
 	} else
-
+	if(typeof request.paused != 'undefined') {
+		document.body.classList.remove('starting')
+		document.body.classList.remove('running')
+		document.body.classList.add('paused')
+	} else
+	
 
 	// the rest of these are console messages
 	if(typeof request.warning != 'undefined') {
@@ -578,6 +604,11 @@ window.addEventListener('message', function (message) {
 		document.body.classList.remove('running')
 		document.body.classList.add('paused')
 		processResponse(request.result, request.line, false)
+	} else 
+	if(typeof request.async != 'undefined') {
+		// async notifications are like halfway between result and started
+		request.started = request.async
+		onStarted(request)
 	} else 
 	if(typeof request.status != 'undefined') {
 		onStatus(request)

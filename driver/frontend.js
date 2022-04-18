@@ -57,7 +57,8 @@ function runAccessor() {
 function runScript() {
   let runScriptTextarea = document.getElementById("run-script")
   if(!document.body.className.includes('starting')) {
-    throw new Error('Document isn\'t starting')
+    restoreRunner()
+    return
   }
 
   try {
@@ -139,11 +140,13 @@ function getRunId(length) {
 
 
 async function checkOnRunner(runId) {
-  return
   try {
     chrome.runtime.sendMessage({ 
       runId: runId,
     }, function (response) {
+      if(!response) {
+        return
+      }
       processResponse(response)
     })
   } catch (e) {
@@ -202,8 +205,6 @@ async function setDelay(callback, msecs) {
     }, 100)
   })
 }
-
-
 
 chrome.runtime.onMessage.addListener(function(request, sender, reply) {
   // access a client variable they've shared from code

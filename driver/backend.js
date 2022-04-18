@@ -7185,7 +7185,7 @@ async function runParameters(params, runContext) {
 	for(let i = 0; i < params.length; i++) {
 		let arg = params[i]
 		result.push(await runStatement(0, [arg], runContext))
-		if(runContext.ended) {
+		if(!isStillRunning(runContext)) {
 			return // bubble up
 		}
 	}
@@ -7263,12 +7263,12 @@ function runPrimitive(AST, runContext) {
 
 async function runThisAndThat(_this, _that, runContext) {
 	let left = await runStatement(0, [_this], runContext)
-	if(runContext.ended) {
+	if(!isStillRunning(runContext)) {
 		return
 	}
 
 	let right = await runStatement(0, [_that], runContext)
-	if(runContext.ended) {
+	if(!isStillRunning(runContext)) {
 		return
 	}
 	return [left, right]
@@ -7278,7 +7278,7 @@ async function runThisAndThat(_this, _that, runContext) {
 async function runBinary(AST, runContext) {
 	// TODO: cannot modulo a float
 	let thisAndThat = await runThisAndThat(AST.left, AST.right, runContext)
-	if(runContext.ended) {
+	if(!isStillRunning(runContext)) {
 		return
 	}
 	let left = thisAndThat[0]
@@ -7323,7 +7323,7 @@ async function runBinary(AST, runContext) {
 let currentContext
 
 async function runStatement(i, AST, runContext) {
-	if(runContext.ended) {
+	if(!isStillRunning(runContext)) {
 		throw new Error('context ended!')
 	}
 	try {
@@ -7331,9 +7331,11 @@ async function runStatement(i, AST, runContext) {
 			runContext.bubbleColumn = AST[i].loc.start.column
 			if(runContext.bubbleLine != AST[i].loc.start.line) {
 				runContext.bubbleLine = AST[i].loc.start.line
+				runContext.bubbleAST = AST
 				await doStatus(runContext, (!AST[i].callee || AST[i].callee.name != 'sleep'))
 			}
 		}
+
 		// HOW THE HELL DO I TEST IF A LANGUAGE IMPLEMENTATION IS FEATURE COMPLETE?
 		//////////////////////////  PASS-THRU
 		if(AST[i].type == 'Literal' || AST[i].type == 'Identifier') {
@@ -7398,7 +7400,7 @@ async function runStatement(i, AST, runContext) {
 			let result = await runStatement(0, [AST[i].init], runContext)
 			// TODO: ^^ intentionally leak here for reporting, global error handling overriding?
 			runContext.localVariables[AST[i].id.name] = result
-			if(runContext.ended) { // error occcured in RUN context
+			if(!isStillRunning(runContext)) { // error occcured in RUN context
 				return
 			}
 			doAssign(AST[i].id.name, beforeLine, bubbleColumn, runContext)
@@ -7410,12 +7412,12 @@ async function runStatement(i, AST, runContext) {
 			// collect variables
 			
 			let params = await runParameters(AST[i].arguments, runContext)
-			if(runContext.ended) {
+			if(!isStillRunning(runContext)) {
 				return // bubble up
 			}
 
 			let calleeFunc = await runStatement(0, [AST[i].callee], runContext)
-			if(runContext.ended) {
+			if(!isStillRunning(runContext)) {
 				return // bubble up
 			}
 
@@ -7503,7 +7505,7 @@ async function runStatement(i, AST, runContext) {
 
 
 			let parent = await runStatement(0, [AST[i].object], runContext)
-			if(runContext.ended) {
+			if(!isStillRunning(runContext)) {
 				return // bubble up
 			}
 
@@ -7527,7 +7529,7 @@ async function runStatement(i, AST, runContext) {
 				}
 				// TODO: add late binding
 				newObject[prop.key.name] = await runStatement(0, [prop.value], runContext)
-				if(runContext.ended) {
+				if(!isStillRunning(runContext)) {
 					return
 				}
 			}
@@ -7595,7 +7597,7 @@ async function runLoop(init, test, update, body, runContext) {
 		throw new Error('ForStatement: Not implemented!')
 	}
 	let initAndTest = await runThisAndThat(init, test, runContext)
-	if(runContext.ended) {
+	if(!isStillRunning(runContext)) {
 		return
 	}
 
@@ -7605,11 +7607,11 @@ async function runLoop(init, test, update, body, runContext) {
 	for(;!testResults && safety > 0; safety--) {
 		let thisAndThat = await runThisAndThat(body, update, runContext)
 		result = thisAndThat[0]
-		if(runContext.ended) {
+		if(!isStillRunning(runContext)) {
 			return
 		}
 		testResults = await runStatement(0, [test], runContext)
-		if(runContext.ended) {
+		if(!isStillRunning(runContext)) {
 			return
 		}
 	}
@@ -7633,7 +7635,7 @@ async function runAssignment(left, right, runContext) {
 
 	if (left.type == 'MemberExpression') {
 		let parent = await runStatement(0, [left.object], runContext)
-		if(runContext.ended) {
+		if(!isStillRunning(runContext)) {
 			return
 		}
 
@@ -7651,7 +7653,7 @@ async function runAssignment(left, right, runContext) {
 		doAssign(left.object.name + '.' + property, beforeLine, bubbleColumn, runContext)
 		let result = await runStatement(0, [right], runContext)
 		// LEAK ASSIGNMENT FOR GLOBAL DEBUGGING?
-		if(runContext.ended) {
+		if(!isStillRunning(runContext)) {
 			return
 		}
 
@@ -7681,7 +7683,7 @@ async function runAssignment(left, right, runContext) {
 			doAssign(left.name, beforeLine, bubbleColumn, runContext)
 			let result = await runStatement(0, [right], runContext)
 			// LEAK ASSIGNMENT FOR GLOBAL DEBUGGING?
-			if(runContext.ended) {
+			if(!isStillRunning(runContext)) {
 				return
 			}
 			runContext.localVariables[left.name] = result
@@ -7696,7 +7698,7 @@ async function runAssignment(left, right, runContext) {
 
 // find and run main
 async function runBody(AST, runContext) {
-	if(runContext.ended) {
+	if(!isStillRunning(runContext)) {
 		throw new Error('context ended!')
 	}
 
@@ -7717,7 +7719,7 @@ async function runBody(AST, runContext) {
 		let startVars = Object.assign({}, runContext.localVariables)
 
 		let result = await runParameters(AST, runContext)
-		if(runContext.ended) {
+		if(!isStillRunning(runContext)) {
 			return
 		}
 		// remove anything created in the past context
@@ -7781,7 +7783,12 @@ function doConsole(tabId, ...args) {
 
 function doAssign(varName, lineNumber, bubbleColumn, runContext) {
 	try {
-		let valueString = doProperty(runContext.localVariables[varName])
+		let valueString
+		if(varName.includes('.')) {
+			valueString = doProperty(runContext.localVariables[varName.split('.')[0]][varName.split('.')[1]])
+		} else {
+			valueString = doProperty(runContext.localVariables[varName])
+		}
 		chrome.tabs.sendMessage(runContext.senderId, { 
 			assign: new Array(bubbleColumn).fill(' ').join('') + varName + ' = ' + valueString + '\n',
 			// always subtract 1 because code is wrapping in a 1-line function above
@@ -7797,6 +7804,7 @@ function doAssign(varName, lineNumber, bubbleColumn, runContext) {
 		}
 	}
 }
+
 
 async function doStatus(runContext, doSleep) {
 	try {
@@ -7825,6 +7833,54 @@ async function doStatus(runContext, doSleep) {
 }
 
 
+let possibleBranches = [
+	'left', 'right', 'body', 'params', 'argument',
+	'expression', 'init', 'test', 'update', 'object',
+	'declarations', 'callee'
+]
+
+function doAssignments(AST, runContext) {
+	let assignments = {}
+	for(let i = 0; i < AST.length; i++) {
+		if(!AST[i].loc) {
+			continue
+		}
+		let bubbleColumn = AST[i].loc.start.column
+		if(AST[i] == 'AssignmentExpression') {
+			let varName
+			let valueString
+			if(AST[i].left.type == 'Identifier') {
+				varName = AST[i].left.name
+				valueString = doProperty(runContext.localVariables[varName])
+			} else if(AST[i].left.type == 'MemberExpression') {
+				varName = AST[i].left.object.name
+				let property = AST[i].left.property.name
+				valueString = doProperty(runContext.localVariables[varName][property])
+				varName += '.' + property
+			}
+			assignments[AST[i].loc.start.line] = new Array(bubbleColumn)
+				.fill(' ').join('') + varName + ' = ' + valueString + '\n'
+		} else {
+			for(let j = 0; j < possibleBranches.length; ++j) {
+				if(typeof AST[i][possibleBranches[j]] != 'undefined') {
+					if(typeof AST[i][possibleBranches[j]].type) {
+						let childAssigns = doAssignments([AST[i][possibleBranches[j]]], runContext)
+						Object.assign(assignments, childAssigns)
+					} else if (typeof AST[i][possibleBranches[j]].length != 0
+						&& typeof AST[i][possibleBranches[j]][0].type != 'undefined') {
+						let childAssigns = doAssignments(AST[i][possibleBranches[j]], runContext)
+						Object.assign(assignments, childAssigns)
+					} else {
+						// don't know what to do
+					}
+				}
+			}
+		}
+	}
+	return assignments
+}
+
+
 function doError(err, runContext) {
 	try {
 		runContext.ended = true
@@ -7833,7 +7889,21 @@ function doError(err, runContext) {
 			error: err.message + '',
 			// always subtract 1 because code is wrapping in a 1-line function above
 			line: runContext.bubbleLine - 1,
-			stack: runContext.bubbleStack
+			stack: runContext.bubbleStack,
+			// LOOK AT THIS FANCY SHIT GOOGLE CHROME DEBUGGER!
+			//   MAKE A LIST OF ASSIGNMENTS NEARBY AND SEND THEIR CURRENT VALUE TO THE FRONTEND
+			//   TO SAVE THE DEVELOPER TIME RERUNNING THEIR WHOLE PROGRAM JUST TO SET UP A BREAK
+			//   POINT, JUST TO CHECK THE VALUE OF A LOOSELY TYPED VARIABLE. SEE THAT? LOOSE
+			//   TYPING WORKS JUST FINE IF YOUR TOOLS SUPPORT YOU INSTEAD OF WORKING AGAINST YOU
+			// SEE, IT'S A CATCH22, WHY WOULD I SPIN MY WHEELS FIXING CHROME DEBUGGER'S SOURCE CODE
+			//   WHEN THE EXPECTATION IS THAT IF I DON'T LIKE IT, I CAN FIX IT MYSELF. THAT'S WHY
+			//   IT SUCKS STILL. THE WHOLE "OPEN SOURCE DOESN'T OWE YOU ANYTHING", IS A SELF 
+			//   DEFEATING PRINCINPAL, LIKE IF ALL THE AMERICAN FARMERS DECIDED TO LET PEOPLE STARVE
+			//                                         (HUNGRY? FIX THE TRACTOR YOURSELF)
+			//   THEY DON'T OWE YOU ANYTHING, NOT EVEN LIFE SUPPORT. FUCK OFF FOSS, FOSS OWES ME
+			//   EVERYTHING BECAUSE I'LL BE THE ONE STUCK CLEANING THIS SHIT CODE UP.
+			//   TECHNICAL DEBT APPLIES TO PUBLISHING INCORRECT CODE DO. CODE IS LIKE LITTER.
+			locals: doAssignments(runContext.bubbleAST),
 		}, function(response) {
 	
 		});
@@ -7846,17 +7916,60 @@ function doError(err, runContext) {
 	}
 }
 
+
+
+
+
 // WHY DO THIS? Because setTimeout bubbles up, we don't want run context to continue
-async function _setTimeout(runContext, callback, msec) {
+// THIS WILL HELP WHEN IMPLEMENTING @Before, @After, @Done to see if end action
+//  should evaluate yet
+function _setTimeout(runContext, callback, msec) {
 	runContext.async = true
-	setTimeout(callback, msec)
+	runContext.asyncRunners++
+	let timerId
+	timerId = setTimeout(function () {
+		runContext.asyncRunners--
+		delete runContext.timers[timerId] // keep track if timer triggers before it's counted
+		callback()
+	}, msec)
+	runContext.timers[timerId] = false // reoccuring
+	return timerId
 }
-async function _setInterval(runContext, callback, msec) {
+function _setInterval(runContext, callback, msec) {
 	runContext.async = true
-	setInterval(callback, msec)
+	runContext.asyncRunners++
+	let timerId = setInterval(function () {
+		callback()
+	}, msec)
+	runContext.timers[timerId] = true // reoccuring
+	return timerId
+}
+function _clearTimeout(runContext, id) {
+	// keep track if timer triggers before it's counted
+	if(typeof runContext.timers[id] != 'undefined') {
+		runContext.asyncRunners--
+		delete runContext.timers[id]
+	}
+	return clearInterval(id)
+}
+function _clearInterval(runContext, id) {
+	runContext.asyncRunners-- // always subtracts because it was reoccurring
+	return clearInterval(id)
 }
 
-// TODO: _Promise counter to detect when process is off, for async: 
+// ChromeDriver does this inside the browser context, but because
+//   Our runner is interpreted we don't need to override browser promise
+//   This also prevents ChromeDriver from fucking up out Promise object,
+//      in-case javascript is checking for a promise type in the application.
+// TODO: _Promise counter to detect when process is off, for async:
+function _Promise(runContext, resolve) {
+	runContext.async = true
+	runContext.asyncRunners++
+	return Promise.apply(this, function (data) {
+		runContext.asyncRunners--
+		return resolve(data)
+	})
+}
 
 async function createEnvironment(sender, runContext) {
 	// TODO: this is where we add Chrome security model,
@@ -7899,7 +8012,7 @@ async function createEnvironment(sender, runContext) {
 			},
 			windows: {
 				get: chrome.windows.get,
-				create: chrome.windows.create,
+				create: createWindow,
 			}
 		},
 		module: WEBDRIVER_API,
@@ -7910,12 +8023,14 @@ async function createEnvironment(sender, runContext) {
 		Object: Object,
 		setTimeout: _setTimeout.bind(null, runContext),
 		setInterval: _setInterval.bind(null, runContext),
-		Promise: Promise, // TODO: bind promise to something like chromedriver does
+		Promise: _Promise.bind(null, runContext), // TODO: bind promise to something like chromedriver does
 		setWindowBounds: setWindowBounds,
 		navigateTo: navigateTo,
-
+		clearTimeout: _clearTimeout.bind(null, runContext),
+		clearInterval: _clearInterval.bind(null, runContext),
 	}
 	Object.assign(runContext, {
+		timers: {},
 		bubbleStack: [],
 		bubbleLine: -1,
 		bubbleColumn: 0,
@@ -7924,7 +8039,12 @@ async function createEnvironment(sender, runContext) {
 		localVariables: env,
 		localFunctions: {},
 		senderId: sender.tab.id,
+		asyncRunners: 0,
+		async: false,
 		ended: false,
+		paused: false,
+		continue: false, // TODO: implement continuations / long jumps for debugger
+		// I think by pushing runStatement(AST[i]) <- i onto a stack and restoring for()?
 	})
 }
 
@@ -7956,6 +8076,13 @@ async function attachDebugger(tabId) {
 	}
 
 }
+
+
+function createWindow(options) {
+	currentContext.navationURL = options.url
+	return chrome.windows.create(options)
+}
+
 
 async function setWindowBounds(windowId, tabs, x, y, w, h) {
 	try {
@@ -7996,7 +8123,7 @@ async function setWindowBounds(windowId, tabs, x, y, w, h) {
 }
 
 
-async function navigateTo(url) {
+async function navigateTo(url, wait) {
 	if(!currentContext) {
 		throw new Error('Tab context not set.')
 	}
@@ -8006,13 +8133,15 @@ async function navigateTo(url) {
 	if(targets[0] && !targets[0].attached) {
 		await attachDebugger(targetId)
 	}
+	currentContext.navationURL = url
 	let dom = await chrome.debugger.sendCommand({
 		tabId: targetId
 	}, 'Runtime.evaluate', {
 //	}, 'Debugger.evaluateOnCallFrame', {
 		expression: 'window.location = "' + url + '";'
 	})
-
+	// TODO: wait for network to settle, or duck out
+	
 }
 
 let threads = {
@@ -8020,18 +8149,36 @@ let threads = {
 }
 
 
+// INTERESTING FOR CODE REVEIWS, HABIT OF EXTRACTING DOUBLE NEGATIVES?
+function isStillRunning(runContext) {
+	if(!runContext.paused || !runContext.ended) {
+		return true
+	}
+	return false
+}
+
+
 chrome.runtime.onMessage.addListener((request, sender, reply) => {
 	let AST
+
 	if(!request.script && request.runId) {
 		// TODO: check on runner
-		if(typeof threads[request.runId] == 'undefined') {
-			debugger
+		if(typeof threads[request.runId] != 'undefined') {
+			if(typeof request.pause != 'undefined') {
+				threads[request.runId].paused = true
+			}
+			// now every status update will report the line number
+			reply({ 
+				status: '.', 
+				line: threads[request.runId].bubbleLine - 1
+			})
+		} else {
+			// now every status update will report the line number
+			reply({ 
+				paused: '.', 
+				line: threads[request.runId].bubbleLine - 1
+			})
 		}
-		// now every status update will report the line number
-		reply({ 
-			status: '.', 
-			line: threads[request.runId].bubbleLine - 1
-		})
 		return
 	}
 	if(!request.script || !request.script.length) {
@@ -8071,10 +8218,11 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
 			await attachDebugger(sender.tab.id)
 			// run code from client
 			let result = await runBody(runContext.body, runContext)
-			if(runContext.ended) {
+			if(!isStillRunning(runContext)) {
 				// TODO: send async status?
 			} else if (runContext.async) {
-				chrome.tabs.sendMessage(sender.tab.id, { async: result + '' }, function(response) {
+				debugger
+				chrome.tabs.sendMessage(sender.tab.id, { async: request.runId }, function(response) {
 
 				});
 			} else {
@@ -8121,4 +8269,42 @@ self.addEventListener('install', function () {
 		}
 	}
 	*/
+})
+
+
+
+
+//chrome.webNavigation.onBeforeNavigate.addListener(function(request, event) {
+
+//})
+
+chrome.webNavigation.onCommitted.addListener(function(details) {
+  // IF THE USER DECIDES TO START MESSING AROUND IN THAT WINDOW
+  //   PAUSE THE SCRIPT SO WE CAN DEBUG MISSING ELEMENTS!
+  // WHY DID NO ONE AT JETBRAINS THINK OF THIS? SWITCHING WINDOWS IS FUN!
+	// PAUSE THE SCRIPT!
+	let runIds = Object.keys(threads)
+	for(let i = 0; i < runIds.length; i++) {
+		// check if the local tabId has been set
+		if(threads[runIds[i]].localVariables.tabId == details.tabId) {
+			// sometimes users type these in wrong and the browser fixes it automatically
+			// DON'T USE THIS AS A REASON TO PAUSE FROM INTERFERENCE
+			let leftStr = threads[runIds[i]].navationURL.replace(/https|http|\//ig, '')
+			let rightStr = details.url.replace(/https|http|\//ig, '')
+			if(!leftStr.localeCompare(rightStr)) {
+				// WE KNOW THE REQUEST CAME FROM A SCRIPT AND NOT FROM THE USER
+			} else {
+				debugger
+				threads[runIds[i]].paused = true
+				// ^ more important
+				// send a paused status back to the frontend
+				chrome.tabs.sendMessage(threads[runIds[i]].senderId, { 
+					paused: details.timeStamp
+				}, function(response) {
+
+				})
+			}
+			break
+		}
+	}
 })

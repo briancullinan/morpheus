@@ -94,7 +94,9 @@ function makeResizeTo(id, tabs) {
 
 async function newWindow() {
   let win = await chrome.windows.create({
-    url: 'http://www.google.com'
+    url: 'http://www.google.com',
+    //alwaysOnTop: true,
+    //type: 'panel',
   })
   tabId = win.tabs[0].id
   console.log(win.tabs[0])
