@@ -80,20 +80,19 @@ function launchApp(id, callback, errCallback) {
   });
 }
 
-
-function makeMoveWindow(id, x, y) {
+function makeMoveTo(id, tabs) {
   return function (x, y) {
-    // do a thing with id
-    let win = chrome.windows.get(id)
-    win.left = x
-    win.top = y
+    return setWindowBounds(id, tabs, x, y)
   }
 }
 
 async function newWindow() {
-  let win = await chrome.windows.create()
+  let win = await chrome.windows.create({
+    url: 'http://www.google.com'
+  })
+  //chrome.browser.openTab(
   return Object.assign(win, {
-    moveTo: makeMoveWindow(win.id)
+    moveTo: makeMoveTo(win.id, win.tabs)
   })
 }
 

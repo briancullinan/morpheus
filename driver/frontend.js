@@ -15,6 +15,9 @@ let accessorResult = null
 
 async function restoreRunner(sender) {
   try {
+    if(awaitingAccessor) {
+      return
+    }
     // try to restore runner status
     window.postMessage({
       frontend: 'Worker service started\n'
@@ -35,10 +38,11 @@ async function restoreRunner(sender) {
 }
 
 function runAccessor() {
+  let runScriptTextarea = document.getElementById("run-script")
   if(awaitingAccessor) {
     awaitingAccessor = false
-    if(runScript.value) {
-      accessorResult = JSON.parse(runScript.value)
+    if(runScriptTextarea.value) {
+      accessorResult = JSON.parse(runScriptTextarea.value)
     } else {
       accessorResult = null
     }
@@ -51,21 +55,21 @@ function runAccessor() {
 
 
 function runScript() {
-  let runScript = document.getElementById("run-script")
+  let runScriptTextarea = document.getElementById("run-script")
   if(!document.body.className.includes('starting')) {
     throw new Error('Document isn\'t starting')
   }
 
   try {
     let runId = getRunId(20)
-    if(!runScript.value.length) {
+    if(!runScriptTextarea.value.length) {
       throw new Error('No script!')
     }
     chrome.runtime.sendMessage({ 
-      script: runScript.value,
+      script: runScriptTextarea.value,
       runId: runId,
     }, processResponse)
-    runScript.value = ''
+    runScriptTextarea.value = ''
   } catch (e) {
     // reload the page!
     if(e.message.includes('context invalidated')) {
@@ -90,6 +94,9 @@ document.addEventListener('DOMContentLoaded', (sender) => {
     return
   }
 
+  if(restoreTimer) {
+    clearInterval(restoreTimer)
+  }
   restoreRunner()
 
   document.addEventListener('click', function (evt) {
@@ -222,10 +229,19 @@ chrome.runtime.onMessage.addListener(function(request, sender, reply) {
 })
 
 
-setTimeout(function () {
+let restoreTimer = setTimeout(function () {
   if(!document.getElementById("run-script")) {
     return
   }
   restoreRunner()
 }, 1000)
 
+
+// TODO: inject scripts
+/*
+chrome.webNavigation.onBeforeNavigate.addListener(
+  callback: function,
+  filters?: object,
+)
+
+*/

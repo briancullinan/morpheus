@@ -346,7 +346,7 @@ function onError(request) {
 	}
 	let newLines = request.error.replace(/\s*$/, '')
 	// if error has a line number, insert message below that line
-	let prevLine = processLineNumber(request.line)
+	let prevLine = processLineNumber(request.line < 0 ? 0 : request.line)
 	if(!ACE.errorWidget) {
 		ACE.errorWidget = createLineWidget(newLines, prevLine, 'morph_error')
 		ace.getSession().widgetManager.addLineWidget(ACE.errorWidget)
@@ -531,10 +531,10 @@ function onConsole(request) {
 																								// see, I do have some nice things to say
 	let prevLine = ACE.lastLine - (ACE.libraryLoaded ? 1 : ACE.libraryLines)
 	if(!ACE.consoleWidget) {
-		ACE.consoleWidget = createLineWidget(newLines, prevLine)
+		ACE.consoleWidget = createLineWidget(newLines + '\n', prevLine)
 		ace.getSession().widgetManager.addLineWidget(ACE.consoleWidget)
 	} else {
-		ACE.consoleWidget.el.children[0].innerText += '\n' + newLines
+		ACE.consoleWidget.el.children[0].innerText += newLines + '\n'
 	}
 	ACE.consoleLines += newLines.split('\n').length
 	ACE.consoleWidget.pixelHeight = ace.renderer.lineHeight * ACE.consoleLines

@@ -104,6 +104,7 @@ body.paused .run-button:focus,
 /* RUNNING BUTTON */
 
 
+body:not(.frontend) .run-button,
 body.running .run-button:active:hover,
 body.running .run-button:focus:hover,
 body.running .run-button:active,
@@ -125,6 +126,7 @@ body.starting .run-button
 }
 
 
+body:not(.frontend) .run-button.small,
 body.running .run-button.small:active:hover,
 body.running .run-button.small:focus:hover,
 body.running .run-button.small:active,

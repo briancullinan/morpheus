@@ -7485,12 +7485,20 @@ async function runStatement(i, AST, runContext) {
 
 		} else
 		if(AST[i].type == 'MemberExpression') {
-			if(!AST[i].property || AST[i].property.type != 'Identifier') {
-				debugger
+			if(!AST[i].property) {
+				throw new Error('MemberExpression: Not implemented!')
+			}
+			let property
+			if(AST[i].property.type == 'Literal') {
+				property = AST[i].property.value
+			} else
+			if(AST[i].property.type == 'Identifier') {
+				property = AST[i].property.name
+			} else {
 				throw new Error('MemberExpression: Not implemented!')
 			}
 
-			let property = AST[i].property.name
+
 			let parent = await runStatement(0, [AST[i].object], runContext)
 			if(runContext.ended) {
 				return // bubble up
@@ -7604,17 +7612,32 @@ async function runLoop(init, test, update, body, runContext) {
 
 // DO VARIABLE REASSIGNMENTS
 async function runAssignment(left, right, runContext) {
-	// TODO: Error: cannot assign value to primitive type
 	let beforeLine = runContext.bubbleLine - 1
 	let bubbleColumn = runContext.bubbleColumn
+
+	if(left.type == 'Literal') {
+	// cannot assign value to primitive type
+	throw new Error('Cannot override primitive.')
+	}
 
 	if (left.type == 'MemberExpression') {
 		let parent = await runStatement(0, [left.object], runContext)
 		if(runContext.ended) {
 			return
 		}
+
+		let property
+		if(left.property.type == 'Identifier') {
+			property = left.property.name
+		} else 
+		if(left.property.type == 'Literal') {
+			property = left.property.value
+		} else {
+			throw new Error('AssignmentExpression: Not implemented!')
+		}
+
 		// WOW! IMAGINE THAT! SHOW VARIABLES BEFORE AND AFTER ASSIGNMENT! GOOGLE CHROME DEBUGGER!
-		doAssign(left.object.name + '.' + left.property.name, beforeLine, bubbleColumn, runContext)
+		doAssign(left.object.name + '.' + property, beforeLine, bubbleColumn, runContext)
 		let result = await runStatement(0, [right], runContext)
 		// LEAK ASSIGNMENT FOR GLOBAL DEBUGGING?
 		if(runContext.ended) {
@@ -7628,9 +7651,9 @@ async function runAssignment(left, right, runContext) {
 			Object.assign(WEBDRIVER_API, result)
 		}
 
-		parent[left.property.name] = result
+		parent[property] = result
 		// notify clients
-		doAssign(left.object.name + '.' + left.property.name, beforeLine, bubbleColumn, runContext)
+		doAssign(left.object.name + '.' + property, beforeLine, bubbleColumn, runContext)
 		return result
 	} else 
 	// TODO: does expression evaluate even if there assignment error?
@@ -7698,21 +7721,44 @@ async function runBody(AST, runContext) {
 	}
 }
 
-function doAssign(varName, lineNumber, bubbleColumn, runContext) {
-	try {
-		let valueString = runContext.localVariables[varName]
-		if(typeof valueString == 'object' && valueString != null) {
+function doProperty(value, noRecurse) {
+	// TODO: detect runCall symbols on function.AST and call code generation worker
+
+
+	// LOL! GODDAMNIT GOOGLE, IT'S 2022, YOU CAN'T SHOW US YOUR OWN SOURCE CODE
+	//   I MEAN WHEN YOU CLICK ON IT IN THE DEBUGGER OF COURSE, SINCE THIS IS A REPL
+	// VISUAL STUDIO DOES THIS! YOU CAN EVEN FIND VISUAL STUDIO SOURCE CODE THROUGH
+	//   THE SYMBOL SELECTOR
+	if(typeof value == 'function') {
+		return (value + '').replace(/\{.*\}/, ' [native code] ')
+											 .replace(/|=>.*/, ' [native code] ')
+	} else if (typeof value == 'object' && value !== null) {
+		let prototypeName = (Object.getPrototypeOf(value).constructor + '')
+				.replace(/function?\s*|\(.*$/gi, '')
+				|| (Object.getPrototypeOf(value) + '')
+				.replace(/^\[object |]$/gi, '')
+		if(!noRecurse) {
 			// HEY GOOGLE CHROME DEBUGGER, LOOK AT THIS! 1 EXTRA LEVEL OF OBJECT VALUES SO I DON'T
 			//   HAVE TO SIT AROUND WAITING FOR THE STUPID IMMEDIATE BUBBLE TO POP UP
-			let properties = Object.getOwnPropertyNames(valueString)
+			let properties = Object.getOwnPropertyNames(value)
 				.reduce((str, prop) => {
 					return (str + (str.length ? ', ' : '') + prop + ': ' 
-						+ valueString[prop] + ' ')
+						+ doProperty(value[prop], true) + ' ')
 				}, '')
 			//let methods = Object.getPrototypeOf(valueString).methods
-			let prototypeName = (Object.getPrototypeOf(valueString) + '').replace('[object ', '[')
-			valueString = prototypeName + ' ' + '{' + properties + '}'
+			return '[' + prototypeName + '] {' + properties + '}'
+		} else {
+			return '[object ' + prototypeName + ']'
 		}
+	} else {
+		return value + ''
+	}
+}
+
+
+function doAssign(varName, lineNumber, bubbleColumn, runContext) {
+	try {
+		let valueString = doProperty(runContext.localVariables[varName])
 		chrome.tabs.sendMessage(runContext.senderId, { 
 			assign: new Array(bubbleColumn).fill(' ').join('') + varName + ' = ' + valueString + '\n',
 			// always subtract 1 because code is wrapping in a 1-line function above
@@ -7847,6 +7893,8 @@ async function createEnvironment(sender, runContext) {
 		setTimeout: _setTimeout.bind(null, runContext),
 		setInterval: _setInterval.bind(null, runContext),
 		Promise: Promise, // TODO: bind promise to something like chromedriver does
+		setWindowBounds: setWindowBounds
+
 	}
 	Object.assign(runContext, {
 		bubbleStack: [],
@@ -7869,12 +7917,12 @@ async function createEnvironment(sender, runContext) {
 
 async function attachDebugger(tabId) {
 	try {
-		await chrome.debugger.attach({tabId: tabId}, '1.0')
+		await chrome.debugger.attach({tabId: tabId}, '1.3')
 		// confirm it works
 		let dom = await chrome.debugger.sendCommand({
 			tabId: tabId
 		}, 'DOM.getDocument')
-		if(!dom.root.children[1].children[1].attributes.includes('running')) {
+		if(!dom.root.children[1].children[1].attributes[1].includes('running')) {
 			chrome.tabs.sendMessage(tabId, { 
 				warning: 'Tab not running.' 
 			}, function(response) {
@@ -7885,11 +7933,57 @@ async function attachDebugger(tabId) {
 		if(e.message.includes('Another debugger')) {
 			// TODO: attach to another tab!
 		} else
-		throw e
+		throw new Error('Protocol error: attachDebugger')
 	}
 
 }
 
+async function setWindowBounds(windowId, tabs, x, y) {
+	try {
+		/*
+		let targetTabs = await chrome.tabs.query({windowId: windowId})
+		if(!targetTabs) {
+			throw new Error('Window closed or doesn\'t exist')
+		}
+		let targetId = targetTabs[0].id
+		*/
+		let targetId = tabs[0].id
+		let targets = (await chrome.debugger.getTargets())
+			.filter(t => t.tabId == targetId)
+		if(targets[0] && !targets[0].attached) {
+			await attachDebugger(targetId)
+		}
+		let tab
+		tab = await chrome.tabs.get(targetId)
+		tab.left = x
+		tab.top = y
+		/*
+		Debugger.evaluateOnCallFrame
+		let bounds = await chrome.debugger.sendCommand({
+			tabId: targetId
+		}, 'Runtime.evaluate', {
+			expression: 'console.error(\'this is a test\'); window.moveTo(' + x + ', ' + y + ');'
+		})
+		let bounds = await chrome.debugger.sendCommand({
+			tabId: targetId
+		}, 'Browser.setWindowBounds', {
+			bounds: { normal: {
+				x, y
+			}}
+		})
+		*/
+
+
+		//let processId = await chrome.processes.getProcessIdForTab(targetId)
+		debugger
+
+		return bounds
+	} catch (e) {
+		debugger
+		console.log(e)
+		throw new Error('Protocol error: setWindowBounds(...)')
+	}
+}
 
 let threads = {
 
@@ -7940,23 +8034,29 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
 			script: request.script,
 			runId: request.runId,
 		};
-		await createEnvironment(sender, runContext)
-		threads[request.runId] = runContext
-		// attach debugger
-		await attachDebugger(sender.tab.id)
-		// run code from client
-		let result = await runBody(runContext.body, runContext)
-		if(runContext.ended) {
-			// TODO: send async status?
-		} else if (runContext.async) {
-			chrome.tabs.sendMessage(sender.tab.id, { async: result + '' }, function(response) {
+		try {
+			await createEnvironment(sender, runContext)
+			threads[request.runId] = runContext
+			// attach debugger
+			await attachDebugger(sender.tab.id)
+			// run code from client
+			let result = await runBody(runContext.body, runContext)
+			if(runContext.ended) {
+				// TODO: send async status?
+			} else if (runContext.async) {
+				chrome.tabs.sendMessage(sender.tab.id, { async: result + '' }, function(response) {
 
-			});
-		} else {
-			chrome.tabs.sendMessage(sender.tab.id, { result: result + '' }, function(response) {
+				});
+			} else {
+				chrome.tabs.sendMessage(sender.tab.id, { result: result + '' }, function(response) {
 
-			});
+				});
+			}
+						
+		} catch (e) {
+			doError(e, runContext)
 		}
+
 	}, 300)
 
 
