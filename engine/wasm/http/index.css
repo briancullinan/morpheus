@@ -89,9 +89,9 @@ body.no-gl .run-button {
 as though the button is circling when mouse over and
 a pause button when the script can be paused */
 
-body.paused .run-button:hover,
-body.paused .run-button:active,
-body.paused .run-button:focus,
+body.stopped .run-button:hover,
+body.stopped .run-button:active,
+body.stopped .run-button:focus,
 .run-button {
   border-color: transparent transparent transparent #208020;
   transition: border 200ms ease, color 200ms ease;

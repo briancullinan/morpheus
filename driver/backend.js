@@ -7228,6 +7228,12 @@ async function runCall(runContext, functionName, parameterDefinition, body, ...c
 
 	//Object.assign(runContext.localVariables, startVars) // reset references
 	// TODO: LEAKY SCOPE, remove unnamed variables from previous scope
+	// TODO: FIX SCOPING WITH A RUNCONTEXT.CONTEXTS STACK
+	//   This would help solve var/let, automatically drop var into top context
+	//   This would help with static/public/friendly checking
+	//   This would help languages with leaky scopes by purpose, LUA, PROLOG?
+	//   This would fix scoping around parameter definitions
+	// TODO: search the contexts stack for the variable
 
 	runContext.bubbleStack.pop()
 
@@ -8053,6 +8059,8 @@ async function createEnvironment(sender, runContext) {
 		paused: false,
 		continue: false, // TODO: implement continuations / long jumps for debugger
 		// I think by pushing runStatement(AST[i]) <- i onto a stack and restoring for()?
+		// TODO: continuations, check for anonymous functions, variable/function declarations
+		// TODO: allow moving cursor to any symbol using address of symbol in AST
 	})
 }
 
@@ -8166,27 +8174,54 @@ function isStillRunning(runContext) {
 }
 
 
+// check on runner
+function doStatusResponse(request, reply) {
+	let runContext = threads[request.runId]
+	if(typeof runContext == 'undefined') {
+		return
+	}
+	
+	if(runContext.ended) {
+		reply({ 
+			stopped: '.', 
+			line: runContext.bubbleLine - 1
+		})
+		return
+	} else
+
+	if(typeof request.pause != 'undefined') {
+		runContext.paused = request.pause
+		if(request.pause) {
+			reply({ 
+				paused: '.', 
+				line: runContext.bubbleLine - 1
+			})
+	
+		} else {
+				// TODO: continue
+				debugger
+
+		}
+		return 
+	}
+
+	// now every status check will report on current line number also
+	reply({ 
+		status: '.', 
+		line: runContext.bubbleLine - 1
+	})
+}
+
+
 chrome.runtime.onMessage.addListener((request, sender, reply) => {
 	let AST
 
 	if(!request.script && request.runId) {
-		// TODO: check on runner
-		if(typeof threads[request.runId] != 'undefined') {
-			if(typeof request.pause != 'undefined') {
-				threads[request.runId].paused = true
-			}
-			// now every status update will report the line number
-			reply({ 
-				status: '.', 
-				line: threads[request.runId].bubbleLine - 1
-			})
-		} else {
-			// now every status update will report the line number
-			reply({ 
-				paused: '.', 
-				line: threads[request.runId].bubbleLine - 1
-			})
-		}
+		doStatusResponse(request, reply)
+		return
+	}
+	if(!request.script && typeof request.frontend != 'undefined') {
+		reply({ stopped: '.' })
 		return
 	}
 	if(!request.script || !request.script.length) {

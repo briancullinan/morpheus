@@ -91,27 +91,7 @@ function processResponse(updateText, lineNumber, error) {
 		return
 	}
 
-	debugger
-return
-
-	let newLines = updateText.trim().split('\n')
-	let prevLine
-	// if error has a line number, insert message below that line
-	if(typeof lineNumber == 'number') {
-		prevLine = processLineNumber(lineNumber)
-	} else {
-		// WAS MEANING TO WRITE THIS SOONER
-		prevLine = ACE.lastLine - (ACE.libraryLoaded ? 1 : ACE.libraryLines)
-	}
-
-	for(let j = 0; j < newLines.length; ++j) {
-		let newWidget = createLineWidget(newLines[j], ++prevLine, error ? 'morph_error' : '')
-		ace.getSession().widgetManager.addLineWidget(newWidget)
-	}
-	// add console output to bottom of code
-	if(typeof lineNumber != 'number') {
-		ACE.lastLine = prevLine
-	}
+	// TODO: display some fancy report?
 	
 }
 
@@ -122,7 +102,9 @@ function runAccessor() {
 
 function runBlock(start) {
 	if(document.body.className.includes('running')
-		|| document.body.className.includes('starting')) {
+		|| document.body.className.includes('starting')
+		|| document.body.className.includes('paused')) {
+		window['run-script'].value = '"' + (ACE.lastRunId || '') + '"'
 		return
 	}
 
@@ -340,7 +322,7 @@ function onError(request) {
 	}
 
 	document.body.classList.remove('running')
-	document.body.classList.add('paused')
+	document.body.classList.add('stopped')
 	if (!ace.session || !ace.session.lineWidgets) {
 		initLineWidgets()
 	}
@@ -367,7 +349,11 @@ function onError(request) {
 
 
 function onAccessor(request) {
-	if(!document.body.className.includes('running')) {
+	if(!document.body.className.includes('running')
+		// because pause it allowed to happen mid flight finish the accessor request
+		&& !document.body.className.includes('paused')
+		// plus a side effect, we might use accessors in debugging
+	) {
 		debugger
 	}
 	switch(request.accessor) {
@@ -395,6 +381,7 @@ function onFrontend() {
 }
 
 function onStarted(request) {
+	document.body.classList.remove('stopped')
 	document.body.classList.remove('paused')
 	document.body.classList.remove('starting')
 	document.body.classList.add('running')
@@ -585,8 +572,11 @@ window.addEventListener('message', function (message) {
 	} else
 	if(typeof request.paused != 'undefined') {
 		document.body.classList.remove('starting')
-		document.body.classList.remove('running')
 		document.body.classList.add('paused')
+		// debounce
+		setTimeout(function () {
+			document.body.classList.remove('running')
+		}, 1000)
 	} else
 	
 
@@ -602,7 +592,7 @@ window.addEventListener('message', function (message) {
 	} else 
 	if(typeof request.result != 'undefined') {
 		document.body.classList.remove('running')
-		document.body.classList.add('paused')
+		document.body.classList.add('stopped')
 		processResponse(request.result, request.line, false)
 	} else 
 	if(typeof request.async != 'undefined') {
@@ -615,6 +605,12 @@ window.addEventListener('message', function (message) {
 	} else 
 	if(typeof request.assign != 'undefined') {
 		onAssign(request)
+	} else 
+	if(typeof request.stopped != 'undefined') {
+		document.body.classList.remove('paused')
+		document.body.classList.remove('running')
+		document.body.classList.remove('starting')
+
 	} else {
 		debugger
 	}

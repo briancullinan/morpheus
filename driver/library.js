@@ -99,7 +99,6 @@ async function newWindow() {
     //type: 'panel',
   })
   tabId = win.tabs[0].id
-  console.log(win.tabs[0])
   return Object.assign(win, {
     moveTo: makeMoveTo(win.id, win.tabs),
     resizeTo: makeResizeTo(win.id, win.tabs),

@@ -56,6 +56,16 @@ function runAccessor() {
 
 function runScript() {
   let runScriptTextarea = document.getElementById("run-script")
+
+  if(document.body.className.includes('running')
+    || document.body.className.includes('paused')) {
+    chrome.runtime.sendMessage({ 
+      pause: !document.body.className.includes('paused'),
+      runId: JSON.parse(runScriptTextarea.value),
+    }, processResponse)
+    return
+  }
+
   if(!document.body.className.includes('starting')) {
     restoreRunner()
     return
