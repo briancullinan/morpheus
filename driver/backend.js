@@ -7386,6 +7386,9 @@ async function runStatement(i, AST, runContext) {
 			// so context doesn't disappear
 			for(let j = 0; j < AST[i].declarations.length; j++) {
 				result = await runStatement(j, AST[i].declarations, runContext)
+				if(!isStillRunning(runContext)) { // bubble up
+					return
+				}
 			}
 			return result
 		} else
@@ -7406,7 +7409,7 @@ async function runStatement(i, AST, runContext) {
 			let result = await runStatement(0, [AST[i].init], runContext)
 			// TODO: ^^ intentionally leak here for reporting, global error handling overriding?
 			runContext.localVariables[AST[i].id.name] = result
-			if(!isStillRunning(runContext)) { // error occcured in RUN context
+			if(!isStillRunning(runContext)) { // bubble up
 				return
 			}
 			doAssign(AST[i].id.name, beforeLine, bubbleColumn, runContext)

@@ -105,6 +105,7 @@ function runBlock(start) {
 		|| document.body.className.includes('starting')
 		|| document.body.className.includes('paused')) {
 		window['run-script'].value = '"' + (ACE.lastRunId || '') + '"'
+		ace.focus()
 		return
 	}
 
@@ -133,7 +134,7 @@ function runBlock(start) {
 			+ ace.session.getLines(start, ACE.lastLine).join('\n').replace(/\s*$/, '')
 			+ '\nreturn ' + funcName + '();\n'
 	}
-
+	ace.focus()
 }
 
 

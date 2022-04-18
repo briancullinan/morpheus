@@ -78,6 +78,7 @@ body.no-gl .run-button {
 
 /* PLAY BUTTON */
 
+body.started.paused .run-button.small:hover,
 .run-button.small {
   border-width: 12px 0 12px 20px;
   height: 25px;
@@ -88,7 +89,7 @@ body.no-gl .run-button {
 /* by stacking these qualifiers I can make it appear
 as though the button is circling when mouse over and
 a pause button when the script can be paused */
-
+body.started.paused .run-button:hover,
 body.stopped .run-button:hover,
 body.stopped .run-button:active,
 body.stopped .run-button:focus,
@@ -144,8 +145,8 @@ body.starting .run-button.small
 
 /* PAUSE BUTTON */
 
-/*
-body .run-button:hover {
+body.started.paused .run-button,
+body.started.running .run-button:hover {
   border-color: transparent transparent transparent #808080;
   border-style: double;
   border-width: 0px 0 0px 60px;
@@ -154,11 +155,12 @@ body .run-button:hover {
   width: 0;
 }
 
-body .run-button.small:hover {
+body.started.paused .run-button.small,
+body.started.running .run-button.small:hover {
   border-width: 0px 0 0px 20px;
   width: 0;
 }
-*/
+
 
 #run-accessor {
   height: 1px;
