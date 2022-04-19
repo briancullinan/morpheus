@@ -12,6 +12,9 @@ let ACE = {
 	playButtons: [],
 	downloaded: false,
 	filename: false,
+
+	// THIS GIVES US THAT FEATURE LIKE VISUAL STUDIO WITH THE HIDDEN IMPORTS IN
+	//   PROJECT SETTINGS, I THINK ECLIPSE/JAVA DOES THIS TOO.
 	libraryCode: '',
 	libraryLines: 0,
 	libraryLoaded: false,
@@ -285,17 +288,83 @@ function initAce() {
 	ace.setFontSize(16)
 	ace.setTheme('ace/theme/monokai')
 	ace.setOption('minLines', 1000)
-	ace.setOption('foldStyle', 'manual')
-	ace.setOption('scrollPastEnd', 1.0)
-	ace.setOption('wrap', 'margin')
-	ace.setOption('printMarginColumn', 80)
-	ace.setOption('split', 'Below')
+	ace.setOption('foldStyle', 'markbeginend')
+	ace.setOption('fadeFoldWidgets', true)
+	ace.setOption('scrollPastEnd', 0.618) // FOR TERRY!!!
+	ace.setOption('wrap', 50)
+	ace.setOption('printMarginColumn', 50)
+	//ace.setOption('split', 'below')
+	ace.setOption('indentedSoftWrap', false)
 	ace.session.setTabSize(2)
 	ace.session.setMode('ace/mode/javascript')
 	ace.session.setUseWorker(false)
 	// add play buttons to individual function blocks for ease of use
 	ace.on('focus', function () { INPUT.editorActive = true })
 	ace.on('blur', function () { INPUT.editorActive = false })
+
+
+	// INIT FILE LIST
+
+	setTimeout(function () {
+		let fileList = document.getElementById('file-list')
+		if(!fileList) {
+			return
+		}
+		fileList = fileList.children[0]
+		if(!fileList) {
+			return
+		}
+		if(!ACE.filetypes) {
+			ACE.filetypes = {}
+		}
+		if(!ACE.filetypes['folder']) {
+			ACE.filetypes['folder'] = fileList.children[0].getElementsByTagName('svg')[0].outerHTML
+		}
+		if(!ACE.filetypes['file']) {
+			ACE.filetypes['file'] = fileList.children[1].getElementsByTagName('svg')[0].outerHTML
+		}
+	let files = Object.keys(FS.virtual).sort()
+		let startLength = files.length
+		// MAKE SURE WE HAVE A COMPLETE LIST OF DIRECTORIES, SOMETIMES
+		//   FILES ARE CREATED IN INDEXEDDB AND NO HEIRARCHY IS MADE
+		/*
+
+			root
+			root/dir1
+			root/dir1/dir2
+
+		*/
+		// GAH! AGAIN GODDAMNIT, LOOP OVERFLOW
+		//for(let i = 0; i < files.length; i++) {
+		for(let i = 0; i < startLength; i++) {
+			let segments = files[i].split('/')
+				.map(function (seg, i, arr) { return arr.slice(0, i + 1).join('/') })
+			files.push.apply(files, segments)
+		}
+		files = files.sort()
+			.filter(function (f, i, arr) { return f && arr.indexOf(f) == i })
+		for(let j = 0; j < files.length; j++) {
+			let segments = files[j].split('/')
+			if(j < fileList.children.length) {
+				//fileList.children[j].style.padding
+			} else {
+				let item = document.createElement('LI')
+				fileList.appendChild(item)
+				let link = document.createElement('A')
+				item.appendChild(link)
+			}
+			// TODO: SHOW SEPERATED DIRECTORIES IN ONE LINE LIKE VISUAL STUDIO CODE DOES
+			//   GITHUB ALSO DOES IT FOR FOLDERS THAT ONLY HAVE 1 PATH
+			fileList.children[j].children[0].innerText = segments.slice(-1)[0]
+			fileList.children[j].children[0].style.paddingLeft 
+				= (segments.length * 20 + 20) + 'px'
+			if(!FS.virtual[files[j]] || FS.virtual[files[j]].mode == FS_DIR) {
+				fileList.children[j].className = 'folder'
+			} else {
+				fileList.children[j].className = 'file'
+			}
+		}
+	}, 3000)
 
 	/*
 	ace.renderer.on('afterRender', function wtfLines () {
@@ -406,12 +475,17 @@ let statusWidgets = [
 ]
 
 function onStatus(request) {
-	let prevLine = getLimitedLine(request)
+	let prevLine = getLimitedLine(request.line)
 
 	//if(!ACE.statusLine) {
 	//  createLineWidget('.', 0, 'morph_cursor')
 	//  ACE.statusLine = ace.session.lineWidgets[0]
 	//}
+	if(request.line >= ACE.libraryLines) {
+		ACE.previousNonLibrary = prevLine
+	} else {
+		ACE.previousLine = request.line
+	}
 
 	statusWidgets[prevLine] = Date.now()
 }
@@ -488,8 +562,7 @@ function Ace_Frame() {
 }
 
 
-function getLimitedLine(request) {
-	let prevLine = request.line
+function getLimitedLine(prevLine) {
 	if(!ACE.libraryLoaded) {
 		prevLine -= ACE.libraryLines
 	} else {
@@ -505,7 +578,7 @@ function getLimitedLine(request) {
 
 
 function onAssign(request) {
-	let prevLine = getLimitedLine(request)
+	let prevLine = getLimitedLine(request.line)
 	// TODO: status line always out of view because sleep is in library.js
 	if(prevLine < 0) {
 		return // don't load status line while it's out of view
@@ -557,6 +630,34 @@ function onConsole(request) {
 }
 
 
+function onPaused(request) {
+	//let prevLine = getLimitedLine(request.line)
+	//if(prevLine < 0) {
+	//	return // don't load status line while it's out of view
+	//}
+	document.body.classList.remove('starting')
+	document.body.classList.add('paused')
+	if(!ACE.pausedWidget) {
+		if(!ACE.libraryLoaded) {
+			ACE.pausedWidget = createLineWidget('PAUSED', ACE.previousNonLibrary, 'morph_pause')
+		} else {
+			ACE.pausedWidget = createLineWidget('PAUSED', ACE.previousLine, 'morph_pause')
+		}
+	} else {
+		if(!ACE.libraryLoaded) {
+			ACE.pausedWidget.row = ACE.previousNonLibrary
+		} else {
+			ACE.pausedWidget.row = ACE.previousLine
+		}
+	}
+	ace.getSession().widgetManager.addLineWidget(ACE.pausedWidget)
+	// debounce
+	setTimeout(function () {
+		document.body.classList.remove('running')
+	}, 1000)
+}
+
+
 window.addEventListener('message', function (message) {
 	let request = message.data
 	// never download if we get a response from extension
@@ -579,12 +680,7 @@ window.addEventListener('message', function (message) {
 		onStarted(request)
 	} else
 	if(typeof request.paused != 'undefined') {
-		document.body.classList.remove('starting')
-		document.body.classList.add('paused')
-		// debounce
-		setTimeout(function () {
-			document.body.classList.remove('running')
-		}, 1000)
+		onPaused(request)
 	} else
 	
 

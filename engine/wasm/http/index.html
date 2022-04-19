@@ -17,14 +17,21 @@
 </div>
 <div id="left-joystick"></div><div id="right-joystick"></div>
 <div id="viewport-frame">
-		<textarea id="run-script"></textarea>
-		<button id="run-button" class="run-button" onclick="runBlock(-1)">&nbsp;</button>
-		<button id="run-accessor" class="run-accessor" onclick="runAccessor(-1)">&nbsp;</button>
 		<div id="command-bar">
 			<label for="codeFold"><input type="checkbox" id="codeFold" name="codeFold" /> Fold<span></span></label>
 			<label for="lineWrap"><input type="checkbox" id="lineWrap" name="lineWrap" /> Wrap<span></span></label>
 			<label for="fontSize"><select name="fontSize"><option>12</option><option>16</option><option>20</option></select> Font</label>
 			<label for="language"><select name="language"><option>JS</option><option>C#</option><option>PY</option></select></label>
+			<textarea id="run-script"></textarea>
+			<button id="run-button" class="run-button" onclick="runBlock(-1)">&nbsp;</button>
+			<button id="run-accessor" class="run-accessor" onclick="runAccessor(-1)">&nbsp;</button>
+		</div>
+		<div id="file-list">
+			<ol>
+				<li><a href="#"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>default_folder</title><path d="M27.5,5.5H18.2L16.1,9.7H4.4V26.5H29.6V5.5Zm0,4.2H19.3l1.1-2.1h7.1Z" style="fill:#c09553"/></svg>engine</a></a></li>
+				<li><a href="#"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>default_file</title><path d="M20.414,2H5V30H27V8.586ZM7,28V4H19v6h6V28Z" style="fill:#c5c5c5"/></svg>.gitignore</a></a></li>
+				<li><a href="#"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>default_file</title><path d="M20.414,2H5V30H27V8.586ZM7,28V4H19v6h6V28Z" style="fill:#c5c5c5"/></svg>index.html</a></li>
+			</ol>
 		</div>
 		<div id="editor">// after installing the plugin, DevTools can start
 // instructions: 
@@ -34,7 +41,8 @@ function createWindow() {
 	console.log(title)
 	let newWin = newWindow()
 	newWin.moveTo(
-		window.screenLeft + window.outerWidth / 2, 
+		window.screenLeft 
+		+ window.outerWidth / 2, 
 		window.screenTop)
 	newWin.resizeTo(
 		window.outerWidth / 2, 

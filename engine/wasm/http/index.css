@@ -33,14 +33,13 @@ body > img {
   position: absolute;
   z-index: 999;
   top: 0;
-  padding: 0;
+  padding: 0 0 0 40px;
   left: 0;
-  width: 50%;
+  width: 100%;
   font-size: 14px;
   color: #B0B090;
   white-space: nowrap;
   height: 22px;
-  overflow: hidden;
   display: block;
   background: #000;
 }
@@ -61,6 +60,10 @@ body > img {
 #command-bar label:after {
   left:auto;
   right:0;
+}
+
+#command-bar label:hover {
+  background: #002;
 }
 
 #command-bar input:active,
@@ -125,7 +128,7 @@ body > img {
   position:absolute;
   top:0;
   left:0;
-  border: 1px solid #A07020;
+  border: 2px solid #A07020;
   border-radius: 10px;
   width: 38px;
   height: 18px;
@@ -138,13 +141,58 @@ body > img {
 }
 
 
+#file-list li {
+  /*data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 200'%3E%3Cpath d='M10 10h123v123H10z'/%3E%3C/svg%3E*/
+  background-image: url( "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M20.414,2H5V30H27V8.586ZM7,28V4H19v6h6V28Z' style='fill:%23c5c5c5'/%3E%3C/svg%3E" );
+}
+
+#file-list {
+  width: 250px;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+#file-list ol {
+  margin: 0;
+  list-style: none;
+  padding: 0;
+  width:100%;
+}
+
+#file-list li {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  width:100%;
+}
+
+#file-list svg {
+  width: auto;
+  height: 26px;
+  position: absolute;
+  left: 10px;
+  top: 0;
+}
+
+#file-list a {
+  text-decoration: none;
+  color: #B0B090;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  padding: 2px 0 2px 40px;
+}
+
+#file-list a:hover {
+  background: #002;
+}
 
 .morph_error {
   background-color: #902020;
 }
 .morph_error .ace_comment {
   font-weight: bold;
-  color: #A0D0A0;
+  color: #B0B080;
 }
 .morph_cursor {
   background-color: #206020;
@@ -153,10 +201,16 @@ body > img {
   color: #D0A0D0;
 }
 .morph_assign {
-  background-color: #B09020;
+  background-color: #C0A020;
 }
 .morph_assign .ace_comment {
-  color: #202060;
+  color: #202040;
+}
+.morph_pause {
+  background-color: #202040;
+}
+.morph_pause .ace_comment {
+  color: #B0B080;
 }
 
 .ace_editor > .ace_line {
@@ -175,9 +229,9 @@ body > img {
   border: 0;
   background: transparent;
   box-sizing: border-box;
-  left: 50%;
+  left: 40em;
   top: 10px;
-  margin-left: -84px;
+  margin-left: 250px;
   width: 0;
   height: 74px;
 
@@ -351,21 +405,23 @@ body.started.running .run-button.small:hover {
   background-size: 24em;
   z-index: 1;
   display: flex;
-  padding-top:20px;
+  padding-top:22px;
   flex-direction: row;
 }
 
 #editor {
-  width:50%;
+  width:40em;
   flex-shrink: 0;
 }
 
 #viewport-frame canvas {
   background-color: rgba(0, 0, 0, 0.0);
-  height: 100%;
-  width: 50%;
+  width: 0;
   height: 100%;
   flex-grow: 1;
+  flex-shrink: 1;
+  flex-basis: auto;
+  display:inline-block;
 }
 
 body.no-gl #viewport-frame canvas {
