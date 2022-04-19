@@ -289,6 +289,7 @@ function initAce() {
 	ace.setOption('scrollPastEnd', 1.0)
 	ace.setOption('wrap', 'margin')
 	ace.setOption('printMarginColumn', 80)
+	ace.setOption('split', 'Below')
 	ace.session.setTabSize(2)
 	ace.session.setMode('ace/mode/javascript')
 	ace.session.setUseWorker(false)
