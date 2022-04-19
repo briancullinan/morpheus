@@ -1,7 +1,7 @@
 // Launcher program for web browser and .wasm builds
 let isStreaming = false
 
-function instantiateWasm(bytes) {
+function initWasm(bytes) {
   let libraries = {
     env: Q3e,
     SYS: SYS,
@@ -103,9 +103,11 @@ function init() {
 // TODO: change when hot reloading works
 window.addEventListener('load', function () {
   if(typeof Q3e.imports == 'undefined') {
-    initAce()
+    if(!typeof window.initAce != 'undefined') {
+      initAce()
+    }
     init()
-    .then(instantiateWasm)
-    .then(startProgram);
+    .then(initWasm)
+    .then(initEngine);
   }
 }, false)

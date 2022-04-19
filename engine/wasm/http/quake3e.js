@@ -55,7 +55,7 @@ function getQueryCommands() {
 	return startup
 }
 
-function startProgram(program) {
+function initEngine(program) {
 	// share the game with window for hackers
 	if(!program) {
 		throw new Error("no program!")

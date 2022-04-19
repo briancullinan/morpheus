@@ -119,6 +119,9 @@ function readAll() {
           }, 100)
         }
       }
+      if(typeof window.initFilelist != 'undefined') {
+        initFilelist()
+      }
     })
   })
   .catch(function (e) {
@@ -196,6 +199,10 @@ function Sys_Mkdir(filename) {
   openDatabase().then(function (db) {
     writeStore(FS.virtual[localName], localName)
   })
+  // TODO: ADD FILESYSTEM WATCHERS API
+  if(typeof window.updateFilelist != 'undefined') {
+    updateFilelist(fileStr)
+  }
 }
 
 function Sys_GetFileStats( filename, size, mtime, ctime ) {
@@ -238,6 +245,10 @@ function Sys_FOpen(filename, mode) {
       FS.virtual[localName],
       localName
     ]
+    // TODO: ADD FILESYSTEM WATCHERS API
+    if(typeof window.updateFilelist != 'undefined') {
+      updateFilelist(FS.pointers[FS.filePointer][3])
+    }
     return FS.filePointer // not zero
   }
 
@@ -295,6 +306,10 @@ function Sys_FClose(pointer) {
     throw new Error('File IO Error') // TODO: POSIX
   }
   writeStore(FS.pointers[pointer][2], FS.pointers[pointer][3])
+  // TODO: ADD FILESYSTEM WATCHERS API
+  if(typeof window.updateFilelist != 'undefined') {
+    updateFilelist(FS.pointers[pointer][3])
+  }
   FS.pointers[pointer] = void 0
 }
 
@@ -365,7 +380,11 @@ function Sys_Rename(src, dest) {
     destName = destName.substring('/base'.length)
   if(destName[0] == '/')
     destName = destName.substring(1)
-  debugger
+  // TODO: ADD FILESYSTEM WATCHERS API
+  if(typeof window.updateFilelist != 'undefined') {
+    updateFilelist(srcName)
+    updateFilelist(destName)
+  }
 }
 
 

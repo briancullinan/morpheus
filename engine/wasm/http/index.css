@@ -141,11 +141,6 @@ body > img {
 }
 
 
-#file-list li {
-  /*data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 200'%3E%3Cpath d='M10 10h123v123H10z'/%3E%3C/svg%3E*/
-  background-image: url( "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M20.414,2H5V30H27V8.586ZM7,28V4H19v6h6V28Z' style='fill:%23c5c5c5'/%3E%3C/svg%3E" );
-}
-
 #file-list {
   width: 250px;
   font-size: 16px;
@@ -180,11 +175,43 @@ body > img {
   display: block;
   white-space: nowrap;
   overflow: hidden;
-  padding: 2px 0 2px 40px;
+  padding: 0 0 0 40px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+#file-list label {
+  position:absolute;
+  left:0;
+  top:0;
+  overflow:hidden;
+  height: 16px;
+  width: 16px;
+}
+
+#file-list input {
+  height:1px;
+  width:1px;
+  opacity: 0;
+  position:absolute;
+  left:100%;
+}
+
+#file-list .level1 ~ :not(.level1) {
+  display:none;
+}
+
+
+#file-list .file a {
+  background-image: url( "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctitle%3Edefault_file%3C/title%3E%3Cpath d='M20.414,2H5V30H27V8.586ZM7,28V4H19v6h6V28Z' style='fill:%23c5c5c5'/%3E%3C/svg%3E" );
+}
+
+#file-list .folder a {
+  background-image: url( "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctitle%3Edefault_folder%3C/title%3E%3Cpath d='M27.5,5.5H18.2L16.1,9.7H4.4V26.5H29.6V5.5Zm0,4.2H19.3l1.1-2.1h7.1Z' style='fill:%23c09553'/%3E%3C/svg%3E" );
 }
 
 #file-list a:hover {
-  background: #002;
+  background-color: #002;
 }
 
 .morph_error {
