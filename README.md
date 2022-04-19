@@ -25,12 +25,13 @@ I build it, let me know when it makes contact.
 1) DONE: Componentize engine, combine with Ace9
 2) Give Morpheus form, animations and world geometry
 3) Modularize goals, separate QVMs
-4) IN PROGRESS: Stream browser automation through plugin
+4) POC DONE: Stream browser automation through plugin
 5) Automate LinkedIn lobby, find gamers
 6) Slippery onboarding, "Holy Shit!" moment
 7) auto-exec on remote cloud for mobile testing
 8) \mvjoin and follow remote player splines
 9) \sync IndexedDB file-system with a Github Gist after CAS
+10) Firefox automation plugin
 
 
 ## Content-Security-Policy:

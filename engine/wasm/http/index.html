@@ -20,6 +20,12 @@
 		<textarea id="run-script"></textarea>
 		<button id="run-button" class="run-button" onclick="runBlock(-1)">&nbsp;</button>
 		<button id="run-accessor" class="run-accessor" onclick="runAccessor(-1)">&nbsp;</button>
+		<div id="command-bar">
+			<label for="codeFold"><input type="checkbox" id="codeFold" name="codeFold" /> Fold<span></span></label>
+			<label for="lineWrap"><input type="checkbox" id="lineWrap" name="lineWrap" /> Wrap<span></span></label>
+			<label for="fontSize"><select name="fontSize"><option>12</option><option>16</option><option>20</option></select> Font</label>
+			<label for="language"><select name="language"><option>JS</option><option>C#</option><option>PY</option></select></label>
+		</div>
 		<div id="editor">// after installing the plugin, DevTools can start
 // instructions: 
 // https://developer.chrome.com/docs/extensions/mv3/getstarted/#unpacked

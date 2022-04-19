@@ -285,6 +285,10 @@ function initAce() {
 	ace.setFontSize(16)
 	ace.setTheme('ace/theme/monokai')
 	ace.setOption('minLines', 1000)
+	ace.setOption('foldStyle', 'manual')
+	ace.setOption('scrollPastEnd', 1.0)
+	ace.setOption('wrap', 'margin')
+	ace.setOption('printMarginColumn', 80)
 	ace.session.setTabSize(2)
 	ace.session.setMode('ace/mode/javascript')
 	ace.session.setUseWorker(false)
@@ -292,6 +296,7 @@ function initAce() {
 	ace.on('focus', function () { INPUT.editorActive = true })
 	ace.on('blur', function () { INPUT.editorActive = false })
 
+	/*
 	ace.renderer.on('afterRender', function wtfLines () {
 		let textLayer = document.getElementsByClassName('ace_content')[0]
 		if(!textLayer) {
@@ -309,6 +314,7 @@ function initAce() {
 			}, new Array(addLineCount).fill('\n').join(''));
 		}
 	})
+	*/
 
 }
 

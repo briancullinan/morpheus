@@ -8256,7 +8256,7 @@ chrome.runtime.onMessage.addListener((request, sender, reply) => {
 			body: AST.body,
 			script: request.script,
 			runId: request.runId,
-		};
+		}
 		try {
 			await createEnvironment(sender, runContext)
 			threads[request.runId] = runContext
