@@ -40,7 +40,7 @@ function createWindow() {
 	let newWin = newWindow()
 	// should now have a window on the right ->
 	navigateTo('https://console.cloud.google.com/')
-	let newDomain = newWin.location.domain
+	let newDomain = newWin.location.host
 	if(newDomain.includes('accounts.google.com')) {
 		enterLogin()
 	}

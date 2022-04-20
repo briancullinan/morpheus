@@ -7284,7 +7284,30 @@ async function runCall(runContext, functionName, parameterDefinition, before, af
 }
 
 function _makeWindowAccessor(result, runContext) {
-	debugger
+	if(typeof result == 'object' && result) {
+		result._accessor = async function (i, member, AST, ctx, callback) {
+			if(member.property.name == 'location') {
+				let location = await chrome.debugger.sendCommand({
+					tabId: ctx.localVariables.tabId
+				}, 'Runtime.evaluate', {
+					expression: 'JSON.stringify(window.location)'
+				})
+				if(!location || !location.result
+					|| location.result.type != 'string') {
+					throw new Error('Member access error: ' + member)
+				} else {
+					return JSON.parse(location.result.value)
+				}
+
+			} else
+			if(result.hasOwnProperty(member)
+				|| result[member]) {
+				return result[member]
+			} else {
+				throw new Error('Member access error: ' + member)
+			}
+		}
+	}
 	return result
 }
 
@@ -7475,6 +7498,7 @@ async function runStatement(i, AST, runContext) {
 				return // bubble up
 			}
 
+			runContext.bubbleMember = null
 			let calleeFunc = await runStatement(0, [AST[i].callee], runContext)
 			if(!isStillRunning(runContext)) {
 				return // bubble up
@@ -7513,11 +7537,17 @@ async function runStatement(i, AST, runContext) {
 					} else {
 						result = await (new calleeFunc(...params))
 					}
+				} else if (typeof calleeFunc == 'function'
+					&& runContext.bubbleMember) {
+					result = await calleeFunc.apply(runContext.bubbleMember, params)
 				} else if (typeof calleeFunc == 'function') {
-					result = await calleeFunc.apply(this, params)
+					result = await calleeFunc(...params)
 				} else {
 					throw new Error('Not a function! ' + AST[i].callee.name)
 				}
+				runContext.bubbleMember = null
+
+
 				if(!isStillRunning(runContext)) {
 					return // bubble up
 				}
@@ -7549,6 +7579,13 @@ async function runStatement(i, AST, runContext) {
 			|| AST[i].type == 'ArrowFunctionExpression') {
 				namePrefix = 'inline '
 			} else {
+				// ATTRIBUTE SUPPORT
+				// TODO: C# GIVES YOU A WAY TO ADD ATTRIBUTES TO
+				//   MANY TOKEN TYPES 
+				//   JAVA HAS ATTRIBUTES TOO, BUT THEY ARE UGLIER
+				// TODO: @Delay(), @LongLoops() and other safetys
+				// TODO: STATIC CONSTRUCTORS, STD LIBRARY LOADERS
+				// TODO: onBefore, onAfter, control flow imprinting
 				let attributeComments = runContext.script
 					.substring(0, AST[i].start)
 					.match(FUNC_COMMENTS)
@@ -7617,6 +7654,7 @@ async function runStatement(i, AST, runContext) {
 			if(!parent || (!parent.hasOwnProperty(property) && !parent[property])) {
 				throw new Error('Member access error: ' + property)
 			} else {
+				runContext.bubbleMember = parent
 				return parent[property]
 			}
 		} else
@@ -7867,9 +7905,9 @@ function doProperty(value, noRecurse) {
 	//   I MEAN WHEN YOU CLICK ON IT IN THE DEBUGGER OF COURSE, SINCE THIS IS A REPL
 	// VISUAL STUDIO DOES THIS! YOU CAN EVEN FIND VISUAL STUDIO SOURCE CODE THROUGH
 	//   THE SYMBOL SELECTOR
-	if(typeof value == 'function') {
-		return (value + '').replace(/\{.*\}/, ' [native code] ')
-											 .replace(/|=>.*/, ' [native code] ')
+	if(typeof value == 'function' || typeof value == 'async function') {
+		return (value + '').replace(/\{[\n\r\s\S]*\}/, ' [ native code ] ')
+											 .replace(/=>[\n\r\s\S]*/, ' [ native code ] ')
 	} else if (typeof value == 'object' && value !== null) {
 		let prototypeName = (Object.getPrototypeOf(value).constructor + '')
 				.replace(/function?\s*|\(.*$/gi, '')
@@ -8005,6 +8043,7 @@ async function doMorpheusPass(required) {
 
 
 async function doMorpheusKey() {
+	debugger
 	// chrome.storage.sync.set({ mytext: txtValue });
 	let tryTimes = 15
 	let response
