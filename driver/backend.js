@@ -7211,7 +7211,7 @@ let WEBDRIVER_API = {
 
 
 
-async function runCall(runContext, functionName, parameterDefinition, body, ...callArgs) {
+async function runCall(runContext, functionName, parameterDefinition, before, after, body, ...callArgs) {
 	// assign to param names in next context
 	let startVars = Object.assign({}, runContext.localVariables)
 
@@ -7228,8 +7228,29 @@ async function runCall(runContext, functionName, parameterDefinition, body, ...c
 		runContext.localVariables[parameterDefinition[l].name] = callArgs[l]
 	}
 
+	// TODO: SOMETHING ABOUT IF AN ASPECT HAS AN EXCPLICIT RETURN 
+	//   STATEMENT THEN OVERRIDE THE RETURN VALUE WITH BEFORE
+	//   OTHERWISE LEAVE IT UNMODIFIED
+	if(before) {
+		let beforeFunc = runContext.localFunctions[before]
+		if(beforeFunc) {
+			let r = await beforeFunc(callArgs, runContext)
+		} else {
+			throw new Error('Attribute @Before not found: ' + before)
+		}
+	}
+
 	// run new command context
 	let result = await runStatement(0, [body], runContext)
+
+	if(after) {
+		let afterFunc = runContext.localFunctions[after]
+		if(afterFunc) {
+			let r = await afterFunc(result, runContext)
+		} else {
+			throw new Error('Attribute @After not found: ' + after)
+		}
+	}
 
 	//Object.assign(runContext.localVariables, startVars) // reset references
 	// TODO: LEAKY SCOPE, remove unnamed variables from previous scope
@@ -7240,8 +7261,14 @@ async function runCall(runContext, functionName, parameterDefinition, body, ...c
 	//   This would fix scoping around parameter definitions
 	// TODO: search the contexts stack for the variable
 
+
 	runContext.bubbleStack.pop()
 
+	return result
+}
+
+function _makeWindowAccessor(result, runContext) {
+	debugger
 	return result
 }
 
@@ -7253,6 +7280,8 @@ function doAssert() {
 
 }
 
+
+const ASPECTS_REGEX = /(\n\s*\/\/\s*@(Before|After)\s*\([^\)]*\)\s*)+/
 
 function runPrimitive(AST, runContext) {
 	if(AST.type == 'Literal') {
@@ -7495,11 +7524,36 @@ async function runStatement(i, AST, runContext) {
 		if(AST[i].type == 'FunctionExpression' 
 			|| AST[i].type == 'ArrowFunctionExpression'
 			|| AST[i].type == 'FunctionDeclaration') {
-			
-				let namePrefix = ''
+			let before
+			let after
+			let namePrefix = ''
 			if(AST[i].type == 'FunctionExpression' 
 			|| AST[i].type == 'ArrowFunctionExpression') {
 				namePrefix = 'inline '
+			} else {
+				let attributeComments = runContext.script
+					.substring(0, AST[i].start)
+					.match(ASPECTS_REGEX)
+				if(attributeComments) {
+					let attribs = attributeComments.split(/\s*|\n*|\@|\(|\)/g)
+					for(let i = 0; i < attribs.length; i++) {
+						if(attribs[i].trim().length == 0) {
+							continue
+						} else
+						if(attribs[i] == 'Before') {
+							before = attribs[i+1]
+							++i
+						} else
+						if(attribs[i] == 'After') {
+							after = attribs[i+1]
+							++i
+						} else {
+							doConsole(runContext.senderId, 
+								'WARNING: Attribute not recognized: ' + attribs[i])
+						}
+
+					}
+				}
 			}
 			if(AST[i].id) {
 				// don't add namePrefix!
@@ -7512,7 +7566,7 @@ async function runStatement(i, AST, runContext) {
 			let funcName = namePrefix + (AST[i].id ? AST[i].id.name : functionCounter)
 			++functionCounter
 			let result = (runContext.localFunctions[funcName] 
-				= runCall.bind(null, runContext, funcName, AST[i].params, AST[i].body))
+				= runCall.bind(null, runContext, funcName, AST[i].params, before, after, AST[i].body))
 			return result
 
 		} else
@@ -7579,7 +7633,15 @@ async function runStatement(i, AST, runContext) {
 			} else if (AST[i].alternate) {
 				return await runStatement(0, [AST[i].alternate], runContext) 
 			}
-		}
+		} else
+		if(AST[i].type == 'DebuggerStatement') {
+			runContext.paused = true
+			chrome.tabs.sendMessage(runContext.senderId, { 
+				paused: '.', 
+				line: runContext.bubbleLine - 1
+			}, function () { console.log('debugging' )})
+			return
+		} else
 
 
 
@@ -7739,6 +7801,12 @@ async function runBody(AST, runContext) {
 	if(!isStillRunning(runContext)) {
 		throw new Error('context ended!')
 	}
+
+	// TODO: FIX CONTEXTS. THIS IS ONE OF THE THINGS THAT
+	//   SERIOUSLY BOTHERS ME ABOUT CHROME DEBUGGER, IF I 
+	//   AM IN A DIFFERENT SCOPE LOOKING AT A VARIABLE WITH
+	//   THE SAME NAME AS THE SCOPE IT'S PAUSED ON, IT SHOWS
+	//   ME THE WRONG SCOPE WHEN I USE THE STACK!
 
 	// restore outer scope when context was created
 	//Object.assign(callStack, runContext.localFunctions)
@@ -8186,6 +8254,8 @@ async function createEnvironment(sender, runContext) {
 		doMorpheusKey: doMorpheusKey,
 		clearTimeout: _clearTimeout.bind(null, runContext),
 		clearInterval: _clearInterval.bind(null, runContext),
+		_makeWindowAccessor: _makeWindowAccessor,
+
 	}
 	Object.assign(runContext, {
 		timers: {},
@@ -8481,25 +8551,27 @@ chrome.webNavigation.onCommitted.addListener(function(details) {
 	// PAUSE THE SCRIPT!
 	let runIds = Object.keys(threads)
 	for(let i = 0; i < runIds.length; i++) {
+		let dbgTab = threads[runIds[i]] // tab being managed?
 		// check if the local tabId has been set
-		if(threads[runIds[i]].localVariables.tabId == details.tabId) {
+		if(dbgTab && dbgTab.localVariables.tabId == details.tabId) {
 			// sometimes users type these in wrong and the browser fixes it automatically
 			// DON'T USE THIS AS A REASON TO PAUSE FROM INTERFERENCE
-			let leftStr = threads[runIds[i]].navationURL.replace(/https|http|\//ig, '')
+			let leftStr = dbgTab.navationURL.replace(/https|http|\//ig, '')
 			let rightStr = details.url.replace(/https|http|\//ig, '')
 			if(!leftStr.localeCompare(rightStr)
 				|| (ALLOW_REDIRECT 
 					&& details.transitionQualifiers.includes('server_redirect'))
 			) {
 				// WE KNOW THE REQUEST CAME FROM A SCRIPT AND NOT FROM THE USER
-				threads[runIds[i]].documentId = details.parentDocumentId || details.documentId
-			} else if(details.documentId != threads[runIds[i]].documentId
-				&& details.parentDocumentId != threads[runIds[i]].documentId) {
+				dbgTab.documentId = details.parentDocumentId 
+					|| details.documentId
+			} else if(details.documentId != dbgTab.documentId
+				&& details.parentDocumentId != dbgTab.documentId) {
 				debugger
-				threads[runIds[i]].paused = true
+				dbgTab.paused = true
 				// ^ more important
 				// send a paused status back to the frontend
-				chrome.tabs.sendMessage(threads[runIds[i]].senderId, { 
+				chrome.tabs.sendMessage(dbgTab.senderId, { 
 					paused: details.timeStamp
 				}, function(response) {
 

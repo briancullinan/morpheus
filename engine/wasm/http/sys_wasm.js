@@ -77,9 +77,14 @@ function init() {
   if(typeof window.preFS != 'undefined') {
     let preloadedPaths = Object.keys(window.preFS)
     for(let i = 0; i < preloadedPaths.length; i++) {
-
+      if(preloadedPaths[i].endsWith('_timestamp')) {
+        continue
+      }
+      let newFiletime = window.preFS[
+          preloadedPaths[i] + '_timestamp'] 
+              || new Date()
       FS.virtual[preloadedPaths[i]] = {
-        timestamp: new Date(),
+        timestamp: newFiletime,
         mode: FS_FILE,
         contents: _base64ToArrayBuffer(window.preFS[preloadedPaths[i]])
       }

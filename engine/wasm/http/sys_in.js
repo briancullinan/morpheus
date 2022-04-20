@@ -151,13 +151,11 @@ function InputPushMovedEvent (evt) {
     && !document.webkitIsFullScreen
     && !document.mozIsFullScreen
 
-  if(gw_active && notFullscreen) {
-    Cvar_SetIntegerValue( 
-      stringToAddress('vid_xpos'), 
-      stringToAddress('' + (window.screenX || window.screenLeft)) );
-    Cvar_SetIntegerValue( 
-      stringToAddress('vid_ypos'), 
-      stringToAddress('' + (window.screenY || window.screenTop)) );
+  if(HEAP32[gw_active >> 2] && notFullscreen) {
+    Cvar_SetIntegerValue( stringToAddress('vid_xpos'), 
+      window.screenX || window.screenLeft );
+    Cvar_SetIntegerValue( stringToAddress('vid_ypos'), 
+      window.screenY || window.screenTop );
   }
 }
 

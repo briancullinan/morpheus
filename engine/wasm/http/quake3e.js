@@ -267,7 +267,10 @@ function Sys_Edit() {
 		//   these are the leaves of change that worry code reviewers
 		ACE.filename = filenameStr
 	} else {
-		Com_Printf(stringToAddress('File not found \'%s\'.\nUsage: edit [filename]\n'), filename)
+		let vargs = stringToAddress('DEADBEEF') // pointer to pointer
+		HEAPU32[vargs >> 2] = filename
+		HEAPU32[(vargs >> 2) + 1] = 0
+		Com_Printf(stringToAddress('File not found \'%s\'.\nUsage: edit [filename]\n'), vargs)
 	}
 }
 

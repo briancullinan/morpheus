@@ -103,7 +103,7 @@ async function enterLogin(url) {
 
 }
 
-
+// @After(_makeWindowAccessor)
 async function newWindow() {
   let win = await chrome.windows.create({
     url: 'http://www.google.com',

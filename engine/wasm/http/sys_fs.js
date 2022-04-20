@@ -90,6 +90,14 @@ function readAll() {
         if(cursor.key.endsWith('default.cfg')) {
           hadDefault = cursor.key
         }
+        // already exists on filesystem, 
+        //   it must have come with page
+        if(FS.virtual[cursor.key]
+          && FS.virtual[cursor.key].timestamp 
+            > cursor.value.timestamp) {
+          // embedded file is newer, start with that
+          return cursor.continue()
+        }
         FS.virtual[cursor.key] = {
           timestamp: cursor.value.timestamp,
           mode: cursor.value.mode,
@@ -119,8 +127,8 @@ function readAll() {
           }, 100)
         }
       }
-      if(typeof window.initFilelist != 'undefined') {
-        initFilelist()
+      if(typeof window.updateFilelist != 'undefined') {
+        updateFilelist()
       }
     })
   })

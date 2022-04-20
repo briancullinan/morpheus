@@ -270,7 +270,9 @@ function initLibraries() {
 	// automatically load libraries
 	let buf = stringToAddress('DEADBEEF') // pointer to pointer
 	let length
-	if ((length = FS_ReadFile(stringToAddress('driver/library.js'), buf)) > 0 && HEAPU32[buf >> 2] > 0) {
+	if ((length = FS_ReadFile(stringToAddress('driver/library.js'), buf)) 
+			> 0 && HEAPU32[buf >> 2] > 0
+	) {
 		let imageView = Array.from(HEAPU8.slice(HEAPU32[buf >> 2], HEAPU32[buf >> 2] + length))
 		let utfEncoded = imageView.map(function (c) { return String.fromCharCode(c) }).join('')
 		FS_FreeFile(HEAPU32[buf >> 2])
@@ -291,7 +293,7 @@ function anyParentsCollapsed(segments) {
 		return
 	}
 	return segments.slice(0, -1)
-		.reduce(function (p, i) { 
+		.reduce(function (p, s, i) { 
 			return p + ACE.filescollapsed[
 				segments.slice(0, i + 1).join('/')]
 		}, 0)
@@ -317,7 +319,8 @@ function updateFilelist(filepath) {
 			.map(function (seg, i, arr) {
 				return arr.slice(0, i + 1).join('/') 
 			})
-		// ADD MISSING PATHS FROM ENGINE TO FILE LIST SO WE DON'T LOSE FILES IN DATABASE
+		// ADD MISSING PATHS FROM ENGINE TO FILE 
+		//   LIST SO WE DON'T LOSE FILES IN DATABASE
 		//   FROM MISSING LINKS. TODO: FSCHKDSK TOOL, WTF?
 		newFiles.push.apply(newFiles, segments)
 	}
@@ -328,14 +331,14 @@ function updateFilelist(filepath) {
 	})
 
 	if(ACE.fileslist) {
-return  // TODO: fix updating
 		let prevCollapse = ACE.filescollapsed
 		// save expand/collapse state even if files are added or removed
 		ACE.filescollapsed = newFiles.reduce(function (obj, i) {
-			obj[i] = prevCollapse[newFiles[i]]
-			let segments = i.split('/')
-			// MAINTAIN THIS VISIBILITY INDEX SO USER INTERACTION CAN BE VERY SPECIFIC AND FAST
-			ACE.filesvisible = !anyParentsCollapsed(segments)
+			obj[i] = prevCollapse[i]
+			// MAINTAIN THIS VISIBILITY INDEX SO USER 
+			//   INTERACTION CAN BE VERY SPECIFIC AND FAST
+			ACE.filesvisible[i] = obj[i] 
+					|| !anyParentsCollapsed(i.split('/'))
 			return obj
 		}, {})
 	} else {
@@ -355,21 +358,13 @@ return  // TODO: fix updating
 }
 
 function isDirectory(i) {
-	// only folder paths and directories are collapsible, missing paths added 
-	//   seperately above HENCE THE CHECK FOR !FS.virtual[files[j]]
+	// only folder paths and directories are collapsible,
+	//   missing paths added seperately above
+	//   HENCE THE CHECK FOR !FS.virtual[files[j]]
 	return !FS.virtual[i] || FS.virtual[i].mode == FS_DIR
 }
 
-function toggleCollapse(evt) {
-	if(!evt.target) {
-		return
-	}
-	let row = evt.target.getAttribute('aria-id') // WTF?
-	let dataRow = ACE.fileslist[row]
-	if(FS.virtual[dataRow]
-		&& FS.virtual[dataRow].mode != FS_DIR) {
-		return
-	}
+function toggleCollapse(row, dataRow) {
 	let collapse = !ACE.filescollapsed[dataRow]
 	for(let i = row; i < ACE.fileslist.length; i++) {
 		if(ACE.fileslist[i].substring(0, dataRow.length)
@@ -389,6 +384,25 @@ function toggleCollapse(evt) {
 	ACE.filescollapsed[dataRow] = collapse
 	ACE.filesmoved = true
 }
+
+
+
+function doFileClick(evt) {
+	if(!evt.target) {
+		return
+	}
+  let gamedir = addressToString(FS_GetCurrentGameDir())
+	let row = evt.target.getAttribute('aria-id') // WTF?
+	let dataRow = ACE.fileslist[row]
+	if(FS.virtual[dataRow]
+		&& FS.virtual[dataRow].mode != FS_DIR) {
+		Cbuf_AddText(stringToAddress(
+				'edit "' + dataRow.replace(gamedir + '/', '') + '"\n'))
+		return
+	}
+	toggleCollapse(row, dataRow)
+}
+
 
 
 // DO THE SAME KIND OF VIRTUAL RENDERING TECHNIQUE ACE USES ON CODE,
@@ -448,7 +462,7 @@ function renderFilelist() {
 			item = document.createElement('LI')
 			actualList.appendChild(item)
 			link = document.createElement('A')
-			link.onclick = toggleCollapse
+			link.onclick = doFileClick
 			item.appendChild(link)
 		} else {
 			item = actualList.children[displayCount]

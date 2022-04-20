@@ -101,6 +101,7 @@ define DO_MORPH_CC
 	$(Q)$(NODE) "let fs = require('fs'); \
 	let base64 = fs.readFileSync('$1', 'base64'); \
 	let preScript = \"if(typeof window.preFS == 'undefined') window.preFS={};\n\"; \
+	preScript += \"window.preFS['$3_timestamp']=\"+Date.now()+\";\"; \
 	preScript += \"window.preFS['$3']='\"+base64+\"';\n\"; \
 	fs.writeFileSync('$2', preScript);"
 endef
