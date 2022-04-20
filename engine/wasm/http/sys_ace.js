@@ -555,6 +555,86 @@ function onError(request) {
 }
 
 
+// TODO: call this code for engine system errors Sys_Dialog()
+function doDialog(request, newDialog) {
+	if(!newDialog) {
+		newDialog = document.createElement('DIV')
+		newDialog.className = 'dialog'
+		document.body.appendChild(newDialog)
+	}
+	if(request.dragDrop) {
+		if(request.text) {
+			if(!newDialog.children[0]) {
+				newDialog.id = 'drop-file'
+				newDialog.appendChild(document.createElement('SPAN'))
+			}
+			newDialog.children[0].innerText = request.text
+		}
+	} else if (request.form) {
+		if(!newDialog.children.length) {
+			newDialog.id = 'enter-login'
+			newDialog.appendChild(document.createElement('FORM'))
+			if(request.text) {
+				let newTitle = document.createElement('H2')
+				newTitle.innerText = request.text
+				newDialog.children[0].appendChild(newTitle)
+			}
+			let fields = Object.keys(request.form)
+			for(let i = 0; i < fields.length; i++) {
+				let field = request.form[fields[i]]
+				let newField
+				let newLabel
+				if(field == 'text') {
+					newLabel = document.createElement('LABEL')
+					newLabel.innerText = fields[i] + ': '
+					newDialog.children[0].appendChild(newLabel)
+					newField = document.createElement('INPUT')
+					newField.type = 'text'
+					newDialog.children[0].appendChild(newField)
+				} else
+				if(field == 'pass') {
+					newLabel = document.createElement('LABEL')
+					newLabel.innerText = fields[i] + ': '
+					newDialog.children[0].appendChild(newLabel)
+					newField = document.createElement('INPUT')
+					newField.type = 'password'
+					newDialog.children[0].appendChild(newField)
+				} else
+				if(field == 'submit') {
+					newField = document.createElement('BUTTON')
+					newField.type = 'submit'
+					newField.innerText = fields[i]
+					newDialog.children[0].appendChild(newField)
+				} else {
+					continue
+				}
+				newDialog.children[0].appendChild(
+						document.createElement('BR'))
+			}
+		}
+	} else {
+
+	}
+	// create a drop surface since the game 
+	//    and editor might interfere
+	newDialog.style.display = 'block'
+	// no await? don't want to lock up main thread
+	if(newDialog.timeout) {
+		clearTimeout(newDialog.timeout)
+	}
+	newDialog.timeout = setTimeout(function () {
+		window['run-script'].value = ''
+		window['run-accessor'].click()
+		// circle back around so server can always control dialog
+		newDialog.timeout = setTimeout(function () {
+			newDialog.style.display = 'none'
+		}, 1000)
+	}, 2000)
+	// async skip click
+	return newDialog
+}
+
+
 function onAccessor(request) {
 	if(!document.body.className.includes('running')
 		// because pause it allowed to happen mid flight finish the accessor request
@@ -573,31 +653,11 @@ function onAccessor(request) {
 		window['run-script'].value = window[propertyName]
 		window['run-accessor'].click()
 		return
-
 		case '_morpheusKey':
-		// create a drop surface since the game 
-		//    and editor might interfere
-		if(!ACE.dropFile) {
-			ACE.dropFile = document.getElementById('drop-file')
-		}
-		ACE.dropFile.style.display = 'block'
-		// no await? don't want to lock up main thread
-		ACE.dropTimout = setTimeout(function () {
-			window['run-script'].value = ''
-			window['run-accessor'].click()
-		}, 2000)
-		// async skip click
+			ACE.dropFile = doDialog(request, ACE.dropFile)
 		return
-
 		case '_enterLogin':
-		if(!ACE.enterPassword) {
-			ACE.enterPassword = document.getElementById('enter-login')
-		}
-		ACE.enterPassword.style.display = 'block'
-		ACE.passwordTimout = setTimeout(function () {
-			window['run-script'].value = ''
-			window['run-accessor'].click()
-		}, 2000)
+			ACE.enterPassword = doDialog(request, ACE.enterPassword)
 		return
 
 		default:

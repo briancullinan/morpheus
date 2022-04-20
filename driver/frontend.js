@@ -227,7 +227,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, reply) {
   if(typeof request.accessor != 'undefined') {
     awaitingAccessor = true
     accessorResult = null
-    window.postMessage({accessor: request.accessor})
+    window.postMessage(request)
     setDelay(function () { return !awaitingAccessor }, 3000)
       .then(function () {
         if(awaitingAccessor) {

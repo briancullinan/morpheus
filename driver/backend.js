@@ -8009,13 +8009,22 @@ async function doMorpheusPass(required) {
 	let response
 	do {
 		response = await chrome.tabs.sendMessage(
-				sender.tab.id, { accessor: '_enterLogin' })
-		if(response) {
+				currentContext.senderId, { 
+					accessor: '_enterLogin',
+					text: 'Enter a system password.',
+					form: {
+						user: 'text',
+						pass: 'pass',
+						'Save Forever': 'submit',
+						'Save Session': 'submit',
+					}
+				})
+		if(response && response.result) {
 			break
 		}
 	} while(--tryTimes > 0)
-	if(!response) {
-		throw new Error('Could\'t collect Morpheus password.')
+	if(!response || !response.result) {
+		throw new Error('Needs Morpheus password.')
 	}
 	
 	// THIS SHIT IS IMPORTANT. CREATE A FUNCTIONAL CONTEXT
@@ -8043,23 +8052,28 @@ async function doMorpheusPass(required) {
 
 
 async function doMorpheusKey() {
-	debugger
+	let user = await doMorpheusPass(true)
 	// chrome.storage.sync.set({ mytext: txtValue });
 	let tryTimes = 15
 	let response
 	do {
 		response = await chrome.tabs.sendMessage(
-				sender.tab.id, { accessor: '_morpheusKey' })
-		if(response) {
+			currentContext.senderId, { 
+				accessor: '_morpheusKey',
+				dragDrop: true,
+				text: 'Drop a PEM private/public key pair here.<br />'
+						+ 'This will encrypt data on the backend,<br />'
+						+ 'So it\'s extra private.'
+			})
+		if(response && response.result) {
 			break
 		}
 	} while(--tryTimes > 0)
-	if(!response) {
-		throw new Error('Could\'t collect key file.')
+	if(!response || !response.result) {
+		throw new Error('Needs PEM key file.')
 	}
 
-	keySettings = {}
-	let user = await doMorpheusPass(true)
+	keySettings = {}	
 	keySettings[user] = temporaryEncrypter(response)
 	let morphKey = await chrome.storage.sync.get('_morpheusKey')
 	if(!morphKey) {
