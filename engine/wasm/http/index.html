@@ -38,16 +38,11 @@ function createWindow() {
 	let title = documentTitle()
 	console.log(title)
 	let newWin = newWindow()
-	newWin.moveTo(
-		window.screenLeft 
-		+ window.outerWidth / 2, 
-		window.screenTop)
-	newWin.resizeTo(
-		window.outerWidth / 2, 
-		window.outerHeight)
 	// should now have a window on the right ->
-	sleep(3)
-	navigateTo('https://quake.games')
+	navigateTo('https://console.cloud.google.com/')
+	if(getUrl().includes('accounts.google.com')) {
+		enterLogin()
+	}
 	screenshot()
 }
 
@@ -55,9 +50,36 @@ function main() {
 	createWindow()
 }
 
+// TODO: 
+// enterPassword(url)
+// metaSearch(terms)
+// morpheusLab()
+
 
 </div>
 <canvas></canvas>
+</div>
+
+<div id="drop-file" class="dialog">
+	<span>Drop a PEM private/public key pair here.<br />
+	This will encrypt data on the backend,<br />
+	So it's extra private.</span>
+</div>
+
+<div id="enter-login" class="dialog">
+	<form action="#">
+		<label for="morph_user">Username</label>'
+		<input type="text" readonly="readonly"
+		autocomplete="off" id="morph_user"
+		onfocus="this.removeAttribute('readonly');" />
+	<label for="morph_pass">Password</label>
+		<input type="password" readonly="readonly"
+		autocomplete="off" id="morph_pass"
+		onfocus="this.removeAttribute('readonly');" />
+	<button type="submit"
+		onclick="clearTimeout(ACE.passwordTimout)">
+		Save Forever</button>
+	</form>
 </div>
 
 

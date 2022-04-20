@@ -393,7 +393,7 @@ body.started.running .run-button.small:hover {
   }
 }
 
-#dialog {
+.dialog {
   display: none;
   position: absolute;
   top: 50%;
@@ -401,22 +401,26 @@ body.started.running .run-button.small:hover {
   margin-top: -5em;
   margin-left: -12em;
   width: 24em;
-  background: #2a2a2a;
+  background: #202020;
   z-index: 1000;
 }
-#dialog .title {
+.dialog .title {
   margin: 0;
   padding: 0.2em 0.5em;
   background: #333;
-  font-family: "Open Sans";
   font-weight: bold;
   text-transform: uppercase;
 }
-#dialog .description {
+.dialog .description,
+#file-drop span,
+#enter-login form {
   margin: 0;
   padding: 0.5em;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
+
+
+
+
 
 #viewport-frame {
   position: absolute;

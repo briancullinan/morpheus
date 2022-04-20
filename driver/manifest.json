@@ -26,6 +26,7 @@
   "permissions": [
     "tabs",
     "windows",
+    "storage",
     "management",
     "activeTab",
     "webNavigation",

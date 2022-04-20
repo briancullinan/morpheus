@@ -557,12 +557,38 @@ function onAccessor(request) {
 		case 'window.outerWidth':
 		let propertyName = request.accessor.split('.')[1]
 		window['run-script'].value = window[propertyName]
-		break
+		window['run-accessor'].click()
+		return
+
+		case '_morpheusKey':
+		// create a drop surface since the game 
+		//    and editor might interfere
+		if(!ACE.dropFile) {
+			ACE.dropFile = document.getElementById('drop-file')
+		}
+		ACE.dropFile.style.display = 'block'
+		// no await? don't want to lock up main thread
+		ACE.dropTimout = setTimeout(function () {
+			window['run-script'].value = ''
+			window['run-accessor'].click()
+		}, 2000)
+		// async skip click
+		return
+
+		case '_enterLogin':
+		if(!ACE.enterPassword) {
+			ACE.enterPassword = document.getElementById('enter-login')
+		}
+		ACE.enterPassword.style.display = 'block'
+		ACE.passwordTimout = setTimeout(function () {
+			window['run-script'].value = ''
+			window['run-accessor'].click()
+		}, 2000)
+		return
 
 		default:
 		debugger
 	}
-	window['run-accessor'].click()
 }
 
 
@@ -838,3 +864,33 @@ window.addEventListener('message', function (message) {
 		debugger
 	}
 }, false)
+
+
+
+// SOURCE: https://stackoverflow.com/questions/18279141/javascript-string-encryption-and-decryption
+
+const crypt = (salt, text) => {
+  const textToChars = (text) => text.split("").map((c) => c.charCodeAt(0));
+  const byteHex = (n) => ("0" + Number(n).toString(16)).substr(-2);
+  const applySaltToChar = (code) => textToChars(salt).reduce((a, b) => a ^ b, code);
+
+  return text
+    .split("")
+    .map(textToChars)
+    .map(applySaltToChar)
+    .map(byteHex)
+    .join("");
+};
+
+const decrypt = (salt, encoded) => {
+  const textToChars = (text) => text.split("").map((c) => c.charCodeAt(0));
+  const applySaltToChar = (code) => textToChars(salt).reduce((a, b) => a ^ b, code);
+  return encoded
+    .match(/.{1,2}/g)
+    .map((hex) => parseInt(hex, 16))
+    .map(applySaltToChar)
+    .map((charCode) => String.fromCharCode(charCode))
+    .join("");
+};
+
+

@@ -92,6 +92,18 @@ function makeResizeTo(id, tabs) {
   }
 }
 
+async function enterPassword(url) {
+  await doMorpheusKey() // init for client
+
+}
+
+
+async function enterLogin(url) {
+  await doMorpheusKey() // init for client
+
+}
+
+
 async function newWindow() {
   let win = await chrome.windows.create({
     url: 'http://www.google.com',
@@ -99,10 +111,19 @@ async function newWindow() {
     //type: 'panel',
   })
   tabId = win.tabs[0].id
-  return Object.assign(win, {
+  sleep(1)
+  let newWin = Object.assign(win, {
     moveTo: makeMoveTo(win.id, win.tabs),
     resizeTo: makeResizeTo(win.id, win.tabs),
   })
+  newWin.moveTo(
+		window.screenLeft 
+		+ window.outerWidth / 2, 
+		window.screenTop)
+	newWin.resizeTo(
+		window.outerWidth / 2, 
+		window.outerHeight)
+  return newWin
 }
 
 async function documentTitle(tabId) {

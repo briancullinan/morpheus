@@ -23,7 +23,8 @@ I build it, let me know when it makes contact.
 
 ## Short term
 1) DONE: Componentize engine, combine with Ace9
-2) Give Morpheus form, animations and world geometry
+2) Give Morpheus form, animations and world geometry, 
+    tc_vis for tracemap grid snapping
 3) Modularize goals, separate QVMs
 4) POC DONE: Stream browser automation through plugin
 5) Automate LinkedIn lobby, find gamers
