@@ -7393,6 +7393,13 @@ async function runBinary(AST, runContext) {
 	} else
 	if(AST.operator == '>=') {
 		return left >= right
+	} else
+	// MEANT TO DO THIS SOONER
+	if(AST.operator == '&&') {
+		return left && right
+	} else
+	if(AST.operator == '||') {
+		return left || right
 	} else {
 		throw new Error(AST.operator + ': Not implemented!')
 	}
@@ -7427,14 +7434,20 @@ async function runStatement(i, AST, runContext) {
 		if(AST[i].type == 'AssignmentExpression') {
 			return await runAssignment(AST[i].left, AST[i].right, runContext)
 		} else
-		if(AST[i].type == 'BinaryExpression') {
+		if(AST[i].type == 'BinaryExpression'
+			|| AST[i].type == 'LogicalExpression') {
 			return await runBinary(AST[i], runContext)
 		} else
 		// WTF I KEEP MISSING RETURN AWAIT?!!! NEED TO WRITE AN AST IN PROLOG
 		//   THEN WRITE PROLOG PARSER IN JAVASCRIPT TO EVALUATE MATCHING AST
 		//   TREE FROM ACORN/BISON/ANTLR
 		if(AST[i].type == 'ForStatement') {
-			return await runLoop(AST[i], runContext)
+			return await runLoop(
+				AST[i].init, 
+				AST[i].test, 
+				AST[i].update, 
+				AST[i].body, 
+				runContext)
 		} else
 		if(AST[i].type == 'UpdateExpression') {
 			return runUpdate(AST[i], runContext)
@@ -7479,11 +7492,17 @@ async function runStatement(i, AST, runContext) {
 			// TODO: add late binding, don't eval until it's accessed
 			// WOW! IMAGINE THAT! SHOW VARIABLES BEFORE AND AFTER ASSIGNMENT! GOOGLE CHROME DEBUGGER!
 			doAssign(AST[i].id.name, beforeLine, bubbleColumn, runContext)
-			let result = await runStatement(0, [AST[i].init], runContext)
-			// TODO: ^^ intentionally leak here for reporting, global error handling overriding?
-			runContext.localVariables[AST[i].id.name] = result
-			if(!isStillRunning(runContext)) { // bubble up
-				return
+			let result 
+			if(!AST[i].init) {
+				// TODO: error variable used because initialized
+				result = (runContext.localVariables[AST[i].id.name] = void 0)
+			} else {
+				result = await runStatement(0, [AST[i].init], runContext)
+				// TODO: ^^ intentionally leak here for reporting, global error handling overriding?
+				runContext.localVariables[AST[i].id.name] = result
+				if(!isStillRunning(runContext)) { // bubble up
+					return
+				}
 			}
 			doAssign(AST[i].id.name, beforeLine, bubbleColumn, runContext)
 			return result
@@ -7699,7 +7718,20 @@ async function runStatement(i, AST, runContext) {
 			}, function () { console.log('debugging' )})
 			return
 		} else
-
+		if(AST[i].type == 'DoWhileStatement') {
+			let result
+			let safety = 10000
+			do {
+				result = await runStatement(0, [AST[i].body], runContext)
+				if(!isStillRunning(runContext)) {
+					return
+				}
+				testResults = await runStatement(0, [AST[i].test], runContext)
+				if(!isStillRunning(runContext)) {
+					return
+				}
+			} while (testResults && --safety > 0)
+		} else
 
 
 		{
@@ -7761,12 +7793,12 @@ async function runLoop(init, test, update, body, runContext) {
 	let testResults = initAndTest[1]
 	// TODO: turn off safety feature with an attribute @LongLoops
 	let safety = 10000
-	for(;!testResults && safety > 0; safety--) {
+	for(;testResults && safety > 0; safety--) {
 		let thisAndThat = await runThisAndThat(body, update, runContext)
-		result = thisAndThat[0]
 		if(!isStillRunning(runContext)) {
 			return
 		}
+		result = thisAndThat[0]
 		testResults = await runStatement(0, [test], runContext)
 		if(!isStillRunning(runContext)) {
 			return
@@ -7803,7 +7835,10 @@ async function runAssignment(left, right, runContext) {
 		if(left.property.type == 'Literal') {
 			property = left.property.value
 		} else {
-			throw new Error('AssignmentExpression: Not implemented!')
+			property = await runStatement(0, [left.property], runContext)
+			if(!isStillRunning(runContext)) {
+				return
+			}
 		}
 
 		// WOW! IMAGINE THAT! SHOW VARIABLES BEFORE AND AFTER ASSIGNMENT! GOOGLE CHROME DEBUGGER!
@@ -8004,33 +8039,26 @@ async function doMorpheusPass(required) {
 		&& Date.now() - morpheusPassTime < 30 * 1000) {
 		return
 	}
-	// chrome.storage.sync.set({ mytext: txtValue });
-	let tryTimes = 15
-	let response
-	do {
-		response = await chrome.tabs.sendMessage(
-				currentContext.senderId, { 
-					accessor: '_enterLogin',
-					text: 'Enter a system password.',
-					form: {
-						user: 'text',
-						pass: 'pass',
-						'Save Forever': 'submit',
-						'Save Session': 'submit',
-					}
-				})
-		if(response && response.result) {
-			break
-		}
-	} while(--tryTimes > 0)
+
+	let result = await chrome.storage.sync.get('_morpheusKey')
+	if(!result._morpheusKey) {
+		morphKey = []
+	} else {
+		morphKey = JSON.parse(result._morpheusKey)
+	}
+	let response = await currentContext.localFunctions['doLoginDialog']()
+	if(!isStillRunning(currentContext)) {
+		return
+	}
 	if(!response || !response.result) {
 		throw new Error('Needs Morpheus password.')
 	}
-	
+
 	// THIS SHIT IS IMPORTANT. CREATE A FUNCTIONAL CONTEXT
 	//   INSTEAD OF LEAVING PASSWORDS LAYING AROUND IN VARIABLES
-	//   FOR WINDOW.SOMETHING TO SNOOP ON. 
+	//   FOR WINDOW[SOMETHING] TO SNOOP ON. 
 	// NO WAY TO ACCESS morpheusPass FROM OUTSIDE THIS FUNCTION
+	//   RIIIIIIIIIGHT V8????????
 	morpheusPassTime = Date.now()
 	temporaryDecrypter = (function (morpheusPass) {
 		return async function (data) {
@@ -8046,44 +8074,64 @@ async function doMorpheusPass(required) {
 			return crypt(morpheusPass, data)
 		}
 	})(response.pass)
+
+	// STORE THE USERNAME, SO WE DON'T HAVE TO KEEP TYPING IT
+	//   THE HASH USERNAME b****n@g****m AND THE PASSWORD ARE
+	//   COMBINED TO MAKE A WEAK ENCRYPTION STRING BETWEEN FRONT
+	//   END AND BACKEND. IS THIS ENOUGH ENTROPY? IS CHROME GOING
+	//   TO LEAK USERNAMES TO OTHER EXTENSIONS? (PASSWORD YOU KNOW,
+	//                                           USERNAME CHROME KEEPS SAFE?)
+	// THE USERNAME/PASSWORD COMBO DECRYPTS THE EXTENSION CONFIG
+	//   THE EXTENSION CONFIG CONTAINS A LONGER DECRYPTED SALT
+	//   THE SALT COMBINED WITH THE PASSWORD/USERNAME COMBO
+	//   DECRYPTS THE PRIVATE KEY THAT DECRYPTS LOCALLY STORED
+	//   SESSION PASSWORDS. HOW DOES RSA RECOMMEND KEEPING PRIVATE
+	//   SAFE? 
+	await addUser(user)
+
+	// WE ARE NOW READY TO TRANSFER PRE-ENCRYPTED PASSWORDS FROM
+	//   THE FRONT-END UI, WHERE THEY "MIGHT" BE SAFE, TO THE BACKEND
+	//   WHICH WE ASSUME IS TAMPER PROOF, FOR DECRYPTION AND SENDING 
+	//   TO CORRECT PAGE. TODO: IMPORT/EXPORT LAWS ON SECURE TECHNOLOGY.
+
 	return response.user
+}
+
+
+async function addUser(user) {
+	let result = await chrome.storage.sync.get('_morpheusKey')
+	if(!result._morpheusKey) {
+		morphKey = []
+	} else {
+		morphKey = JSON.parse(result._morpheusKey)
+	}
+	if(!morphKey.includes(user)) {
+		morphKey.push(user)
+	}
+	keySettings._morpheusKey = JSON.stringify(morphKey)
+	await chrome.storage.sync.set(keySettings)
+
 }
 
 
 
 async function doMorpheusKey() {
 	let user = await doMorpheusPass(true)
+	if(!isStillRunning(currentContext)) {
+		return
+	}
 	// chrome.storage.sync.set({ mytext: txtValue });
-	let tryTimes = 15
-	let response
-	do {
-		response = await chrome.tabs.sendMessage(
-			currentContext.senderId, { 
-				accessor: '_morpheusKey',
-				dragDrop: true,
-				text: 'Drop a PEM private/public key pair here.<br />'
-						+ 'This will encrypt data on the backend,<br />'
-						+ 'So it\'s extra private.'
-			})
-		if(response && response.result) {
-			break
-		}
-	} while(--tryTimes > 0)
+	let response = await currentContext.localFunctions['doKeyDialog']()
+	if(!isStillRunning(currentContext)) {
+		return
+	}
 	if(!response || !response.result) {
 		throw new Error('Needs PEM key file.')
 	}
 
+	await addUser(user)
 	keySettings = {}	
 	keySettings[user] = temporaryEncrypter(response)
-	let morphKey = await chrome.storage.sync.get('_morpheusKey')
-	if(!morphKey) {
-		morphKey = []
-	} else {
-		morphKey = JSON.parse(morphKey)
-	}
-	debugger
-	morphKey.push(user)
-	keySettings.morphKey = JSON.stringify(morphKey)
 	await chrome.storage.sync.set(keySettings)
 	// OKAY TECHNICAL BULLSHIT, THE GOAL IS TO KEEP PASSWORDS
 	//   OUT OF THE HANDS OF OTHER EXTENSIONS, AND POSSIBLE XSS.
@@ -8102,6 +8150,9 @@ async function doMorpheusKey() {
 	// WHEN A PASSWORD REQUEST IS MADE, THE TIME ON THE CLIENT PAGE
 	//   IF CHECKED FOR EXPIRATION SETTING, THE CLIENT REQUESTS MORPHEUS
 	//   KEY AS A SAFETY CHECK
+	// THE IMPORTANT THING HERE IS TO NEVER TRASMIT AND STORE BOTH PARTS
+	//   OF THE SECRET NEXT TO EACH OTHER / AT THE SAME TIME, NOT TO MAKE
+	//   IT EASY FOR AN ATTACKER TO PUT THE CODE TOGETHER AND STEAL PASSES
 	// MORPHEUS KEY IS WEAK ENCRYPTED WITH A SESSION ID
 	//   THE PRE-PUBLIC-KEY ENCRYPTED PASSWORD IS SENT TO THE BACKEND
 	// THE BACKEND DECRYPTS THE MORPHEUS-KEY-ENCRYPTED RAW PASSWORD
@@ -8305,12 +8356,19 @@ async function createEnvironment(sender, runContext) {
 		tabId: sender.tab.id,
 		chrome: {
 			tabs: {
-				get: chrome.tabs.get
+				get: chrome.tabs.get,
+				sendMessage: chrome.tabs.sendMessage
+						// allow the library script to send messages 
+						//   back to frontend
+						.bind(chrome.tabs, sender.tab.id)
 			},
 			windows: {
 				get: chrome.windows.get,
 				create: createWindow,
-			}
+			},
+			profiles: {
+				list: function () { return morphKey }
+			},
 		},
 		module: WEBDRIVER_API,
 		console: {
@@ -8656,10 +8714,25 @@ chrome.webNavigation.onCommitted.addListener(function(details) {
 
 
 
-let hasKey = false
-chrome.storage.sync.get('_morpheusKey', function(data) {
-	hasKey = true
-  // just kidding, do nothing
+let morphKey = false
+chrome.storage.sync.get('_morpheusKey', async function(data) {
+	try {
+		if(data._morpheusKey) {
+			morphKey = JSON.parse(data._morpheusKey)
+		} else {
+			await chrome.storage.sync.set({
+				'_morpheusKey': JSON.stringify([])
+			})
+		}
+	} catch (e) {
+		try {
+			await chrome.storage.sync.set({
+				'_morpheusKey': JSON.stringify([])
+			})
+		} catch (e) {
+			debugger
+		}
+	}
 })
 
 

@@ -409,7 +409,7 @@ body.started.running .run-button.small:hover {
 }
 .dialog .title,
 .dialog h2 {
-  margin: 0;
+  margin: -40px -40px 20px -40px;
   padding: 0.2em 0.5em;
   background: #333;
   font-weight: bold;
