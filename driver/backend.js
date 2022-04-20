@@ -7218,6 +7218,28 @@ async function runCall(runContext, functionName, parameterDefinition, before, af
 	let beforeLine = runContext.bubbleLine - 1 // -1 for wrapper function
 	runContext.bubbleStack.push(functionName + ' . ' + beforeLine)
 
+	// THIS SHIT IS IMPORTANT. MAKE COMPLICATED SIMPLE.
+	// I MENTION THIS TO PEOPLE AND THEY HAVE NO IDEA
+	//   WHAT I MEAN. I LEARNED THIS IN MY FANCY 4 YR.
+	// https://en.wikipedia.org/wiki/Aspect-oriented_programming
+	//   C# DOES THIS AUTOMATICALLY AND PEOPLE LOVE IT
+	//   THIS IS BASICALLY HOW IT WORKS INTERNALLY, USES
+	//   INTROSPECTION TO READ ATTRIBUTES FROM THE PARSE
+	//   THEN CALLS THE FUNCTIONS BEFORE THE ACTUAL CALL
+	//   HAPPENS. SYNTACTIC SUGAR.
+	if(before) {
+		let beforeFunc
+		if(runContext.localFunctions[before]) {
+			beforeFunc = runContext.localFunctions[before]
+		} else if(typeof runContext.localVariables[before] == 'function') {
+			beforeFunc = runContext.localVariables[before]
+		} else {
+			throw new Error('Attribute @Before not found: ' + before)
+		}
+		// allow users to modify function arguments? SURE!
+		let r = await beforeFunc(callArgs, runContext)
+	}
+
 	for(let l = 0; l < parameterDefinition.length; l++) {
 		if(parameterDefinition[l].type != 'Identifier') {
 			throw new Error('FunctionDeclaration: Not implemented!')
@@ -7228,28 +7250,22 @@ async function runCall(runContext, functionName, parameterDefinition, before, af
 		runContext.localVariables[parameterDefinition[l].name] = callArgs[l]
 	}
 
-	// TODO: SOMETHING ABOUT IF AN ASPECT HAS AN EXCPLICIT RETURN 
-	//   STATEMENT THEN OVERRIDE THE RETURN VALUE WITH BEFORE
-	//   OTHERWISE LEAVE IT UNMODIFIED
-	if(before) {
-		let beforeFunc = runContext.localFunctions[before]
-		if(beforeFunc) {
-			let r = await beforeFunc(callArgs, runContext)
-		} else {
-			throw new Error('Attribute @Before not found: ' + before)
-		}
-	}
-
 	// run new command context
 	let result = await runStatement(0, [body], runContext)
 
+	// TODO: SOMETHING ABOUT IF AN ASPECT HAS AN EXCPLICIT RETURN 
+	//   STATEMENT THEN OVERRIDE THE RETURN VALUE WITH BEFORE
+	//   OTHERWISE LEAVE IT UNMODIFIED
 	if(after) {
-		let afterFunc = runContext.localFunctions[after]
-		if(afterFunc) {
-			let r = await afterFunc(result, runContext)
+		let afterFunc
+		if(runContext.localFunctions[after]) {
+			afterFunc = runContext.localFunctions[after]
+		} else if(typeof runContext.localVariables[after] == 'function') {
+			afterFunc = runContext.localVariables[after]
 		} else {
 			throw new Error('Attribute @After not found: ' + after)
 		}
+		result = await afterFunc(result, runContext)
 	}
 
 	//Object.assign(runContext.localVariables, startVars) // reset references
@@ -7280,8 +7296,8 @@ function doAssert() {
 
 }
 
-
-const ASPECTS_REGEX = /(\n\s*\/\/\s*@(Before|After)\s*\([^\)]*\)\s*)+/
+const FUNC_COMMENTS = /(\n\s*\/\/.*)*(async|function|\s)*?$/
+const ASPECTS_REGEX = /\s+|\n+|\(|\)|function|async/g
 
 function runPrimitive(AST, runContext) {
 	if(AST.type == 'Literal') {
@@ -7502,7 +7518,9 @@ async function runStatement(i, AST, runContext) {
 				} else {
 					throw new Error('Not a function! ' + AST[i].callee.name)
 				}
-
+				if(!isStillRunning(runContext)) {
+					return // bubble up
+				}
 				if(runContext.libraryLines == 0) {
 					throw new Error('Library not loaded!')
 				}
@@ -7533,23 +7551,24 @@ async function runStatement(i, AST, runContext) {
 			} else {
 				let attributeComments = runContext.script
 					.substring(0, AST[i].start)
-					.match(ASPECTS_REGEX)
+					.match(FUNC_COMMENTS)
 				if(attributeComments) {
-					let attribs = attributeComments.split(/\s*|\n*|\@|\(|\)/g)
-					for(let i = 0; i < attribs.length; i++) {
-						if(attribs[i].trim().length == 0) {
+					let attribs = attributeComments[0].split(ASPECTS_REGEX)
+					for(let k = 0; k < attribs.length; k++) {
+						if(attribs[k].trim().length == 0
+							|| !attribs[k].includes('@')) {
 							continue
 						} else
-						if(attribs[i] == 'Before') {
-							before = attribs[i+1]
-							++i
+						if(attribs[k] == '@Before') {
+							before = attribs[k+1]
+							++k
 						} else
-						if(attribs[i] == 'After') {
-							after = attribs[i+1]
-							++i
+						if(attribs[k] == '@After') {
+							after = attribs[k+1]
+							++k
 						} else {
 							doConsole(runContext.senderId, 
-								'WARNING: Attribute not recognized: ' + attribs[i])
+								'WARNING: Attribute not recognized: ' + attribs[k])
 						}
 
 					}
