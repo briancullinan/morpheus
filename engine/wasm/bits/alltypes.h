@@ -89,7 +89,7 @@ typedef long double double_t;
 #endif
 
 #if defined(__NEED_time_t) && !defined(__DEFINED_time_t)
-typedef long time_t;
+typedef long long time_t;
 #define __DEFINED_time_t
 #endif
 
@@ -295,7 +295,7 @@ typedef void * timer_t;
 #endif
 
 #if defined(__NEED_clockid_t) && !defined(__DEFINED_clockid_t)
-typedef int clockid_t;
+//typedef int clockid_t;
 typedef long long timestamp_t;
 #define __DEFINED_clockid_t
 #endif
@@ -316,7 +316,7 @@ struct timeval { time_t tv_sec; suseconds_t tv_usec; };
 #endif
 
 #if defined(__NEED_struct_timespec) && !defined(__DEFINED_struct_timespec)
-struct timespec { time_t tv_sec; long tv_nsec; };
+//struct timespec { time_t tv_sec; long tv_nsec; };
 #define __DEFINED_struct_timespec
 #endif
 

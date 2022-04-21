@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <threads.h>
 #include "lburg.h"
 
 static char rcsid[] = "$Id$";
@@ -37,10 +38,16 @@ static void emitstring(Rule rules);
 static void emitstruct(Nonterm nts, int ntnumber);
 static void emittest(Tree t, char *v, char *suffix);
 
-int main(int argc, char *argv[]) {
+#ifdef __WASM__
+__attribute__((visibility("default")))
+int _start(int argc, char *argv[])
+#else
+int main(int argc, char *argv[])
+#endif
+{
 	int c, i;
 	Nonterm p;
-	
+
 	for (i = 1; i < argc; i++)
 		if (strcmp(argv[i], "-T") == 0)
 			Tflag = 1;
@@ -53,6 +60,8 @@ int main(int argc, char *argv[]) {
 				argv[0]);
 			exit(1);
 		} else if (infp == NULL) {
+extern void DebugBreak(void);
+DebugBreak();
 			if (strcmp(argv[i], "-") == 0)
 				infp = stdin;
 			else if ((infp = fopen(argv[i], "r")) == NULL) {

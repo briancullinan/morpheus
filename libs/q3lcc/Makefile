@@ -2,16 +2,42 @@ TEMPDIR=/tmp
 A=.a
 O=.o
 
-ifeq ($(PLATFORM),mingw32)
-  E=.exe
-else
-  E=
+E=.wasm
+ifndef COMPILE_PLATFORM
+COMPILE_PLATFORM   := $(shell uname | sed -e 's/_.*//' | tr '[:upper:]' '[:lower:]' | sed -e 's/\//_/g')
 endif
 
-CC=gcc
-LCC_CFLAGS=-O2 -Wall -fno-strict-aliasing -MMD
-LDFLAGS=
-LD=gcc
+#-mthread-model posix -pthread
+#-mthread-model single
+
+OPT := wasm-opt 
+CC := ../$(COMPILE_PLATFORM)/wasi-sdk-14.0/bin/clang
+LCC_CFLAGS=-O2 -Wall -fno-strict-aliasing -MMD \
+	-D__WASM__=1 \
+	-D_WASI_EMULATED_MMAN=1 \
+	-Dfopen=Sys_FOpen \
+	-Wno-logical-op-parentheses \
+	-Wno-unused-variable \
+	-Wno-unused-label \
+	-Wno-parentheses \
+	-Wno-dangling-else \
+	-Wno-missing-braces \
+	-I../wasi-sysroot/include \
+
+#	--import fopen            :(
+
+LDFLAGS := \
+	--error-limit=200 \
+	--export-dynamic \
+	--export malloc \
+	--import-memory \
+	--import-table \
+	--export-all \
+	--allow-undefined-file=../../engine/wasm/wasm.syms \
+	../../engine/wasm/wasi/libclang_rt.builtins-wasm32.a \
+	../wasi-sysroot/lib/wasm32-wasi/libc.a
+
+LD := ../$(COMPILE_PLATFORM)/wasi-sdk-14.0/bin/wasm-ld
 AR=ar
 ARFLAGS=cru
 RANLIB=ranlib
@@ -92,7 +118,8 @@ $(BD)rcc/dagcheck$(O): $(BD)rcc/dagcheck.c
 	$(CC) $(LCC_CFLAGS) -Wno-unused -c -Isrc -o $@ $<
 
 $(BD)rcc/dagcheck.c: $(BD)lburg/lburg$(E) src/dagcheck.md
-	$(BD)lburg/lburg$(E) src/dagcheck.md $@
+	$(Q)node --inspect-brk -e "require('../../engine/wasm/bin/web.js') \
+		.lburg('src/dagcheck.md', '$@')"
 
 
 # ===== LBURG =====
@@ -102,6 +129,8 @@ LBURGOBJS= \
 
 $(BD)lburg/lburg$(E): $(LBURGOBJS)
 	$(LD) $(LDFLAGS) -o $@ $(LBURGOBJS)
+	$(Q)$(OPT) -Os --no-validation -o $@ $@
+
 
 $(BD)lburg/%$(O): lburg/%.c
 	$(CC) $(LCC_CFLAGS) -c -Ilburg -o $@ $<

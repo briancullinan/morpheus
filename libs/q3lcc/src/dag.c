@@ -536,12 +536,16 @@ void emitcode(void) {
 			       if (glevel > 0 && IR->stabline) {
 			       	(*IR->stabline)(&cp->u.point.src); swtoseg(CODE); } break;
 		case Gen: case Jump:
-		case Label:    if (cp->u.forest)
-			       	(*IR->emit)(cp->u.forest); break;
-		case Local:    if (glevel && IR->stabsym) {
+		case Label:    
+						if (cp->u.forest)
+						(*IR->emit)(cp->u.forest); 
+						break;
+		case Local:    
+						if (glevel && IR->stabsym) {
 			       	(*IR->stabsym)(cp->u.var);
 			       	swtoseg(CODE);
-			       } break;
+			       } 
+						break;
 		case Switch:   {	int i;
 					/* emit jump targets in data segment */
 					defglobal( cp->u.swtch.table, DATA );

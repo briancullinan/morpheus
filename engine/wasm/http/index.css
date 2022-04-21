@@ -104,6 +104,7 @@ body > img {
 }
 
 
+#command-bar label[for="liveReload"] span,
 #command-bar label[for="lineWrap"] span,
 #command-bar label[for="codeFold"] span {
   position: absolute;
@@ -119,11 +120,15 @@ body > img {
   transition: .5s background-color ease;
 }
 
+/* TODO: convert to SCSS when entire build stack is in browser */
+
+#command-bar label[for="liveReload"],
 #command-bar label[for="lineWrap"],
 #command-bar label[for="codeFold"] {
   padding-left: 40px;
 }
 
+#command-bar label[for="liveReload"] span:before,
 #command-bar label[for="lineWrap"] span:before,
 #command-bar label[for="codeFold"] span:before {
   display:block;
@@ -138,6 +143,7 @@ body > img {
   box-sizing: border-box;
 }
 
+#command-bar label[for="liveReload"]:hover span,
 #command-bar label[for="lineWrap"]:hover span,
 #command-bar label[for="codeFold"]:hover span {
   background-color: #C0A030;
