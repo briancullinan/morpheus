@@ -1,3 +1,11 @@
+Sys_fgets
+Sys_fputs
+Sys_vfprintf
+Sys_time
+Sys_putc
+Sys_getc
+
+
 __assert_fail
 __lock
 __unlock

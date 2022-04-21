@@ -60,8 +60,6 @@ int main(int argc, char *argv[])
 				argv[0]);
 			exit(1);
 		} else if (infp == NULL) {
-extern void DebugBreak(void);
-DebugBreak();
 			if (strcmp(argv[i], "-") == 0)
 				infp = stdin;
 			else if ((infp = fopen(argv[i], "r")) == NULL) {

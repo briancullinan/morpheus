@@ -27,11 +27,10 @@ CC                 := libs/$(COMPILE_PLATFORM)/wasi-sdk-14.0/bin/clang
 CXX                := libs/$(COMPILE_PLATFORM)/wasi-sdk-14.0/bin/clang++
 
 Q3ASM_SOURCE  := libs/q3asm
-MUSL_SOURCE   := libs/musl-1.2.2
 
 CLIENT_INCLUDES    := \
 	-Iengine/wasm \
-	-I$(MUSL_SOURCE)/include \
+	-Ilibs/wasi-sysroot/include \
 	-I$(SDL_SOURCE)/include 
 
 BASE_CFLAGS        := \

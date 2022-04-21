@@ -62,4 +62,23 @@ extern int errcnt;
 extern FILE *infp;
 extern FILE *outfp;
 
+
+int Sys_getc(FILE *f);
+#define getc(f) Sys_getc(f)
+int Sys_putc(int c, FILE *f);
+#define putc(c, f) Sys_putc(c, f)
+int Sys_time(int *t);
+#define time(t) Sys_time(t)
+__attribute__((__visibility__("default")))
+__attribute__((__noinline__))
+int printf(const char *__restrict, ...);
+int Sys_vfprintf(FILE *__restrict, const char *__restrict, __isoc_va_list);
+#define vfprintf(x, y, ...) Sys_vfprintf(x, y, __VA_ARGS__)
+int Sys_fputs(const char *__restrict, FILE *__restrict);
+#define fputs(x, y) Sys_fputs(x, y)
+FILE *Sys_FOpen(const char *__restrict, const char *__restrict);
+#define fopen(x, y) Sys_FOpen(x, y)
+char *Sys_fgets(char *__restrict, int, FILE *__restrict);
+#define fgets(buf, size, fh) Sys_fgets(buf, size, fh)
+
 #endif

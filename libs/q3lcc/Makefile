@@ -1,28 +1,28 @@
 TEMPDIR=/tmp
 A=.a
 O=.o
-
 E=.wasm
+
 ifndef COMPILE_PLATFORM
 COMPILE_PLATFORM   := $(shell uname | sed -e 's/_.*//' | tr '[:upper:]' '[:lower:]' | sed -e 's/\//_/g')
 endif
 
 #-mthread-model posix -pthread
 #-mthread-model single
-
+PLATFORM := wasm
+ARCH := js
 OPT := wasm-opt 
 CC := ../$(COMPILE_PLATFORM)/wasi-sdk-14.0/bin/clang
 LCC_CFLAGS=-O2 -Wall -fno-strict-aliasing -MMD \
 	-D__WASM__=1 \
 	-D_WASI_EMULATED_MMAN=1 \
-	-Dfopen=Sys_FOpen \
 	-Wno-logical-op-parentheses \
 	-Wno-unused-variable \
 	-Wno-unused-label \
 	-Wno-parentheses \
 	-Wno-dangling-else \
 	-Wno-missing-braces \
-	-I../wasi-sysroot/include \
+	-I../wasi-sysroot/include 
 
 #	--import fopen            :(
 
@@ -33,6 +33,9 @@ LDFLAGS := \
 	--import-memory \
 	--import-table \
 	--export-all \
+	--export printf \
+	--export stderr \
+	--export stdout \
 	--allow-undefined-file=../../engine/wasm/wasm.syms \
 	../../engine/wasm/wasi/libclang_rt.builtins-wasm32.a \
 	../wasi-sysroot/lib/wasm32-wasi/libc.a
@@ -118,8 +121,8 @@ $(BD)rcc/dagcheck$(O): $(BD)rcc/dagcheck.c
 	$(CC) $(LCC_CFLAGS) -Wno-unused -c -Isrc -o $@ $<
 
 $(BD)rcc/dagcheck.c: $(BD)lburg/lburg$(E) src/dagcheck.md
-	$(Q)node --inspect-brk -e "require('../../engine/wasm/bin/web.js') \
-		.lburg('src/dagcheck.md', '$@')"
+	$(Q)node --inspect-brk -e "require('../../engine/wasm/bin/lburg.js') \
+		('src/dagcheck.md', '$@')"
 
 
 # ===== LBURG =====
