@@ -1,3 +1,6 @@
+// ZERO DEPENDENCY BARE-BONES JAVASCRIPT FILE-SYSTEM FOR 
+//   POSIX WEB-ASSEMBLY
+// remove these references for web and emulate
 const fs = require('fs')
 const path = require('path')
 
@@ -189,7 +192,9 @@ function fd_write(fd, iovs, iovsLen, nwritten) {
 		console.log(String.fromCharCode.apply(null, bufferBytes));                            
 	if (fd === WASI_STDERR_FILENO) 
 		console.error(String.fromCharCode.apply(null, bufferBytes));                            
-
+	else {
+		throw new Error('wtf')
+	}
 	view.setUint32(nwritten, written, !0);
 
 	return WASI_ESUCCESS;
@@ -343,30 +348,47 @@ function Sys_Mkdirp(path) {
 	}
 }
 
-function Sys_getc(fp) {
-	let c = FS.pointers[fp][2].contents[
-		FS.pointers[fp][0]
-	]
-	if(FS.pointers[fp][0] >= FS.pointers[fp][2].contents.length) {
+function Sys_FRead(bufferAddress, byteSize, count, pointer) {
+  if(typeof FS.pointers[pointer] == 'undefined') {
+    throw new Error('File IO Error') // TODO: POSIX
+  }
+  let i = 0
+  for(; i < count * byteSize; i++ ) {
+    if(FS.pointers[pointer][0] >= FS.pointers[pointer][2].contents.length) {
+      break
+    }
+    HEAPU8[bufferAddress + i] = FS.pointers[pointer][2].contents[FS.pointers[pointer][0]]
+    FS.pointers[pointer][0]++
+  }
+  return (i - (i % byteSize)) / byteSize
+}
+
+function Sys_fgetc(fp) {
+	let c = stringToAddress('DEADBEEF')
+	if(Sys_fgets(c, 1, fp) != 1) {
 		return -1
 	}
-	FS.pointers[fp][0]++
-	return c
+	return HEAPU32[c>>2]
 }
 
 
 function Sys_fgets(buf, size, fp) {
-	if(typeof FS.pointers[fp] == 'undefined') {
-		throw new Error('File IO Error') // TODO: POSIX
-	}
+  if(typeof FS.pointers[fp] == 'undefined') {
+    throw new Error('File IO Error') // TODO: POSIX
+  }
 	let dataView = FS.pointers[fp][2].contents
 			.slice(FS.pointers[fp][0], FS.pointers[fp][0] + size)
-	FS.pointers[fp][0] += dataView.length
-	HEAPU8.set(dataView, buf)
-	if(FS.pointers[fp][0] >= FS.pointers[fp][2].contents.length) {
-		return 0
+	let line = dataView.indexOf('\n'.charCodeAt(0))
+	let length
+	if(line < 0) {
+		length = Sys_FRead(buf, 1, size - 1, fp)
+		HEAPU8[buf + length] = 0
+		return length ? buf : 0
+	} else {
+		length = Sys_FRead(buf, 1, line + 1, fp)
+		HEAPU8[buf + length] = 0
+		return length ? buf : 0
 	}
-	return buf
 }
 
 
@@ -393,17 +415,24 @@ function Sys_fputs(s, f) {
 	return Sys_FWrite(s, 1, l, f) == l ? 0 : -1;
 }
 
-function Sys_putc(c, f) {
+function Sys_fputc(c, f) {
 	let s = stringToAddress(String.fromCharCode(c))
 	return Sys_FWrite(s, 1, 1, f) == 1 ? 0 : -1;
 }
 
-function Sys_vfprintf(fp, fmt, args) {
-	let formatted = addressToString(printf(fmt, args))
+function Sys_fprintf(fp, fmt, args) {
+	let formatted = stringToAddress('DEADBEEF')
+	let length = sprintf(formatted, fmt, args)
+	let formatString
+	if(length < 1 || !HEAPU32[formatted>>2]) {
+		formatString = addressToString(fmt)
+	} else {
+		formatString = addressToString(formatted)
+	}
 	if(fp == HEAPU32[stderr>>2]) {
-		console.error(formatted)
+		console.error(formatString)
 	} else if (fp == HEAPU32[stdout>>2]) {
-		console.log(formatted)
+		console.log(formatString)
 	} else {
 		Sys_fputs(formatted, fp)
 	}
@@ -412,6 +441,18 @@ function Sys_vfprintf(fp, fmt, args) {
 function Sys_time(t) {
 	// locate time is really complicated
 	//   use simple Q3 time structure
+}
+
+
+
+function Sys_feof(fp) {
+  if(typeof FS.pointers[fp] == 'undefined') {
+    return 1
+  }
+	if(FS.pointers[fp][0] >= FS.pointers[fp][2].contents.length) {
+		return 1
+	}
+	return 0
 }
 
 
@@ -424,10 +465,14 @@ var FS = {
 	Sys_Mkdir: Sys_Mkdir,
 	Sys_fgets: Sys_fgets,
 	Sys_fputs: Sys_fputs,
-	Sys_vfprintf: Sys_vfprintf,
-	Sys_putc: Sys_putc,
-	Sys_getc: Sys_getc,
+	Sys_vfprintf: Sys_fprintf,
+	Sys_fprintf: Sys_fprintf,
+	Sys_fputc: Sys_fputc,
+	Sys_putc: Sys_fputc,
+	Sys_getc: Sys_fgetc,
+	Sys_fgetc: Sys_fgetc,
 	Sys_time: Sys_time,
+	Sys_feof: Sys_feof,
 	DebugBreak: function () { debugger },
 }
 
@@ -480,43 +525,87 @@ const polyfill = {
 	sock_shutdown: function () { debugger },
 }
 
+// TODO: compare to initWasm() and make match
 
-async function lburg(inFile, outFile) {
-	let bytes = new Uint8Array(
-		fs.readFileSync(path.join(__dirname, 
-		'../../../libs/q3lcc/build-wasm-js/lburg/lburg.wasm')))
+async function initWasm(bytes) {
 	Object.assign(Q3e, FS, polyfill)
 	Q3e['table'] = Q3e['__indirect_function_table'] =
-	new WebAssembly.Table({ initial: 1000, element: 'anyfunc', maximum: 10000 })
-	Q3e['memory'] = new WebAssembly.Memory({ 'initial': 2048, /* 'shared': true */ })
+		new WebAssembly.Table({ 
+			initial: 1000, 
+			element: 'anyfunc', 
+			maximum: 10000 
+		})
+	Q3e['memory'] = new WebAssembly.Memory({ 
+		initial: 2048, 
+		/* 'shared': true */ 
+	})
 	let wasm = await WebAssembly.instantiate(bytes, Q3e)
 	Object.assign(global, wasm.instance.exports)
 	// store some strings and crap
 	HEAPU8 = new Uint8Array(Q3e.memory.buffer)
 	HEAPU32 = new Uint32Array(Q3e.memory.buffer)
 
+	Q3e['sharedMemory'] = malloc(1024 * 1024) 
+
+	return wasm
+}
+
+
+
+async function lburg(inFile, outFile) {
+	let startArgs = [ 'lburg', inFile, outFile ]
+	let bytes = new Uint8Array(
+		fs.readFileSync(path.join(__dirname, 
+		'../../../libs/q3lcc/build-wasm-js/lburg/lburg.wasm')))
+
+	let localName = outFile
+	if(localName.startsWith('/base')
+		|| localName.startsWith('/home'))
+		localName = localName.substring('/base'.length)
+	if(localName[0] == '/')
+		localName = localName.substring(1)
+
+	let sourceName = inFile
+	if(sourceName.startsWith('/base')
+		|| sourceName.startsWith('/home'))
+		sourceName = sourceName.substring('/base'.length)
+	if(sourceName[0] == '/')
+		sourceName = sourceName.substring(1)
+
+	if(!localName.length) {
+		throw new Error('Input file not specified')
+	}
+	if(!sourceName.length) {
+		throw new Error('Output file not specified')
+	}
 	// TODO: THIS IS THE FUNCTIONAL PART OF THE FILE SYSTEM THAT I WANT TO REWRITE 
 	//   BETWEEN PLATFORMS, < 10 FUCKING LOC.
 	let inFileBytes = new Uint8Array(
-			fs.readFileSync(inFile, 'binary').toString()
-			.split('').map(c => c.charCodeAt(0)))
-	FS.virtual[inFile] = {
+		fs.readFileSync(sourceName, 'binary').toString()
+		.split('').map(c => c.charCodeAt(0)))
+	FS.virtual[sourceName] = {
 		timestamp: new Date(),
 		mode: 33206,
 		contents: inFileBytes
 	}
-	Q3e['sharedMemory'] = malloc(1024 * 1024) 
 
-	let startup = [ 'lburg', inFile, outFile ]
+	await initWasm(bytes)
+
+	// INPUT / OUTPUT template
+	Sys_Mkdirp(stringToAddress(path.dirname(inFile)))
+	Sys_Mkdirp(stringToAddress(path.dirname(outFile)))
+
 	try {
-		Sys_Mkdirp(stringToAddress(path.dirname(inFile)))
-		Sys_Mkdirp(stringToAddress(path.dirname(outFile)))
-		_start(startup.length, stringsToMemory(startup))
-		debugger
+		_start(startArgs.length, stringsToMemory(startArgs))
 	} catch (e) {
 		console.log(e)
 		throw e
 	}
+
+	if(FS.virtual[localName]) {
+		fs.writeFileSync(localName, FS.virtual[localName].contents)
+	}
+
 }
 
 module.exports = lburg

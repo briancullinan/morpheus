@@ -1699,7 +1699,6 @@ int yylex(void) {
 		return CODE;
 	}
 	while ((c = get()) != EOF) {
-    fprintf(stderr, "c = %d\n", c);
 		switch (c) {
 		case ' ': case '\f': case '\t':
 			continue;

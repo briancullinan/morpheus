@@ -63,15 +63,26 @@ extern FILE *infp;
 extern FILE *outfp;
 
 
+
+int Sys_fputc(int, FILE *);
+#define fputc(i, f) Sys_fputc(i, f)
+int Sys_feof(FILE *);
+#define feof(f) Sys_feof(f)
+int Sys_fgetc(FILE *f);
+#define fgetc(f) Sys_fgetc(f)
 int Sys_getc(FILE *f);
 #define getc(f) Sys_getc(f)
 int Sys_putc(int c, FILE *f);
 #define putc(c, f) Sys_putc(c, f)
 int Sys_time(int *t);
 #define time(t) Sys_time(t)
+
 __attribute__((__visibility__("default")))
 __attribute__((__noinline__))
-int printf(const char *__restrict, ...);
+int sprintf(char *__restrict, const char *__restrict, ...);
+
+int Sys_fprintf(FILE *__restrict, const char *__restrict, ...);
+#define fprintf(x, ...) Sys_fprintf(x, __VA_ARGS__)
 int Sys_vfprintf(FILE *__restrict, const char *__restrict, __isoc_va_list);
 #define vfprintf(x, y, ...) Sys_vfprintf(x, y, __VA_ARGS__)
 int Sys_fputs(const char *__restrict, FILE *__restrict);

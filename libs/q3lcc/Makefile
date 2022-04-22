@@ -33,7 +33,7 @@ LDFLAGS := \
 	--import-memory \
 	--import-table \
 	--export-all \
-	--export printf \
+	--export sprintf \
 	--export stderr \
 	--export stdout \
 	--allow-undefined-file=../../engine/wasm/wasm.syms \
@@ -121,7 +121,7 @@ $(BD)rcc/dagcheck$(O): $(BD)rcc/dagcheck.c
 	$(CC) $(LCC_CFLAGS) -Wno-unused -c -Isrc -o $@ $<
 
 $(BD)rcc/dagcheck.c: $(BD)lburg/lburg$(E) src/dagcheck.md
-	$(Q)node --inspect-brk -e "require('../../engine/wasm/bin/lburg.js') \
+	$(Q)node -e "require('../../engine/wasm/bin/lburg.js') \
 		('src/dagcheck.md', '$@')"
 
 
