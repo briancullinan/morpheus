@@ -195,7 +195,7 @@ async function fetchAsset(url, key) {
   await mkdirp('base/' + key.replace(/^\/?base\/|^\/?assets\/|^\/|\/[^\/]*$/ig, ''))
   var obj = {
     timestamp: new Date(),
-    mode: 33206,
+    mode: FS_FILE,
     contents: new Uint8Array(content)
   }
   await writeStore(obj, '/base/' + key.replace(/^\/?base\/|^\/?assets\/|^\//ig, ''))

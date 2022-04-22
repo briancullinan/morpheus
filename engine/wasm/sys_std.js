@@ -1,4 +1,143 @@
 
+/*
+function get_string(memory, addr) {
+	let buffer = new Uint8Array(memory.buffer, addr, memory.buffer.byteLength - addr);
+	let term = buffer.indexOf(0);
+
+	return new TextDecoder().decode(buffer.subarray(0, term));
+}
+*/
+
+
+function addressToString(addr, length) {
+	let newString = ''
+	if(!addr) return newString
+	if(!length) length = 1024
+	for(let i = 0; i < length; i++) {
+		if(HEAPU8[addr + i] == 0) {
+			break;
+		}
+		newString += String.fromCharCode(HEAPU8[addr + i])
+	}
+
+	return newString
+}
+
+function stringToAddress(str, addr) {
+	let start = STD.sharedMemory + STD.sharedCounter
+	if(typeof str != 'string') {
+		str = str + ''
+	}
+	if(addr) start = addr
+	for(let j = 0; j < str.length; j++) {
+		HEAPU8[start+j] = str.charCodeAt(j)
+	}
+	HEAPU8[start+str.length] = 0
+	HEAPU8[start+str.length+1] = 0
+	HEAPU8[start+str.length+2] = 0
+	if(!addr) {
+		STD.sharedCounter += str.length + 3
+		STD.sharedCounter += 4 - (STD.sharedCounter % 4)
+		if(STD.sharedCounter > 1024 * 512) {
+			STD.sharedCounter = 0
+		}
+	}
+	return start
+}
+
+
+// here's the thing, I know for a fact that all the callers copy this stuff
+//   so I don't need to increase my temporary storage because by the time it's
+//   overwritten the data won't be needed, should only keep shared storage around
+//   for events and stuff that might take more than 1 frame
+function stringsToMemory(list, length) {
+	// add list length so we can return addresses like char **
+	let start = STD.sharedMemory + STD.sharedCounter
+	let posInSeries = start + list.length * 4
+	for (let i = 0; i < list.length; i++) {
+		HEAPU32[(start+i*4)>>2] = posInSeries // save the starting address in the list
+		stringToAddress(list[i], posInSeries)
+		posInSeries += list[i].length + 1
+	}
+	if(length) HEAPU32[length >> 2] = posInSeries - start
+	STD.sharedCounter = posInSeries - STD.sharedMemory
+	STD.sharedCounter += 4 - (STD.sharedCounter % 4)
+	if(STD.sharedCounter > 1024 * 512) {
+		STD.sharedCounter = 0
+	}
+	return start
+}
+
+function Sys_Microseconds() {
+	if (window.performance.now) {
+		return parseInt(window.performance.now(), 10);
+	} else if (window.performance.webkitNow) {
+		return parseInt(window.performance.webkitNow(), 10);
+	}
+
+	STD.sharedCounter += 8
+	return STD.sharedMemory + STD.sharedCounter - 8
+}
+
+function Sys_Milliseconds() {
+	if (!Q3e['timeBase']) {
+		// javascript times are bigger, so start at zero
+		//   pretend like we've been alive for at least a few seconds
+		//   I actually had to do this because files it checking times and this caused a delay
+		Q3e['timeBase'] = Date.now() - 5000;
+	}
+
+	//if (window.performance.now) {
+	//  return parseInt(window.performance.now(), 10);
+	//} else if (window.performance.webkitNow) {
+	//  return parseInt(window.performance.webkitNow(), 10);
+	//} else {
+	return Date.now() - Q3e.timeBase;
+	//}
+}
+
+function Sys_RandomBytes (string, len) {
+	if(typeof crypto != 'undefined') {
+		crypto.getRandomValues(HEAP8.subarray(string, string+(len / 4)))
+	} else {
+		for(let i = 0; i < (len / 4); i++) {
+			HEAP8[string] = Math.random() * 255
+		}
+	}
+	return true;
+}
+
+function Com_RealTime(outAddress) {
+	let now = new Date()
+	let t = t.now() / 1000
+	HEAP32[(tm >> 2) + 5] = now.getFullYear() - 1900
+	HEAP32[(tm >> 2) + 4] = now.getMonth() // already subtracted by 1
+	HEAP32[(tm >> 2) + 3] = now.getDate() 
+	HEAP32[(tm >> 2) + 2] = (t / 60 / 60) % 24
+	HEAP32[(tm >> 2) + 1] = (t / 60) % 60
+	HEAP32[(tm >> 2) + 0] = t % 60
+	return t
+}
+
+function Sys_time(t) {
+	// locate time is really complicated
+	//   use simple Q3 time structure
+}
+
+function clock_gettime(clk_id, tp) {
+	var now;
+	if (clk_id === 0) {
+			now = Date.now()
+	} else if ((clk_id === 1 || clk_id === 4) && _emscripten_get_now_is_monotonic) {
+			now = _emscripten_get_now()
+	} else {
+			HEAPU32[errno >> 2] = 28
+			return -1
+	}
+	HEAP32[tp >> 2] = now / 1e3 | 0;
+	HEAP32[tp + 4 >> 2] = now % 1e3 * 1e3 * 1e3 | 0;
+	return 0
+}
 
 var DATE = {
   mktime: function (tm) {
@@ -23,7 +162,7 @@ var DATE = {
   localtime: function (t) {
     // TODO: only uses this for like file names, so doesn't have to be fast
     debugger
-    let s = Q3e.sharedMemory + Q3e.sharedCounter
+    let s = STD.sharedMemory + STD.sharedCounter
     HEAP32[(s + 4 * 1) >> 2] = floor(t / 60)
     HEAP32[(s + 4 * 1) >> 2] = floor(t / 60 / 60)
     HEAP32[(s + 4 * 1) >> 2] = floor(t / 60 / 60)
@@ -45,6 +184,14 @@ typedef struct qtime_s {
   ctime: function (t) {
     return stringToAddress(new Date(t).toString())
   },
+  Com_RealTime: Com_RealTime,
+  Sys_time: Sys_time,
+  Sys_RandomBytes: Sys_RandomBytes,
+  Sys_Milliseconds: Sys_Milliseconds,
+  Sys_Microseconds: Sys_Microseconds,
+  clock_time_get: function () { debugger },
+	clock_res_get: function () { debugger },
+	clock_gettime: clock_gettime,
 }
 
 const DEFAULT_OUTPUT_DEVNAME = "System audio output device"
@@ -60,6 +207,7 @@ function Sys_getenv(varname) {
 */
 
 var STD = {
+  sharedCounter: 0,
   __assert_fail: console.assert, // TODO: convert to variadic fmt for help messages
   longjmp: function (id, code) { throw new Error('longjmp', id, code) },
   setjmp: function (id) { try {  } catch (e) { } },
@@ -160,6 +308,9 @@ var STD = {
   strncat: function () { debugger },
   strtod: function (str, n) { return STD.strtof(str, n) },
   */
+  stringsToMemory: stringsToMemory,
+  addressToString: addressToString,
+  stringsToMemory: stringsToMemory,
 }
 
 

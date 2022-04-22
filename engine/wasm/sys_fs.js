@@ -1,53 +1,6 @@
+// ZERO DEPENDENCY BARE-BONES JAVASCRIPT FILE-SYSTEM FOR 
+//   POSIX WEB-ASSEMBLY
 
-var DB_STORE_NAME = 'FILE_DATA';
-
-function openDatabase(noWait) {
-  if(FS.database) {
-    return Promise.resolve(FS.database)
-  }
-  if(!FS.database && (!FS.open || Date.now() - FS.openTime > 3000)) {
-    FS.openTime = Date.now()
-    // TODO: make a separate /home store for content to upload submissions to NPM-style packaging system
-    // TODO: synchronize saved game states and config files out of /home database
-    // TODO: on Native /base is manually configured, manually downloaded, /home is auto-downloaded
-    //   on web /base is auto-downloaded and home is manually configured/drag-drop, fix this
-    return new Promise(function (resolve) {
-      FS.open = indexedDB.open('/base', 22)
-      FS.open.onsuccess = function (evt) {
-        FS.database = evt.target.result
-        resolve(FS.database)
-        //if(!Array.from(FS.database.objectStoreNames).includes(DB_STORE_NAME)) {
-        //  FS.database.createObjectStore(DB_STORE_NAME)
-        //}
-      }
-      FS.open.onupgradeneeded = function () {
-        let fileStore = FS.open.result.createObjectStore(DB_STORE_NAME)
-        if (!fileStore.indexNames.contains('timestamp')) {
-          fileStore.createIndex('timestamp', 'timestamp', { unique: false });
-        }
-      }
-      FS.open.onerror = function (error) {
-        console.error(error)
-        resolve(error)
-      }
-    })
-  } else if (!noWait) {
-    return new Promise(function (resolve) { 
-      let count = 0
-      let interval
-      interval = setInterval(function () {
-        if(FS.database || count == 10) {
-          clearInterval(interval)
-          openDatabase(true).then(resolve)
-        } else {
-          count++
-        }
-      }, 300)
-    })
-  } else {
-    throw new Error('no database')
-  }
-}
 
 const VFS_NOW = 3
 const ST_FILE = 8
@@ -63,130 +16,22 @@ const S_IRGRP = ((1 << 3) - 1) << 3
 const S_IRUSR = ((1 << 3) - 1) << 6
 const S_IROTH = ((1 << 3) - 1) << 0
 
-function readAll() {
-  let hadDefault = false
-  let startTime = Date.now()
-  Q3e.fs_loading = 1
-  // FIX FOR "QKEY could not open" ERROR
-  FS.virtual['home'] = {
-    timestamp: new Date(),
-    mode: FS_DIR,
+const ENOENT = 9968
+
+
+if(typeof window != 'undefined') {
+
+  function Sys_notify(ifile, path) {
+    openDatabase().then(function (db) {
+      writeStore(ifile, path)
+    })
+    // TODO: ADD FILESYSTEM WATCHERS API INOTIFY 
+    //   THAT READS A LIST GENERATED HERE
+    if(typeof window.updateFilelist != 'undefined') {
+      updateFilelist(FS.pointers[pointer][3])
+    }
   }
-  if(typeof window.fs_loading != 'undefined') {
-    HEAPU32[fs_loading >> 2] = Q3e.fs_loading
-  }
-  console.log('sync started at ', new Date())
-  return openDatabase()
-  .then(function(db) {
-    let transaction = db.transaction([DB_STORE_NAME], 'readonly')
-    let objStore = transaction.objectStore(DB_STORE_NAME)
-    let tranCursor = objStore.openCursor()
-    return new Promise(function (resolve) {
-      tranCursor.onsuccess = function loadItems(event) {
-        let cursor = event.target.result
-        if(!cursor) {
-          return resolve()
-        }
-        if(cursor.key.endsWith('default.cfg')) {
-          hadDefault = cursor.key
-        }
-        // already exists on filesystem, 
-        //   it must have come with page
-        if(FS.virtual[cursor.key]
-          && FS.virtual[cursor.key].timestamp 
-            > cursor.value.timestamp) {
-          // embedded file is newer, start with that
-          return cursor.continue()
-        }
-        FS.virtual[cursor.key] = {
-          timestamp: cursor.value.timestamp,
-          mode: cursor.value.mode,
-          contents: cursor.value.contents
-        }
-        return cursor.continue()
-      }
-      tranCursor.onerror = function (error) {
-        console.error(error)
-        resolve(error)
-      }
-    }).then(function () { 
-      transaction.commit()
-      let tookTime = Date.now() - startTime
-      console.log('sync completed', new Date())
-      console.log('sync took', 
-        (tookTime > 60 * 1000 ? (Math.floor(tookTime / 1000 / 60) + ' minutes, ') : '')
-        + Math.floor(tookTime / 1000) % 60 + ' seconds, '
-        + (tookTime % 1000) + ' milliseconds')
-      Q3e.fs_loading = 0
-      if(typeof window.fs_loading != 'undefined') {
-        HEAPU32[fs_loading >> 2] = 0
-        if(hadDefault) {
-          HEAPU32[com_fullyInitialized >> 2] = 1
-          setTimeout(function () {
-            Sys_FileReady(stringToAddress('default.cfg'), stringToAddress(hadDefault))
-          }, 100)
-        }
-      }
-      if(typeof window.updateFilelist != 'undefined') {
-        updateFilelist()
-      }
-    })
-  })
-  .catch(function (e) {
-    console.log(e)
-    debugger
-  })
   
-  
-}
-
-
-function readStore(key) {
-  return openDatabase()
-  .then(function (db) {
-    let transaction = db.transaction([DB_STORE_NAME], 'readwrite');
-    let objStore = transaction.objectStore(DB_STORE_NAME);
-    return new Promise(function (resolve) {
-      let tranCursor = objStore.get(key)
-      tranCursor.onsuccess = function (event) {
-        resolve(event.target.result)
-      }
-      tranCursor.onerror = function (error) {
-        console.error(error)
-        resolve(error)
-      }
-      transaction.commit()
-    })
-  })
-  .catch(function (e) {})
-}
-
-function writeStore(value, key) {
-  return openDatabase()
-  .then(function (db) {
-    let transaction = db.transaction([DB_STORE_NAME], 'readwrite');
-    let objStore = transaction.objectStore(DB_STORE_NAME);
-    return new Promise(function (resolve) {
-      let storeValue  
-      if(value === false) {
-        storeValue = objStore.delete(key)
-      } else {
-        storeValue = objStore.put(value, key)
-      }
-      storeValue.onsuccess = function () {}
-      transaction.oncomplete = function (event) {
-        resolve(event.target.result)
-        //FS.database.close()
-        //FS.database = null
-        //FS.open = null
-      }
-      storeValue.onerror = function (error) {
-        console.error(error, value, key)
-      }
-      transaction.commit()
-    })
-  })
-  .catch(function (e) {})
 }
 
 
@@ -198,19 +43,18 @@ function Sys_Mkdir(filename) {
     localName = localName.substring('/base'.length)
   if(localName[0] == '/')
     localName = localName.substring(1)
+	// check if parent directory has been created, TODO: POSIX errno?
+	let parentDirectory = localName.substring(0, localName.lastIndexOf('/'))
+	if(parentDirectory && !FS.virtual[parentDirectory]) {
+		throw new Error('ENOENT')
+	}
   FS.virtual[localName] = {
     timestamp: new Date(),
     mode: FS_DIR,
   }
   // async to filesystem
   // does it REALLY matter if it makes it? wont it just redownload?
-  openDatabase().then(function (db) {
-    writeStore(FS.virtual[localName], localName)
-  })
-  // TODO: ADD FILESYSTEM WATCHERS API
-  if(typeof window.updateFilelist != 'undefined') {
-    updateFilelist(fileStr)
-  }
+  Sys_notify(FS.virtual[localName], localName)
 }
 
 function Sys_GetFileStats( filename, size, mtime, ctime ) {
@@ -222,14 +66,14 @@ function Sys_GetFileStats( filename, size, mtime, ctime ) {
   if(localName[0] == '/')
     localName = localName.substring(1)
   if(typeof FS.virtual[localName] != 'undefined') {
-    HEAP32[size >> 2] = (FS.virtual[localName].contents || []).length
-    HEAP32[mtime >> 2] = FS.virtual[localName].timestamp.getTime()
-    HEAP32[ctime >> 2] = FS.virtual[localName].timestamp.getTime()
+    HEAPU32[size >> 2] = (FS.virtual[localName].contents || []).length
+    HEAPU32[mtime >> 2] = FS.virtual[localName].timestamp.getTime()
+    HEAPU32[ctime >> 2] = FS.virtual[localName].timestamp.getTime()
     return 1
   } else {
-    HEAP32[size >> 2] = 0
-    HEAP32[mtime >> 2] = 0
-    HEAP32[ctime >> 2] = 0
+    HEAPU32[size >> 2] = 0
+    HEAPU32[mtime >> 2] = 0
+    HEAPU32[ctime >> 2] = 0
     return 0
   }
 }
@@ -253,10 +97,8 @@ function Sys_FOpen(filename, mode) {
       FS.virtual[localName],
       localName
     ]
-    // TODO: ADD FILESYSTEM WATCHERS API
-    if(typeof window.updateFilelist != 'undefined') {
-      updateFilelist(FS.pointers[FS.filePointer][3])
-    }
+    // DO THIS ON OPEN SO WE CAN CHANGE ICONS
+    Sys_notify(FS.virtual[localName], localName)
     return FS.filePointer // not zero
   }
 
@@ -313,11 +155,7 @@ function Sys_FClose(pointer) {
   if(typeof FS.pointers[pointer] == 'undefined') {
     throw new Error('File IO Error') // TODO: POSIX
   }
-  writeStore(FS.pointers[pointer][2], FS.pointers[pointer][3])
-  // TODO: ADD FILESYSTEM WATCHERS API
-  if(typeof window.updateFilelist != 'undefined') {
-    updateFilelist(FS.pointers[pointer][3])
-  }
+  Sys_notify(FS.pointers[pointer][2], FS.pointers[pointer][3])
   FS.pointers[pointer] = void 0
 }
 
@@ -330,7 +168,7 @@ function Sys_FWrite(buf, count, size, pointer) {
     tmp = new Uint8Array(FS.pointers[pointer][2].contents.length + count * size);
     tmp.set(new Uint8Array(FS.pointers[pointer][2].contents), 0);
   }
-  tmp.set(new Uint8Array(HEAP8.slice(buf, buf + count * size)), FS.pointers[pointer][0]);
+  tmp.set(new Uint8Array(HEAPU8.slice(buf, buf + count * size)), FS.pointers[pointer][0]);
   FS.pointers[pointer][0] += count * size
   FS.pointers[pointer][2].contents = tmp
   return count * size
@@ -340,7 +178,7 @@ function Sys_FFlush(pointer) {
   if(typeof FS.pointers[pointer] == 'undefined') {
     throw new Error('File IO Error') // TODO: POSIX
   }
-  writeStore(FS.pointers[pointer][2], FS.pointers[pointer][3])
+  Sys_notify(FS.pointers[pointer][2], FS.pointers[pointer][3])
 }
 
 function Sys_FRead(bufferAddress, byteSize, count, pointer) {
@@ -352,7 +190,7 @@ function Sys_FRead(bufferAddress, byteSize, count, pointer) {
     if(FS.pointers[pointer][0] >= FS.pointers[pointer][2].contents.length) {
       break
     }
-    HEAP8[bufferAddress + i] = FS.pointers[pointer][2].contents[FS.pointers[pointer][0]]
+    HEAPU8[bufferAddress + i] = FS.pointers[pointer][2].contents[FS.pointers[pointer][0]]
     FS.pointers[pointer][0]++
   }
   return (i - (i % byteSize)) / byteSize
@@ -369,7 +207,7 @@ function Sys_Remove(file) {
   if(typeof FS.virtual[localName] != 'undefined') {
     delete FS.virtual[localName]
     // remove from IDB
-    writeStore(false, localName)
+    Sys_notify(false, localName)
   }
 }
 
@@ -388,10 +226,9 @@ function Sys_Rename(src, dest) {
     destName = destName.substring('/base'.length)
   if(destName[0] == '/')
     destName = destName.substring(1)
-  // TODO: ADD FILESYSTEM WATCHERS API
   if(typeof window.updateFilelist != 'undefined') {
-    updateFilelist(srcName)
-    updateFilelist(destName)
+    Sys_notify(FS.virtual[srcName], srcName)
+    Sys_notify(FS.virtual[destName], destName)
   }
 }
 
@@ -431,13 +268,222 @@ function Sys_ListFiles (directory, extension, filter, numfiles, wantsubs) {
     //matches.push(files[i])
     HEAPU32[(listInMemory + i*4)>>2] = FS_CopyString(stringToAddress(relativeName));
   }
-  HEAP32[(listInMemory>>2)+matches.length] = 0
-  HEAP32[numfiles >> 2] = matches.length
+  HEAPU32[(listInMemory>>2)+matches.length] = 0
+  HEAPU32[numfiles >> 2] = matches.length
   // skip address-list because for-loop counts \0 with numfiles
   return listInMemory
 }
 
-var FS = {
+function Sys_FOpen(filename, mode) {
+	// now we don't have to do the indexing crap here because it's built into the engine already
+	let fileStr = addressToString(filename)
+	let modeStr = addressToString(mode)
+	let localName = fileStr
+	if(localName.startsWith('/base')
+		|| localName.startsWith('/home'))
+		localName = localName.substring('/base'.length)
+	if(localName[0] == '/')
+		localName = localName.substring(1)
+
+
+	let createFP = function (name) {
+		FS.filePointer++
+		FS.pointers[FS.filePointer] = [
+			0, // seek/tell
+			modeStr,
+			FS.virtual[name],
+			localName
+		]
+		return FS.filePointer // not zero
+	}
+
+	// check if parent directory has been created, TODO: POSIX errno?
+	let parentDirectory = localName.substring(0, localName.lastIndexOf('/'))
+	// TODO: check mode?
+	if(typeof FS.virtual[localName] != 'undefined') {
+		// open the file successfully
+		return createFP(localName)
+	} else if (modeStr.includes('w')
+		&& ((parentDirectory = localName.substring(0, localName.lastIndexOf('/')))
+		&& typeof FS.virtual[parentDirectory] != 'undefined')
+	) {
+		// create the file for write because the parent directory exists
+		FS.virtual[localName] = {
+			timestamp: new Date(),
+			mode: FS_FILE,
+			contents: new Uint8Array(0)
+		}
+		return createFP(localName)
+	} else {
+		return 0 // POSIX
+	}
+}
+
+
+function Sys_stat(filename) {
+	let fileStr = addressToString(filename)
+	let localName = fileStr
+	if(localName.startsWith('/base')
+		|| localName.startsWith('/home'))
+		localName = localName.substring('/base'.length)
+	if(localName[0] == '/')
+		localName = localName.substring(1)
+	//if(typeof FS.virtual[localName] != 'undefined') {
+	//  localName = localName
+	//}
+	if(typeof FS.virtual[localName] != 'undefined') {
+		HEAPU32[(stat >> 2)+0] = FS.virtual[localName].mode
+		HEAPU32[(stat >> 2)+1] = (FS.virtual[localName].contents || []).length
+		HEAPU32[(stat >> 2)+2] = FS.virtual[localName].timestamp.getTime()
+		HEAPU32[(stat >> 2)+3] = FS.virtual[localName].timestamp.getTime()
+		HEAPU32[(stat >> 2)+4] = FS.virtual[localName].timestamp.getTime()
+		return 0
+	} else {
+		HEAPU32[(stat >> 2)+0] = 0
+		HEAPU32[(stat >> 2)+1] = 0
+		HEAPU32[(stat >> 2)+2] = 0
+		HEAPU32[(stat >> 2)+3] = 0
+		HEAPU32[(stat >> 2)+4] = 0
+		return 1
+	}
+}
+
+
+function Sys_Mkdirp(path) {
+	let localName = addressToString(path)
+	try {
+		if(localName.startsWith('/base')
+			|| localName.startsWith('/home'))
+			localName = localName.substring('/base'.length)
+		if(localName[0] == '/')
+			localName = localName.substring(1)
+		Sys_Mkdir(path, FS_DIR);
+	} catch (e) {
+		// make the subdirectory and then retry
+		if (e.message === 'ENOENT') {
+			let parentDirectory = localName.substring(0, localName.lastIndexOf('/'))
+			if(!parentDirectory) {
+				throw e
+			}
+			Sys_Mkdirp(stringToAddress(parentDirectory));
+			Sys_Mkdir(path);
+			return;
+		}
+
+		// if we got any other error, let's see if the directory already exists
+		if(Sys_stat(p)) {
+			throw e
+		}
+	}
+}
+
+function Sys_FRead(bufferAddress, byteSize, count, pointer) {
+  if(typeof FS.pointers[pointer] == 'undefined') {
+    throw new Error('File IO Error') // TODO: POSIX
+  }
+  let i = 0
+  for(; i < count * byteSize; i++ ) {
+    if(FS.pointers[pointer][0] >= FS.pointers[pointer][2].contents.length) {
+      break
+    }
+    HEAPU8[bufferAddress + i] = FS.pointers[pointer][2].contents[FS.pointers[pointer][0]]
+    FS.pointers[pointer][0]++
+  }
+  return (i - (i % byteSize)) / byteSize
+}
+
+function Sys_fgetc(fp) {
+	let c = stringToAddress('DEADBEEF')
+	if(Sys_fgets(c, 1, fp) != 1) {
+		return -1
+	}
+	return HEAPU32[c>>2]
+}
+
+
+function Sys_fgets(buf, size, fp) {
+  if(typeof FS.pointers[fp] == 'undefined') {
+    throw new Error('File IO Error') // TODO: POSIX
+  }
+	let dataView = FS.pointers[fp][2].contents
+			.slice(FS.pointers[fp][0], FS.pointers[fp][0] + size)
+	let line = dataView.indexOf('\n'.charCodeAt(0))
+	let length
+	if(line < 0) {
+		//length = Sys_FRead(buf, 1, size - 1, fp)
+		length = Sys_FRead(buf, 1, size, fp)
+		//HEAPU8[buf + length] = 0 // FILL THE BUFFER COMPLETELY?
+		return length ? buf : 0
+	} else {
+		length = Sys_FRead(buf, 1, line + 1, fp)
+		HEAPU8[buf + length] = 0
+		return length ? buf : 0
+	}
+}
+
+
+function Sys_FWrite(buf, size, nmemb, pointer) {
+  if(typeof FS.pointers[pointer] == 'undefined') {
+    throw new Error('File IO Error') // TODO: POSIX
+  }
+  let tmp = FS.pointers[pointer][2].contents
+  if(FS.pointers[pointer][0] + size * nmemb > FS.pointers[pointer][2].contents.length) {
+    tmp = new Uint8Array(FS.pointers[pointer][2].contents.length + size * nmemb);
+    tmp.set(FS.pointers[pointer][2].contents, 0);
+  }
+  tmp.set(HEAPU8.slice(buf, buf + size * nmemb), FS.pointers[pointer][0]);
+  FS.pointers[pointer][0] += size * nmemb
+  FS.pointers[pointer][2].contents = tmp
+  return nmemb // k==size*nmemb ? nmemb : k/size;
+}
+
+
+// WHY ADD THIS INSTEAD OF FWRITE DIRECTLY? 
+//   TO MAKE IT EASIER TO DROP INFRONT OF WASI BS.
+function Sys_fputs(s, f) {
+	let l = addressToString(s).length;
+	return Sys_FWrite(s, 1, l, f) == l ? 0 : -1;
+}
+
+function Sys_fputc(c, f) {
+	let s = stringToAddress(String.fromCharCode(c))
+	return Sys_FWrite(s, 1, 1, f) == 1 ? 0 : -1;
+}
+
+function Sys_fprintf(fp, fmt, args) {
+	let formatted = stringToAddress('DEADBEEF')
+	let length = sprintf(formatted, fmt, args)
+	let formatString
+	if(length < 1 || !HEAPU32[formatted>>2]) {
+		formatString = addressToString(fmt)
+	} else {
+		formatString = addressToString(formatted)
+	}
+	if(fp == HEAPU32[stderr>>2]) {
+		console.error(formatString)
+	} else if (fp == HEAPU32[stdout>>2]) {
+		console.log(formatString)
+	} else {
+		Sys_fputs(formatted, fp)
+	}
+}
+
+
+function Sys_feof(fp) {
+  if(typeof FS.pointers[fp] == 'undefined') {
+    return 1
+  }
+	if(FS.pointers[fp][0] >= FS.pointers[fp][2].contents.length) {
+		return 1
+	}
+	return 0
+}
+
+const FS = {
+  FS_FILE: FS_FILE,
+  FS_DIR: FS_DIR,
+  ENOENT: ENOENT,
+  modeToStr: ['r', 'w', 'rw'],
   pointers: {},
   filePointer: 0,
   virtual: {}, // temporarily store items as they go in and out of memory
@@ -453,4 +499,224 @@ var FS = {
   Sys_Rename: Sys_Rename,
   Sys_GetFileStats: Sys_GetFileStats,
   Sys_Mkdir: Sys_Mkdir,
+  Sys_Mkdirp: Sys_Mkdirp,
+	Sys_FOpen: Sys_FOpen,
+	Sys_Mkdir: Sys_Mkdir,
+	Sys_fgets: Sys_fgets,
+	Sys_fputs: Sys_fputs,
+	Sys_vfprintf: Sys_fprintf,
+	Sys_fprintf: Sys_fprintf,
+	Sys_fputc: Sys_fputc,
+	Sys_putc: Sys_fputc,
+	Sys_getc: Sys_fgetc,
+	Sys_fgetc: Sys_fgetc,
+	Sys_feof: Sys_feof,
+}
+
+var WASI_ESUCCESS = 0;
+var WASI_EBADF = 8;
+var WASI_EINVAL = 28;
+var WASI_ENOSYS = 52;
+
+var WASI_STDOUT_FILENO = 1;
+var WASI_STDERR_FILENO = 2;
+
+function getModuleMemoryDataView() {
+	// call this any time you'll be reading or writing to a module's memory 
+	// the returned DataView tends to be dissaociated with the module's memory buffer at the will of the WebAssembly engine 
+	// cache the returned DataView at your own peril!!
+
+	return new DataView(Q3e.memory.buffer);
+}
+
+function fd_prestat_get(fd, bufPtr) {
+	debugger
+	return WASI_EBADF;
+}
+
+function fd_prestat_dir_name(fd, pathPtr, pathLen) {
+	debugger
+	return WASI_EINVAL;
+}
+
+function environ_sizes_get(environCount, environBufSize) {
+	debugger
+	var view = getModuleMemoryDataView();
+
+	view.setUint32(environCount, 0, !0);
+	view.setUint32(environBufSize, 0, !0);
+
+	return WASI_ESUCCESS;
+}
+
+function environ_get(environ, environBuf) {
+	debugger
+	return WASI_ESUCCESS;
+}
+
+function args_sizes_get(argc, argvBufSize) {
+	debugger
+	var view = getModuleMemoryDataView();
+
+	view.setUint32(argc, 0, !0);
+	view.setUint32(argvBufSize, 0, !0);
+
+	return WASI_ESUCCESS;
+}
+
+function args_get(argv, argvBuf) {
+	debugger
+	return WASI_ESUCCESS;
+}
+
+function fd_fdstat_get(fd, bufPtr) {
+	var view = getModuleMemoryDataView();
+
+	view.setUint8(bufPtr, fd);
+	view.setUint16(bufPtr + 2, 0, !0);
+	view.setUint16(bufPtr + 4, 0, !0);
+
+	function setBigUint64(byteOffset, value, littleEndian) {
+
+			var lowWord = value;
+			var highWord = 0;
+
+			view.setUint32(littleEndian ? 0 : 4, lowWord, littleEndian);
+			view.setUint32(littleEndian ? 4 : 0, highWord, littleEndian);
+	}
+
+	setBigUint64(bufPtr + 8, 0, !0);
+	setBigUint64(bufPtr + 8 + 8, 0, !0);
+
+	return WASI_ESUCCESS;
+}
+
+
+
+// TODO: THIS MIGHT BE A MORE COMPREHENSIVE WRITE FUNCTION
+//   AND THE FS.VIRTUAL CODE COULD BE INSERTED AT THE BOTTOM
+function fd_write(fd, iovs, iovsLen, nwritten) {
+	var view = getModuleMemoryDataView();
+	var written = 0;
+	var bufferBytes = [];                   
+
+	function getiovs(iovs, iovsLen) {
+		// iovs* -> [iov, iov, ...]
+		// __wasi_ciovec_t {
+		//   void* buf,
+		//   size_t buf_len,
+		// }
+		var buffers = Array.from({ length: iovsLen }, function (_, i) {
+			var ptr = iovs + i * 8;
+			var buf = view.getUint32(ptr, !0);
+			var bufLen = view.getUint32(ptr + 4, !0);
+
+			return new Uint8Array(Q3e.memory.buffer, buf, bufLen);
+		});
+
+		return buffers;
+	}
+
+	var buffers = getiovs(iovs, iovsLen);
+	function writev(iov) {
+		for (var b = 0; b < iov.byteLength; b++) {
+			bufferBytes.push(iov[b]);
+		}
+
+		written += b;
+	}
+
+	buffers.forEach(writev);
+
+	if (fd === WASI_STDOUT_FILENO) 
+		console.log(String.fromCharCode.apply(null, bufferBytes));                            
+	if (fd === WASI_STDERR_FILENO) 
+		console.error(String.fromCharCode.apply(null, bufferBytes));                            
+	else {
+		throw new Error('wtf')
+	}
+	view.setUint32(nwritten, written, !0);
+
+	return WASI_ESUCCESS;
+}
+
+function poll_oneoff(sin, sout, nsubscriptions, nevents) {
+	debugger
+	return WASI_ENOSYS;
+}
+
+function proc_exit(rval) {
+	debugger
+	return WASI_ENOSYS;
+}
+
+function fd_close(fd) {
+	debugger
+	return WASI_ENOSYS;
+}
+
+function fd_seek(fd, offset, whence, newOffsetPtr) {
+	debugger
+}
+
+function fd_close(fd) {
+	debugger
+	return WASI_ENOSYS;
+}
+
+
+
+const FILED = {
+
+	//setModuleInstance : setModuleInstance,
+	environ_sizes_get : environ_sizes_get,
+	args_sizes_get : args_sizes_get,
+	fd_fdstat_set_flags: function () { debugger },
+	fd_prestat_get : fd_prestat_get,
+	fd_fdstat_get : fd_fdstat_get,
+	fd_write : fd_write,
+	fd_prestat_dir_name : fd_prestat_dir_name,
+	environ_get : environ_get,
+	args_get : args_get,
+	poll_oneoff : poll_oneoff,
+	proc_exit : proc_exit,
+	fd_close : fd_close,
+	fd_seek : fd_seek,
+	fd_advise: function () { debugger },
+	fd_allocate: function () { debugger },
+	fd_datasync: function () { debugger },
+	fd_read: function () { debugger },
+	path_open: function () { debugger },
+	fd_fdstat_set_rights: function () { debugger },
+	fd_filestat_get: function () { debugger },
+	fd_filestat_set_size: function () { debugger },
+	fd_filestat_set_times: function () { debugger },
+	fd_pread: function () { debugger },
+	fd_pwrite: function () { debugger },
+	fd_readdir: function () { debugger },
+	fd_renumber: function () { debugger },
+	fd_sync: function () { debugger },
+	fd_tell: function () { debugger },
+	path_create_directory: function () { debugger },
+	path_filestat_get: function () { debugger },
+	path_filestat_set_times: function () { debugger },
+	path_link: function () { debugger },
+	path_readlink: function () { debugger },
+	path_remove_directory: function () { debugger },
+	path_rename: function () { debugger },
+	path_symlink: function () { debugger },
+	path_unlink_file: function () { debugger },
+	proc_raise: function () { debugger },
+	sched_yield: function () { debugger },
+	random_get: function () { debugger },
+	sock_recv: function () { debugger },
+	sock_send: function () { debugger },
+	sock_shutdown: function () { debugger },
+}
+
+Object.assign(FS, FILED)
+
+if (typeof module != 'undefined') {
+  // SOMETHING SOMETHING fs.writeFile
+  module.exports = FS
 }

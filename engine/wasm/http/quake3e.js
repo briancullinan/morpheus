@@ -55,133 +55,6 @@ function getQueryCommands() {
 	return startup
 }
 
-function initEngine(program) {
-	// share the game with window for hackers
-	if(!program) {
-		throw new Error("no program!")
-	}
-	Q3e['program'] = program || {}
-	Q3e['instance'] = Q3e['program'].instance || {}
-	Q3e['exports'] = Q3e['instance'].exports || {}
-	let newMethods = Object.keys(Q3e['exports'])
-	for(let i = 0; i < newMethods.length; i++) {
-		window[newMethods[i]] = Q3e['exports'][newMethods[i]] //.apply(Q3e['exports'])
-	}
-	if(typeof window['Z_Malloc'] == 'undefined') {
-		window.Z_Malloc = window['Z_MallocDebug']
-	}
-	Object.assign(window, Q3e['exports'])
-
-	// start a brand new call frame, in-case error bubbles up
-	setTimeout(function () {
-		try {
-			// reserve some memory at the beginning for passing shit back and forth with JS
-			//   not to use a complex HEAP, just loop around on bytes[b % 128] and if 
-			//   something isn't cleared out, crash
-			Q3e['sharedMemory'] = malloc(1024 * 1024) // store some strings and crap
-			Q3e['sharedCounter'] = 0
-			Q3e['exited'] = false
-
-			// Startup args is expecting a char **
-			let startup = getQueryCommands()
-			RunGame(startup.length, stringsToMemory(startup))
-			HEAPU32[fs_loading >> 2] = Q3e.fs_loading
-			// should have Cvar system by now
-			INPUT.fpsUnfocused = Cvar_VariableIntegerValue(stringToAddress('com_maxfpsUnfocused'));
-			INPUT.fps = Cvar_VariableIntegerValue(stringToAddress('com_maxfps'))
-			// this might help prevent this thing that krunker.io does where it lags when it first starts up
-			Q3e.frameInterval = setInterval(Sys_Frame, 
-				1000 / (HEAP32[gw_active >> 2] ? INPUT.fps : INPUT.fpsUnfocused));
-		} catch (e) {
-			console.log(e)
-			Sys_Exit(1)
-			throw e
-		}
-	}, 13)
-	return true
-}
-
-
-/*
-function get_string(memory, addr) {
-	let buffer = new Uint8Array(memory.buffer, addr, memory.buffer.byteLength - addr);
-	let term = buffer.indexOf(0);
-
-	return new TextDecoder().decode(buffer.subarray(0, term));
-}
-*/
-
-
-function addressToString(addr, length) {
-	let newString = ''
-	if(!addr) return newString
-	if(!length) length = 1024
-	for(let i = 0; i < length; i++) {
-		if(HEAPU8[addr + i] == 0) {
-			break;
-		}
-		newString += String.fromCharCode(HEAPU8[addr + i])
-	}
-
-	return newString
-}
-
-function stringToAddress(str, addr) {
-	let start = Q3e.sharedMemory + Q3e.sharedCounter
-	if(typeof str != 'string') {
-		str = str + ''
-	}
-	if(addr) start = addr
-	for(let j = 0; j < str.length; j++) {
-		HEAPU8[start+j] = str.charCodeAt(j)
-	}
-	HEAPU8[start+str.length] = 0
-	HEAPU8[start+str.length+1] = 0
-	HEAPU8[start+str.length+2] = 0
-	if(!addr) {
-		Q3e.sharedCounter += str.length + 3
-		Q3e.sharedCounter += 4 - (Q3e.sharedCounter % 4)
-		if(Q3e.sharedCounter > 1024 * 512) {
-			Q3e.sharedCounter = 0
-		}
-	}
-	return start
-}
-
-
-// here's the thing, I know for a fact that all the callers copy this stuff
-//   so I don't need to increase my temporary storage because by the time it's
-//   overwritten the data won't be needed, should only keep shared storage around
-//   for events and stuff that might take more than 1 frame
-function stringsToMemory(list, length) {
-	// add list length so we can return addresses like char **
-	let start = Q3e.sharedMemory + Q3e.sharedCounter
-	let posInSeries = start + list.length * 4
-	for (let i = 0; i < list.length; i++) {
-		HEAPU32[(start+i*4)>>2] = posInSeries // save the starting address in the list
-		stringToAddress(list[i], posInSeries)
-		posInSeries += list[i].length + 1
-	}
-	if(length) HEAPU32[length >> 2] = posInSeries - start
-	Q3e.sharedCounter = posInSeries - Q3e.sharedMemory
-	Q3e.sharedCounter += 4 - (Q3e.sharedCounter % 4)
-	if(Q3e.sharedCounter > 1024 * 512) {
-		Q3e.sharedCounter = 0
-	}
-	return start
-}
-
-function Com_RealTime(outAddress) {
-	let now = new Date()
-	let t = t.now() / 1000
-	HEAP32[(tm >> 2) + 5] = now.getFullYear() - 1900
-	HEAP32[(tm >> 2) + 4] = now.getMonth() // already subtracted by 1
-	HEAP32[(tm >> 2) + 3] = now.getDate() 
-	HEAP32[(tm >> 2) + 2] = (t / 60 / 60) % 24
-	HEAP32[(tm >> 2) + 1] = (t / 60) % 60
-	HEAP32[(tm >> 2) + 0] = t % 60
-	return t
-}
 
 function Sys_UnloadLibrary() {
 
@@ -195,44 +68,6 @@ function Sys_LoadFunction() {
 	
 }
 
-function Sys_Microseconds() {
-	if (window.performance.now) {
-		return parseInt(window.performance.now(), 10);
-	} else if (window.performance.webkitNow) {
-		return parseInt(window.performance.webkitNow(), 10);
-	}
-
-	Q3e.sharedCounter += 8
-	return Q3e.sharedMemory + Q3e.sharedCounter - 8
-}
-
-function Sys_Milliseconds() {
-	if (!Q3e['timeBase']) {
-		// javascript times are bigger, so start at zero
-		//   pretend like we've been alive for at least a few seconds
-		//   I actually had to do this because files it checking times and this caused a delay
-		Q3e['timeBase'] = Date.now() - 5000;
-	}
-
-	//if (window.performance.now) {
-	//  return parseInt(window.performance.now(), 10);
-	//} else if (window.performance.webkitNow) {
-	//  return parseInt(window.performance.webkitNow(), 10);
-	//} else {
-	return Date.now() - Q3e.timeBase;
-	//}
-}
-
-function Sys_RandomBytes (string, len) {
-	if(typeof crypto != 'undefined') {
-		crypto.getRandomValues(HEAP8.subarray(string, string+(len / 4)))
-	} else {
-		for(let i = 0; i < (len / 4); i++) {
-			HEAP8[string] = Math.random() * 255
-		}
-	}
-	return true;
-}
 
 function Sys_Print(message) {
 	console.log(addressToString(message))
@@ -381,6 +216,8 @@ function Sys_Frame() {
 	}
 }
 
+/*
+
 function alignUp(x, multiple) {
 	if (x % multiple > 0) {
 	x += multiple - x % multiple;
@@ -388,36 +225,10 @@ function alignUp(x, multiple) {
 	return x;
 }
 
-function updateGlobalBufferAndViews(buf) {
-	Q3e["HEAP8"] = window.HEAP8 = new Int8Array(buf);
-	Q3e["HEAPU8"] = window.HEAPU8 = new Uint8Array(buf);
-	Q3e["HEAP16"] = window.HEAP16 = new Int16Array(buf);
-	Q3e["HEAPU16"] = window.HEAPU16 = new Uint16Array(buf);
-	Q3e["HEAP32"] = window.HEAP32 = new Int32Array(buf);
-	Q3e["HEAPU32"] = window.HEAPU32 = new Uint32Array(buf);
-	Q3e["HEAPF32"] = window.HEAPF32 = new Float32Array(buf);
-	Q3e["HEAPF64"] = window.HEAPF64 = new Float64Array(buf);
-}
-
 var _emscripten_get_now_is_monotonic = true;
 
 function _emscripten_get_now() {
 	return performance.now()
-}
-
-function clock_gettime(clk_id, tp) {
-	var now;
-	if (clk_id === 0) {
-			now = Date.now()
-	} else if ((clk_id === 1 || clk_id === 4) && _emscripten_get_now_is_monotonic) {
-			now = _emscripten_get_now()
-	} else {
-			HEAPU32[errno >> 2] = 28
-			return -1
-	}
-	HEAP32[tp >> 2] = now / 1e3 | 0;
-	HEAP32[tp + 4 >> 2] = now % 1e3 * 1e3 * 1e3 | 0;
-	return 0
 }
 
 function emscripten_realloc_buffer(size) {
@@ -460,6 +271,8 @@ function _emscripten_resize_heap(requestedSize) {
 function _emscripten_get_heap_size() {
 	return HEAPU8.length;
 }
+*/
+
 
 function dynCall(ret, func, args) {
 	return Q3e.table.get(func).apply(null, args)
@@ -506,5 +319,4 @@ var SYS = {
 	CL_MenuModified: CL_MenuModified,
 	Com_RealTime: Com_RealTime,
 	CreateAndCall: CreateAndCall,
-	clock_gettime: clock_gettime,
 }
