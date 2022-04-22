@@ -1,3 +1,8 @@
+// I TRIED WASM-CLI OFFICIAL AND IT WAS A HORRIBLE EXPERIENCE
+//   I THINK IT MIGHT BE EXPECTING PROGRAMS BUNDLED WITH EMSCRIPTEN
+//   THIS IS MUCH SHORTER CODE TO GET A WASM TO RUN THAN EMSCRIPTEN
+
+
 // remove these references for web and emulate
 const fs = require('fs')
 const path = require('path')
@@ -5,7 +10,7 @@ const FS = require('../sys_fs.js')
 const {Sys_Mkdirp} = FS
 const {
 	initEnvironment,
-	initWasm, 
+	initWasm,
 	updateEnvironment
 } = require('../sys_wasm.js')
 const {stringToAddress} = require('../sys_std.js')
@@ -54,12 +59,11 @@ async function readAll(inFile, outFile) {
 }
 
 
+let wasmFile
 
-async function lburg(inFile, outFile) {
-	let startArgs = [ 'lburg', inFile, outFile ]
-	let bytes = new Uint8Array(
-		fs.readFileSync(path.join(__dirname, 
-		'../../../build/release-wasm-js/lburg.wasm')))
+async function initProgram(inFile, outFile) {
+	let startArgs = [ 'wasm-cli', inFile, outFile ]
+	let bytes = new Uint8Array(fs.readFileSync(wasmFile))
 
 	let ENV = initEnvironment({}) // TODO: something todo with Z_Malloc in ListFiles?
 	let program = await initWasm(bytes, ENV)
@@ -81,16 +85,24 @@ async function lburg(inFile, outFile) {
 }
 
 
-let runLburg = false
+let runProgram = false
 let foundFiles = []
 for(let i = 0; i < process.argv.length; i++) {
   let a = process.argv[i]
   if(a.match(__filename)) {
-    runLburg = true
+    runProgram = true
   } else if(a == '--') {
 		continue
 	} else if(a == 'node' || a.endsWith('/node')) {
 		continue
+	} else if(a.includes('.wasm')) {
+		if(fs.existsSync(a)) {
+			wasmFile = a
+		} else if (path.join(__dirname, '../../../build/release-wasm-js/', a)) {
+			wasmFile = path.resolve(path.join(__dirname, '../../../build/release-wasm-js/', a))
+		} else {
+			throw new Error('Wasm not found: ' + a)
+		}
 	} else if (a) {
 		if(fs.existsSync(a) || fs.existsSync(path.dirname(a))) {
 			foundFiles.push(a)
@@ -102,9 +114,13 @@ for(let i = 0; i < process.argv.length; i++) {
   }
 }
 
-if(runLburg) {
-	lburg.apply(null, [foundFiles[0], foundFiles[1]])
+if(runProgram) {
+	if(!wasmFile) {
+		throw new Error('Must specify a .wasm to run!')
+	} else {
+		initProgram(foundFiles[0], foundFiles[1])
+	}
 }
 
 
-module.exports = lburg
+module.exports = initProgram

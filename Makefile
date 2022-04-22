@@ -26,12 +26,6 @@ LD                 := libs/$(COMPILE_PLATFORM)/wasi-sdk-14.0/bin/wasm-ld
 CC                 := libs/$(COMPILE_PLATFORM)/wasi-sdk-14.0/bin/clang
 CXX                := libs/$(COMPILE_PLATFORM)/wasi-sdk-14.0/bin/clang++
 
-Q3ASM_SOURCE  := libs/q3asm
-Q3RCC_SOURCE  := libs/q3lcc/src
-LBURG_SOURCE  := libs/q3lcc/lburg
-Q3CPP_SOURCE  := libs/q3lcc/cpp
-Q3LCC_SOURCE  := libs/q3lcc/etc
-
 
 WASI_INCLUDES    := \
 	-Ilibs/wasi-sysroot/include \
@@ -71,17 +65,24 @@ CLIENT_LDFLAGS     := $(WASI_LDFLAGS) -Wl,--no-entry
 #   CAN PARSE IT AND SHOW A SWEET LITTLE GRAPH
 #   OF COMMANDS THAT RUN FOR EACH FILE TO COMPILE.
 
-LIBRARY_DIRS  := $(Q3ASM_SOURCE)/ \
-									libs/q3lcc/ \
-									libs/q3rcc/ \
-									libs/q3cpp/ \
-									libs/lburg/
+UIVM_SOURCE   := games/multigame/q3_ui
+Q3ASM_SOURCE  := libs/q3asm
+Q3RCC_SOURCE  := libs/q3lcc/src
+LBURG_SOURCE  := libs/q3lcc/lburg
+Q3CPP_SOURCE  := libs/q3lcc/cpp
+Q3LCC_SOURCE  := libs/q3lcc/etc
+
 
 # LAYOUT BUILD_DIRS UPFRONT
 BUILD_DIRS    := \
 	$(BUILD_DIR).mkdir \
 	$(filter $(MAKECMDGOALS),clean) \
-	$(subst libs/,$(BUILD_DIR).mkdir/,$(LIBRARY_DIRS))
+	$(BUILD_DIR).mkdir/q3asm/ \
+	$(BUILD_DIR).mkdir/q3lcc/ \
+	$(BUILD_DIR).mkdir/q3rcc/ \
+	$(BUILD_DIR).mkdir/q3cpp/ \
+	$(BUILD_DIR).mkdir/lburg/ \
+	$(BUILD_DIR).mkdir/uivm/ \
 
 
 define MKDIR_SH
@@ -116,6 +117,9 @@ debug:
 		LDFLAGS="$(DEBUG_LDFLAGS)"
 
 multigame: q3asm.wasm q3lcc.wasm ui.qvm cgame.qvm qagame.qvm
+
+
+
 
 # MAKE Q3LCC-WASM TO RECOMPILE GAME CODE IN BROWSER-WORKER
 Q3ASM_FILES  := $(wildcard $(Q3ASM_SOURCE)/*.c)
@@ -189,8 +193,8 @@ $(BUILD_DIR)/lburg/%.o: $(LBURG_SOURCE)/%.c
 	$(DO_LBURG_CC)
 
 $(BUILD_DIR)/q3rcc/dagcheck.c: lburg.wasm $(Q3RCC_SOURCE)/dagcheck.md
-	$(Q)node ./engine/wasm/bin/lburg.js -- \
-			$(Q3RCC_SOURCE)/dagcheck.md $@ 
+	$(Q)node ./engine/wasm/bin/wasm-cli.js -- \
+			lburg.wasm $(Q3RCC_SOURCE)/dagcheck.md $@ 
 
 
 Q3RCC_CFLAGS := $(CLIENT_CFLAGS) \
@@ -243,6 +247,38 @@ $(BUILD_DIR)/q3cpp/%.o: $(Q3CPP_SOURCE)/%.c
 
 
 
-.NOTPARALLEL: clean $(BUILD_DIRS)
+
+WASM_LCC := $(Q)node ./engine/wasm/bin/wasm-cli.js -- \
+			q3lcc.wasm $(Q3RCC_SOURCE)/dagcheck.md $@ 
+
+define DO_UIVM_CC
+	$(echo_cmd) "UIVM_CC $<"
+	$(Q)$(CC) -o $@ $(Q3RCC_CFLAGS) -c $<
+endef
+
+UIVM_FILES  := $(wildcard $(UIVM_SOURCE)/*.c) \
+	$(UIVM_SOURCE)/../game/bg_lib.c \
+	$(UIVM_SOURCE)/../game/bg_misc.c \
+	$(UIVM_SOURCE)/../game/q_math.c \
+	$(UIVM_SOURCE)/../game/q_shared.c
+
+UIVM_OBJS := $(subst $(UIVM_SOURCE)/,$(BUILD_DIR)/uivm/,$(UIVM_FILES:.c=.o)) \
+	$(BUILD_DIR)/uivm/bg_lib.asm \
+	$(BUILD_DIR)/uivm/bg_misc.asm \
+	$(BUILD_DIR)/uivm/q_math.asm \
+	$(BUILD_DIR)/uivm/q_shared.asm \
+	$(UIVM_SOURCE)/../game/ui_syscalls.asm
+
+ui.qvm: $(BUILD_DIRS) $(UIVM_FILES) $(UIVM_OBJS)
+	$(echo_cmd) "LD $@"
+	$(Q)$(CC) $(GAME_CFLAGS) $(GAME_LDFLAGS) -o $@ $(CGOBJ)
+
+$(BUILD_DIR)/uivm/%.o: $(UIVM_SOURCE)/%.c
+	$(DO_UIVM_CC)
+
+
+
+
+
 
 
