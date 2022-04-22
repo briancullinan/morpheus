@@ -2,8 +2,6 @@ if(typeof global != 'undefined' && typeof global.window == 'undefined') {
 	global.window = {}
 }
 
-var Q3e = {}
-window.Q3e = Q3e
 
 function getQueryCommands() {
 	// Wow, look at all the unfuckery I don't have to do with startup options because
@@ -35,8 +33,8 @@ function getQueryCommands() {
 	startup.push.apply(startup, window.preStart)
 	startup.push.apply(startup, [
 		'+set', 'r_fullscreen', window.fullscreen ? '1' : '0',
-		'+set', 'r_customHeight', '' + Q3e.canvas.clientHeight || 0,
-		'+set', 'r_customWidth', '' + Q3e.canvas.clientWidth || 0,
+		'+set', 'r_customHeight', '' + GL.canvas.clientHeight || 0,
+		'+set', 'r_customWidth', '' + GL.canvas.clientWidth || 0,
 	])
 	if(window.location.hostname) {
 		startup.push.apply(startup, [
@@ -111,12 +109,12 @@ function Sys_Edit() {
 
 
 function Sys_Exit(code) {
-	Q3e.exited = true
+	SYS.exited = true
 	GLimp_Shutdown();
 	NET_Shutdown();
-	if(Q3e.frameInterval) {
-		clearInterval(Q3e.frameInterval)
-		Q3e.frameInterval = null
+	if(SYS.frameInterval) {
+		clearInterval(SYS.frameInterval)
+		SYS.frameInterval = null
 	}
 	// redirect to lvlworld
 	let returnUrl = addressToString(Cvar_VariableString('cl_returnURL'))
@@ -126,34 +124,16 @@ function Sys_Exit(code) {
 }
 
 function Sys_Error(fmt, args) {
-	let len = BG_sprintf(Q3e.sharedMemory + Q3e.sharedCounter, fmt, args)
+	let len = BG_sprintf(STD.sharedMemory + STD.sharedCounter, fmt, args)
 	if(len > 0)
-		console.error('Sys_Error: ', addressToString(Q3e.sharedMemory + Q3e.sharedCounter))
+		console.error('Sys_Error: ', addressToString(STD.sharedMemory + STD.sharedCounter))
 	Sys_Exit( 1 )
 	throw new Error(addressToString(fmt))
 }
 
 function Sys_SetStatus(status, replacementStr) {
-	// TODO: something like  window.title = , then setTimeout( window.title = 'Q3e' again)
-	/*
-	let desc = addressToString(status)
-	if(desc.includes('Main menu')) {
-		if(!Q3e.initialized) {
-			Q3e.initialized = true
-			document.body.className += ' done-loading '
-		}
-	}
-	let description = document.querySelector('#loading-progress .description')
-	let div = document.createElement('div')
-	// TODO: use BG_sprintf like above?
-	if(replacementStr) {
-		div.innerHTML = desc.replace('%s', addressToString(replacementStr))
-	}
-	if(description.children.length == 0
-		|| div.innerText.toLowerCase() != description
-			.children[description.children.length-1].innerText.toLowerCase())
-		description.appendChild(div)
-	*/
+	// TODO: something like  window.title = , then setTimeout( window.title = 'Quake3e' again)
+	
 }
 
 function CL_MenuModified(oldValue, newValue, cvar) {
@@ -165,8 +145,8 @@ function CL_MenuModified(oldValue, newValue, cvar) {
 	}
 	let newValueStr = addressToString(newValue)
 	let newLocation = newValueStr.replace(/[^a-z0-9]/gi, '')
-	if(!Q3e.initialized) {
-		Q3e.initialized = true
+	if(!SYS.menuInited) { // keep track of first time the ui.qvm appears
+		SYS.menuInited = true
 		document.body.className += ' done-loading '
 	}
 	if(window.location.pathname.toString().includes(newLocation)) {
@@ -185,29 +165,29 @@ function CL_ModifyMenu(event) {
 }
 
 function Sys_Frame() {
-	if(Q3e.inFrame) {
+	if(SYS.inFrame) {
 		return
 	}
 	function doFrame() {
-		Q3e.inFrame = true
-		Q3e.running = !Q3e.running
+		SYS.inFrame = true
+		SYS.running = !SYS.running
 		try {
 			if(typeof window.ace != 'undefined') {
 				Ace_Frame()
 			}
-			Com_Frame(Q3e.running)
+			Com_Frame(SYS.running)
 		} catch (e) {
-			if(!Q3e.exited && e.message == 'longjmp') {
+			if(!SYS.exited && e.message == 'longjmp') {
 				// let game Com_Frame handle it, it will restart UIVM
 				Cbuf_AddText(stringToAddress('vid_restart\n'));
 				console.error(e)
 			} else
-			if(!Q3e.exited || e.message != 'unreachable') {
+			if(!SYS.exited || e.message != 'unreachable') {
 				Sys_Exit(1)
 				throw e
 			}
 		}
-		Q3e.inFrame = false
+		SYS.inFrame = false
 	}
 	if(HEAP32[gw_active >> 2]) {
 		requestAnimationFrame(doFrame)
@@ -233,12 +213,12 @@ function _emscripten_get_now() {
 
 function emscripten_realloc_buffer(size) {
 	try {
-		Q3e.memory.grow(size - Q3e.memory.buffer.byteLength + 65535 >>> 16);
-		updateGlobalBufferAndViews(Q3e.memory.buffer);
+		Module.memory.grow(size - Module.memory.buffer.byteLength + 65535 >>> 16);
+		updateGlobalBufferAndViews(Module.memory.buffer);
 		return 1;
 	} catch (e) {
 		console.error("emscripten_realloc_buffer: Attempted to grow heap from " 
-			+ Q3e.memory.buffer.byteLength + " bytes to " 
+			+ Module.memory.buffer.byteLength + " bytes to " 
 			+ size + " bytes, but got error: " + e);
 	}
 }
@@ -275,7 +255,7 @@ function _emscripten_get_heap_size() {
 
 
 function dynCall(ret, func, args) {
-	return Q3e.table.get(func).apply(null, args)
+	return Module.table.get(func).apply(null, args)
 }
 
 function CreateAndCall(code, params, vargs) {

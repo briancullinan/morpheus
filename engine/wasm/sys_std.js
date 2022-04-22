@@ -68,6 +68,7 @@ function stringsToMemory(list, length) {
 	return start
 }
 
+
 function Sys_Microseconds() {
 	if (window.performance.now) {
 		return parseInt(window.performance.now(), 10);
@@ -80,11 +81,11 @@ function Sys_Microseconds() {
 }
 
 function Sys_Milliseconds() {
-	if (!Q3e['timeBase']) {
+	if (!DATE.timeBase) {
 		// javascript times are bigger, so start at zero
 		//   pretend like we've been alive for at least a few seconds
 		//   I actually had to do this because files it checking times and this caused a delay
-		Q3e['timeBase'] = Date.now() - 5000;
+		DATE.timeBase = Date.now() - 5000;
 	}
 
 	//if (window.performance.now) {
@@ -92,7 +93,7 @@ function Sys_Milliseconds() {
 	//} else if (window.performance.webkitNow) {
 	//  return parseInt(window.performance.webkitNow(), 10);
 	//} else {
-	return Date.now() - Q3e.timeBase;
+	return Date.now() - DATE.timeBase;
 	//}
 }
 
@@ -327,6 +328,17 @@ let maths = Object.getOwnPropertyNames(Math)
 for(let j = 0; j < maths.length; j++) {
   MATHS[maths[j] + 'f'] = Math[maths[j]]
   MATHS[maths[j]] = Math[maths[j]]
+}
+
+if(typeof module != 'undefined') {
+  module.exports = {
+    MATHS,
+		STD,
+		DATE,
+    stringToAddress,
+    addressToString,
+    stringsToMemory
+  }
 }
 
 

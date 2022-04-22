@@ -121,7 +121,7 @@ $(BD)rcc/dagcheck$(O): $(BD)rcc/dagcheck.c
 	$(CC) $(LCC_CFLAGS) -Wno-unused -c -Isrc -o $@ $<
 
 $(BD)rcc/dagcheck.c: $(BD)lburg/lburg$(E) src/dagcheck.md
-	$(Q)node -e "require('../../engine/wasm/bin/lburg.js') \
+	$(Q)node --inspect-brk -e "require('../../engine/wasm/bin/lburg.js') \
 		('src/dagcheck.md', '$@')"
 
 

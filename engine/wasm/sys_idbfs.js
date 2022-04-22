@@ -49,18 +49,42 @@ function openDatabase(noWait) {
 }
 
 
+function loadEntry(event) {
+  let cursor = event.target.result
+  if(!cursor) {
+    return resolve()
+  }
+  if(cursor.key.endsWith('default.cfg')) {
+    FS.hadDefault = cursor.key
+  }
+  // already exists on filesystem, 
+  //   it must have come with page
+  if(FS.virtual[cursor.key]
+    && FS.virtual[cursor.key].timestamp 
+      > cursor.value.timestamp) {
+    // embedded file is newer, start with that
+    return cursor.continue()
+  }
+  FS.virtual[cursor.key] = {
+    timestamp: cursor.value.timestamp,
+    mode: cursor.value.mode,
+    contents: cursor.value.contents
+  }
+  return cursor.continue()
+}
+
+
 
 function readAll() {
-  let hadDefault = false
   let startTime = Date.now()
-  Q3e.fs_loading = 1
+  FS.isSyncing = 1
   // FIX FOR "QKEY could not open" ERROR
   FS.virtual['home'] = {
     timestamp: new Date(),
     mode: FS_DIR,
   }
   if(typeof window.fs_loading != 'undefined') {
-    HEAPU32[fs_loading >> 2] = Q3e.fs_loading
+    HEAPU32[fs_loading >> 2] = FS.isSyncing
   }
   console.log('sync started at ', new Date())
   readPreFS()
@@ -70,29 +94,7 @@ function readAll() {
     let objStore = transaction.objectStore(DB_STORE_NAME)
     let tranCursor = objStore.openCursor()
     return new Promise(function (resolve) {
-      tranCursor.onsuccess = function loadItems(event) {
-        let cursor = event.target.result
-        if(!cursor) {
-          return resolve()
-        }
-        if(cursor.key.endsWith('default.cfg')) {
-          hadDefault = cursor.key
-        }
-        // already exists on filesystem, 
-        //   it must have come with page
-        if(FS.virtual[cursor.key]
-          && FS.virtual[cursor.key].timestamp 
-            > cursor.value.timestamp) {
-          // embedded file is newer, start with that
-          return cursor.continue()
-        }
-        FS.virtual[cursor.key] = {
-          timestamp: cursor.value.timestamp,
-          mode: cursor.value.mode,
-          contents: cursor.value.contents
-        }
-        return cursor.continue()
-      }
+      tranCursor.onsuccess = loadEntry
       tranCursor.onerror = function (error) {
         console.error(error)
         resolve(error)
@@ -105,13 +107,13 @@ function readAll() {
         (tookTime > 60 * 1000 ? (Math.floor(tookTime / 1000 / 60) + ' minutes, ') : '')
         + Math.floor(tookTime / 1000) % 60 + ' seconds, '
         + (tookTime % 1000) + ' milliseconds')
-      Q3e.fs_loading = 0
+      FS.isSyncing = 0
       if(typeof window.fs_loading != 'undefined') {
         HEAPU32[fs_loading >> 2] = 0
-        if(hadDefault) {
+        if(FS.hadDefault) {
           HEAPU32[com_fullyInitialized >> 2] = 1
           setTimeout(function () {
-            Sys_FileReady(stringToAddress('default.cfg'), stringToAddress(hadDefault))
+            Sys_FileReady(stringToAddress('default.cfg'), stringToAddress(FS.hadDefault))
           }, 100)
         }
       }

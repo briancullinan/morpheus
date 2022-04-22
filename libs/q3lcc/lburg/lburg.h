@@ -77,6 +77,11 @@ int Sys_putc(int c, FILE *f);
 int Sys_time(int *t);
 #define time(t) Sys_time(t)
 
+
+__attribute__((__visibility__("default")))
+__attribute__((__noinline__))
+void* malloc(size_t bytes);
+
 __attribute__((__visibility__("default")))
 __attribute__((__noinline__))
 int sprintf(char *__restrict, const char *__restrict, ...);

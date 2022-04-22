@@ -32,6 +32,10 @@ if(typeof window != 'undefined') {
     }
   }
   
+} else if (typeof global != 'undefined') {
+	function Sys_notify(ifile, path) {
+
+	}
 }
 
 
@@ -111,7 +115,7 @@ function Sys_FOpen(filename, mode) {
     return createFP()
   } else 
   // only write+ files after they have all been loaded, so we don't accidentally overwrite
-  if (/* !Q3e.fs_loading && */ modeStr.includes('w')
+  if (/* !FS.isSyncing && */ modeStr.includes('w')
     && (typeof FS.virtual[parentDirectory] != 'undefined'
     // allow writing to root path
     || parentDirectory.length == 0)
@@ -257,7 +261,12 @@ function Sys_ListFiles (directory, extension, filter, numfiles, wantsubs) {
       && (!wantsubs || (FS.virtual[key].mode >> 12) == ST_DIR)
   })
   // return a copy!
-  let listInMemory = Z_Malloc( ( matches.length + 1 ) * 4 )
+	let listInMemory
+	if(typeof Z_Malloc != 'undefined') {
+		listInMemory = Z_Malloc( ( matches.length + 1 ) * 4 )
+	} else {
+		listInMemory = malloc( ( matches.length + 1 ) * 4 )
+	}
   for(let i = 0; i < matches.length; i++) {
     let relativeName = matches[i]
     if(localName && relativeName.startsWith(localName)) {
@@ -371,7 +380,7 @@ function Sys_Mkdirp(path) {
 		}
 
 		// if we got any other error, let's see if the directory already exists
-		if(Sys_stat(p)) {
+		if(Sys_stat(path)) {
 			throw e
 		}
 	}
@@ -526,7 +535,7 @@ function getModuleMemoryDataView() {
 	// the returned DataView tends to be dissaociated with the module's memory buffer at the will of the WebAssembly engine 
 	// cache the returned DataView at your own peril!!
 
-	return new DataView(Q3e.memory.buffer);
+	return new DataView(Module.memory.buffer);
 }
 
 function fd_prestat_get(fd, bufPtr) {
@@ -611,7 +620,7 @@ function fd_write(fd, iovs, iovsLen, nwritten) {
 			var buf = view.getUint32(ptr, !0);
 			var bufLen = view.getUint32(ptr + 4, !0);
 
-			return new Uint8Array(Q3e.memory.buffer, buf, bufLen);
+			return new Uint8Array(Module.memory.buffer, buf, bufLen);
 		});
 
 		return buffers;

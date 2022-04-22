@@ -3,14 +3,14 @@ const fs = require('fs')
 const path = require('path')
 const FS = require('../sys_fs.js')
 const {Sys_Mkdirp} = FS
+const {
+	initEnvironment,
+	initWasm, 
+	updateEnvironment
+} = require('../sys_wasm.js')
+const {stringToAddress} = require('../sys_std.js')
 
 // TODO: compare to initWasm() and make match
-
-Object.assign(Q3e, {
-	wasi_snapshot_preview1: Q3e,
-	env: Q3e,
-})
-
 
 async function readAll(inFile, outFile) {
 
@@ -61,7 +61,9 @@ async function lburg(inFile, outFile) {
 		fs.readFileSync(path.join(__dirname, 
 		'../../../libs/q3lcc/build-wasm-js/lburg/lburg.wasm')))
 
-	await initWasm(bytes)
+	let ENV = initEnvironment({}) // TODO: something todo with Z_Malloc in ListFiles?
+	let program = await initWasm(bytes, ENV)
+	updateEnvironment(program, ENV)
 	await readAll(inFile, outFile)
 
 	try {

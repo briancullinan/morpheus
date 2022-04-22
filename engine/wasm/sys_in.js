@@ -1,31 +1,11 @@
 function GLimp_StartDriverAndSetMode(mode, modeFS, fullscreen, fallback) {
-  //let win = malloc(8)
   // TODO: multiple windows like a DVR?
   //   what kind of game needs two screens for one player to switch back and forth?
-  
-  /*
-  SDL.windows[handle] = {
-    x: x,
-    y: y,
-    w: w,
-    h: h,
-    title: title,
-    flags: flags,
-  }
-  */
-  if(!Q3e.canvas) {
-    //Q3e.canvas.width = viewport.clientWidth / 2
-    //Q3e.canvas.height = document.body.clientHeight
-  }
-  Q3e.canvas.setAttribute('width', Q3e.canvas.clientWidth)
-  Q3e.canvas.setAttribute('height', Q3e.canvas.clientHeight)
+  GL.canvas.setAttribute('width', GL.canvas.clientWidth)
+  GL.canvas.setAttribute('height', GL.canvas.clientHeight)
   if(window.flipper) {
     window.flipper.remove()
   }
-
-  //HEAP32[win>>2] = 1
-  //window.title = addressToString(title)
-  //return 1 //win;
 
   // TODO: keep track of multiple?
   let webGLContextAttributes = {
@@ -35,30 +15,21 @@ function GLimp_StartDriverAndSetMode(mode, modeFS, fullscreen, fallback) {
     premultipliedAlpha: false,
   }
 
+  GL.context = (!fallback)
+    ? GL.canvas.getContext('webgl2', webGLContextAttributes)
+    : (GL.canvas.getContext('webgl', webGLContextAttributes)
+      || GL.canvas.getContext('experimental-webgl'))
 
-  Q3e['webgl'] = (!fallback)
-    ? Q3e.canvas.getContext('webgl2', webGLContextAttributes)
-    : (Q3e.canvas.getContext('webgl', webGLContextAttributes)
-      || Q3e.canvas.getContext('experimental-webgl'))
-
-  Q3e.webgl.viewport(0, 0, Q3e.canvas.width, Q3e.canvas.height);
-  if (!Q3e.webgl) return 2
-  //let handle = malloc(8);
-  //HEAP32[handle>>2] = 1
+  GL.context.viewport(0, 0, GL.canvas.width, GL.canvas.height);
+  if (!GL.context) return 2
   if(typeof GL != 'undefined') {
-    INPUT.handle = GL.registerContext(Q3e.webgl, webGLContextAttributes)
+    INPUT.handle = GL.registerContext(GL.context, webGLContextAttributes)
     GL.makeContextCurrent(INPUT.handle)
-    //if(typeof Module != 'undefined') {
-    //  Module.useWebGL = true;
-    //}
-    //GLImmediate.clientColor = new Float32Array([ 1, 1, 1, 1 ]);
-    //GLImmediate.init()
-    //GLImmediate.getRenderer()
   }
 
   // set the window to do the grabbing, when ungrabbing this doesn't really matter
   if(!INPUT.firstClick) {
-    //Q3e.canvas.requestPointerLock();
+    //GL.canvas.requestPointerLock();
   } else {
     SDL_ShowCursor()
   }
@@ -67,24 +38,24 @@ function GLimp_StartDriverAndSetMode(mode, modeFS, fullscreen, fallback) {
 }
 
 function updateVideoCmd () {
-  Q3e.canvas.setAttribute('width', Q3e.canvas.clientWidth)
-  Q3e.canvas.setAttribute('height', Q3e.canvas.clientHeight)
+  GL.canvas.setAttribute('width', GL.canvas.clientWidth)
+  GL.canvas.setAttribute('height', GL.canvas.clientHeight)
   // THIS IS THE NEW VID_RESTART FAST HACK
-  HEAP32[INPUT.updateWidth>>2] = Q3e.canvas.width
-  HEAP32[INPUT.updateHeight>>2] = Q3e.canvas.height
-  Cvar_Set(stringToAddress('r_customWidth'), stringToAddress('' + Q3e.canvas.clientWidth))
-  Cvar_Set(stringToAddress('r_customHeight'), stringToAddress('' + Q3e.canvas.clientHeight))
+  HEAP32[INPUT.updateWidth>>2] = GL.canvas.width
+  HEAP32[INPUT.updateHeight>>2] = GL.canvas.height
+  Cvar_Set(stringToAddress('r_customWidth'), stringToAddress('' + GL.canvas.clientWidth))
+  Cvar_Set(stringToAddress('r_customHeight'), stringToAddress('' + GL.canvas.clientHeight))
   // TODO: make this an SDL/Sys_Queue event to `vid_restart fast` on native
   Cbuf_AddText(stringToAddress('vid_restart fast\n'));
 }
 
 function resizeViewport () {
   // ignore if the canvas hasn't yet initialized
-  if(!Q3e.canvas) return
-  Q3e.canvas.removeAttribute('width')
-  Q3e.canvas.removeAttribute('height')
-  if (Q3e.resizeDelay) clearTimeout(Q3e.resizeDelay)
-  Q3e.resizeDelay = setTimeout(updateVideoCmd, 100);
+  if(!GL.canvas) return
+  GL.canvas.removeAttribute('width')
+  GL.canvas.removeAttribute('height')
+  if (INPUT.resizeDelay) clearTimeout(INPUT.resizeDelay)
+  INPUT.resizeDelay = setTimeout(updateVideoCmd, 100);
 }
 
 
@@ -117,7 +88,7 @@ const KEYCATCH_CGAME   =  0x0008
 
 function InputPushFocusEvent (evt) {
   if(evt.type == 'pointerlockchange') {
-    HEAP32[gw_active >> 2] = (document.pointerLockElement === Q3e.canvas)
+    HEAP32[gw_active >> 2] = (document.pointerLockElement === GL.canvas)
     if(!HEAP32[gw_active >> 2] && !(Key_GetCatcher() & KEYCATCH_CONSOLE)) {
       Sys_QueEvent( Sys_Milliseconds(), SE_KEY, 
       INPUT.keystrings['ESCAPE'], true, 0, null );
@@ -140,10 +111,10 @@ function InputPushFocusEvent (evt) {
 function InputPushMovedEvent (evt) {
   if (evt.toElement === null && evt.relatedTarget === null) {
     INPUT.firstClick = true
-    if(Q3e.frameInterval) {
-      clearInterval(Q3e.frameInterval)
+    if(SYS.frameInterval) {
+      clearInterval(SYS.frameInterval)
     }
-    Q3e.frameInterval = setInterval(Sys_Frame, 1000.0 / INPUT.fpsUnfocused)
+    SYS.frameInterval = setInterval(Sys_Frame, 1000.0 / INPUT.fpsUnfocused)
     return
   }
 
@@ -319,7 +290,7 @@ function InputPushTextEvent (evt) {
         SDL_ShowCursor()
         HEAP32[gw_active >> 2] = false
       } else if(!INPUT.firstClick) {
-        //Q3e.canvas.requestPointerLock();      
+        //GL.canvas.requestPointerLock();      
       }
     }, 100)
   } else {
@@ -401,25 +372,25 @@ function InputPushMouseEvent (evt) {
   //}
   // Basically, whenever the requestPointerLock() is finally triggered when cgame starts,
   //   the unfocusedFPS is cancelled and changed to real FPS, 200+!
-  if(down && document.pointerLockElement != Q3e.canvas) {
+  if(down && document.pointerLockElement != GL.canvas) {
     // TODO: start sound, capture mouse
     HEAP32[gw_active >> 2] = 1
-    Q3e.canvas.requestPointerLock();
+    GL.canvas.requestPointerLock();
 
-    if(Q3e.frameInterval) {
-      clearInterval(Q3e.frameInterval)
+    if(SYS.frameInterval) {
+      clearInterval(SYS.frameInterval)
     }
-    Q3e.frameInterval = setInterval(Sys_Frame, 1000.0 / INPUT.fps);
+    SYS.frameInterval = setInterval(Sys_Frame, 1000.0 / INPUT.fps);
   }
 }
 
 function Com_MaxFPSChanged() {
   INPUT.fpsUnfocused = Cvar_VariableIntegerValue(stringToAddress('com_maxfpsUnfocused'));
   INPUT.fps = Cvar_VariableIntegerValue(stringToAddress('com_maxfps'));
-  if(Q3e.frameInterval) {
-    clearInterval(Q3e.frameInterval)
+  if(SYS.frameInterval) {
+    clearInterval(SYS.frameInterval)
   }
-  Q3e.frameInterval = setInterval(Sys_Frame, 1000.0 / (HEAP32[gw_active >> 2] 
+  SYS.frameInterval = setInterval(Sys_Frame, 1000.0 / (HEAP32[gw_active >> 2] 
     ? INPUT.fps : INPUT.fpsUnfocused))
 }
 
@@ -478,9 +449,9 @@ function IN_Init() {
   window.addEventListener('resize', resizeViewport, false)
   window.addEventListener('popstate', CL_ModifyMenu, false)
 
-  Q3e.canvas.addEventListener('mousemove', InputPushMouseEvent, false)
-  Q3e.canvas.addEventListener('mousedown', InputPushMouseEvent, false)
-  Q3e.canvas.addEventListener('mouseup', InputPushMouseEvent, false)
+  GL.canvas.addEventListener('mousemove', InputPushMouseEvent, false)
+  GL.canvas.addEventListener('mousedown', InputPushMouseEvent, false)
+  GL.canvas.addEventListener('mouseup', InputPushMouseEvent, false)
   
   document.addEventListener('mousewheel', InputPushWheelEvent, {capture: false, passive: true})
   document.addEventListener('visibilitychange', InputPushFocusEvent, false)
@@ -494,10 +465,10 @@ function IN_Init() {
 
   /*
   let nipple handle touch events
-  Q3e.canvas.addEventListener('touchstart', InputPushTouchEvent, false)
-  Q3e.canvas.addEventListener('touchend', InputPushTouchEvent, false)
-  Q3e.canvas.addEventListener('touchmove', InputPushTouchEvent, false)
-  Q3e.canvas.addEventListener('touchcancel', InputPushTouchEvent, false)
+  GL.canvas.addEventListener('touchstart', InputPushTouchEvent, false)
+  GL.canvas.addEventListener('touchend', InputPushTouchEvent, false)
+  GL.canvas.addEventListener('touchmove', InputPushTouchEvent, false)
+  GL.canvas.addEventListener('touchcancel', InputPushTouchEvent, false)
   */
 
   console.log( '------------------------------------\n' )
@@ -573,7 +544,7 @@ function InputPushTouchEvent(joystick, id, evt, data) {
   }
 
   if(evt.type == 'move') {
-    let ratio = Q3e.canvas.clientWidth / Q3e.canvas.clientHeight
+    let ratio = GL.canvas.clientWidth / GL.canvas.clientHeight
 		INPUT.touchhats[id][0] = (x * ratio) * 50
 		INPUT.touchhats[id][1] = y * 50
   }
@@ -702,13 +673,13 @@ function GLimp_Shutdown(destroy) {
   //document.removeEventListener('dragover', INPUT.dragOverHandler)
   document.removeEventListener('pointerlockchange', InputPushFocusEvent);
 
-  if (destroy && Q3e.canvas) {
-    Q3e.canvas.removeEventListener('mousemove', InputPushMouseEvent)
-    Q3e.canvas.removeEventListener('mousedown', InputPushMouseEvent)
-    Q3e.canvas.removeEventListener('mouseup', InputPushMouseEvent)
+  if (destroy && GL.canvas) {
+    GL.canvas.removeEventListener('mousemove', InputPushMouseEvent)
+    GL.canvas.removeEventListener('mousedown', InputPushMouseEvent)
+    GL.canvas.removeEventListener('mouseup', InputPushMouseEvent)
     GL.deleteContext(INPUT.handle);
-    Q3e.canvas.remove()
-    delete Q3e['canvas']
+    GL.canvas.remove()
+    delete GL.canvas
   }
 }
 
