@@ -209,7 +209,10 @@ function Sys_getenv(varname) {
 
 var STD = {
   sharedCounter: 0,
-  __assert_fail: console.assert, // TODO: convert to variadic fmt for help messages
+  stringToAddress,
+  addressToString,
+  stringsToMemory,
+__assert_fail: console.assert, // TODO: convert to variadic fmt for help messages
   longjmp: function (id, code) { throw new Error('longjmp', id, code) },
   setjmp: function (id) { try {  } catch (e) { } },
   //Sys_getenv: Sys_getenv,

@@ -64,7 +64,7 @@ async function lburg(inFile, outFile) {
 	let ENV = initEnvironment({}) // TODO: something todo with Z_Malloc in ListFiles?
 	let program = await initWasm(bytes, ENV)
 	updateEnvironment(program, ENV)
-	await readAll(inFile, outFile)
+	let localName = await readAll(inFile, outFile)
 
 	try {
 		_start(startArgs.length, stringsToMemory(startArgs))
