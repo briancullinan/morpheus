@@ -59,10 +59,11 @@ async function lburg(inFile, outFile) {
 	let startArgs = [ 'lburg', inFile, outFile ]
 	let bytes = new Uint8Array(
 		fs.readFileSync(path.join(__dirname, 
-		'../../../libs/q3lcc/build-wasm-js/lburg/lburg.wasm')))
+		'../../../build/release-wasm-js/lburg.wasm')))
 
 	let ENV = initEnvironment({}) // TODO: something todo with Z_Malloc in ListFiles?
 	let program = await initWasm(bytes, ENV)
+	//console.log(program.instance.exports)
 	updateEnvironment(program, ENV)
 	let localName = await readAll(inFile, outFile)
 
@@ -78,5 +79,32 @@ async function lburg(inFile, outFile) {
 	}
 
 }
+
+
+let runLburg = false
+let foundFiles = []
+for(let i = 0; i < process.argv.length; i++) {
+  let a = process.argv[i]
+  if(a.match(__filename)) {
+    runLburg = true
+  } else if(a == '--') {
+		continue
+	} else if(a == 'node' || a.endsWith('/node')) {
+		continue
+	} else if (a) {
+		if(fs.existsSync(a) || fs.existsSync(path.dirname(a))) {
+			foundFiles.push(a)
+		//} else if (path.join(process.cwd, a)) {
+		//	foundFiles.push(path.join(process.cwd, a))
+		} else {
+			console.log('WARNING: File not found: ' + a)
+		}
+  }
+}
+
+if(runLburg) {
+	lburg.apply(null, [foundFiles[0], foundFiles[1]])
+}
+
 
 module.exports = lburg

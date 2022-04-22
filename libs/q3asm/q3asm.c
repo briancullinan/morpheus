@@ -1898,7 +1898,13 @@ static const char *banner = {
 main
 ==============
 */
-int main( int argc, const char *argv[] ) {
+#ifdef __WASM__
+__attribute__((visibility("default")))
+int _start(int argc, char *argv[])
+#else
+int main(int argc, char *argv[])
+#endif
+{
 	int			i;
 	double		start, end;
 	const char	*bin;

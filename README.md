@@ -21,6 +21,9 @@ Sell the thing I made to them.
 
 I build it, let me know when it makes contact.
 
+I just remembered before I was going to call this project DEMOnstrable. 
+With a little Devil icon. A play on the demo, demon, and daemon.
+
 ## Short term
 1) DONE: Componentize engine, combine with Ace9
 2) Give Morpheus form, animations and world geometry, 

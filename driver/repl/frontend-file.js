@@ -1,6 +1,20 @@
-
+// need to improve file list
+//   need to render a list of widgets for section collapsing
+// tables of contents should sort by entity type and alphabetically or locationally
+//   need (depth, title, sort-key)
+// entity list should group map entities in separate
+//   .map files then use build system and a few transoforms
+//   to compile .bsp
+// unzip .zip files automatically and list contents in tree
+// TODO: add alternate image views so same control can be used for
+//   listing textures later
+// decode Makefile and highlight the file with the commands being run
+// file list always shows sized, especially on folders
 
 // TODO: probably some game engine display
+
+
+
 
 
 // let ACE = {}

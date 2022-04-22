@@ -12,10 +12,10 @@ Q=@
 endif
 
 ifndef BUILD_DIR
-BUILD_DIR := build/release
+BUILD_DIR := build/release-wasm-js
 endif
 ifeq ($(BUILD_DIR),)
-BUILD_DIR := build/release
+BUILD_DIR := build/release-wasm-js
 endif
 ifndef COMPILE_PLATFORM
 COMPILE_PLATFORM   := $(shell uname | sed -e 's/_.*//' | tr '[:upper:]' '[:lower:]' | sed -e 's/\//_/g')
@@ -27,9 +27,13 @@ CC                 := libs/$(COMPILE_PLATFORM)/wasi-sdk-14.0/bin/clang
 CXX                := libs/$(COMPILE_PLATFORM)/wasi-sdk-14.0/bin/clang++
 
 Q3ASM_SOURCE  := libs/q3asm
+Q3RCC_SOURCE  := libs/q3lcc/src
+LBURG_SOURCE  := libs/q3lcc/lburg
+Q3CPP_SOURCE  := libs/q3lcc/cpp
+Q3LCC_SOURCE  := libs/q3lcc/etc
 
-CLIENT_INCLUDES    := \
-	-Iengine/wasm \
+
+WASI_INCLUDES    := \
 	-Ilibs/wasi-sysroot/include \
 	-I$(SDL_SOURCE)/include 
 
@@ -41,40 +45,55 @@ BASE_CFLAGS        := \
 	-D_XOPEN_SOURCE=700 \
 	-D__EMSCRIPTEN__=1 \
 	-D__WASM__=1 \
+	-D__wasi__=1 \
+	-D__wasm32__=1 \
+	-D_WASI_EMULATED_SIGNAL \
+	-D_WASI_EMULATED_MMAN=1 \
 	-std=gnu11
 
 CLIENT_CFLAGS      := $(BASE_CFLAGS) \
-											$(CLIENT_INCLUDES)
-CLIENT_LDFLAGS     := $(LDFLAGS) \
-	-Wl,--import-memory -Wl,--import-table -Wl,--error-limit=200 \
-	-Wl,--no-entry --no-standard-libraries -Wl,--export-dynamic \
-	-Wl,--allow-undefined-file=engine/wasm/wasm.syms \
-	engine/wasm/wasi/libclang_rt.builtins-wasm32.a 
+											$(WASI_INCLUDES)
 
-Q3ASM_CFLAGS       := $(CLIENT_CFLAGS)
+WASI_LDFLAGS       := $(LDFLAGS) \
+	-Wl,--import-memory -Wl,--import-table \
+	-Wl,--export-dynamic -Wl,--error-limit=200 \
+	-Wl,--export=sprintf -Wl,--export=malloc  \
+	-Wl,--export=stderr -Wl,--export=stdout  \
+	--no-standard-libraries \
+	-Wl,--allow-undefined-file=engine/wasm/wasm.syms \
+	engine/wasm/wasi/libclang_rt.builtins-wasm32.a \
+	libs/wasi-sysroot/lib/wasm32-wasi/libc.a
+
+CLIENT_LDFLAGS     := $(WASI_LDFLAGS) -Wl,--no-entry 
+	
 
 # WRITE THIS IN A WAY THAT THE FILE TREE
 #   CAN PARSE IT AND SHOW A SWEET LITTLE GRAPH
 #   OF COMMANDS THAT RUN FOR EACH FILE TO COMPILE.
 
-LIBRARY_DIRS  := $(Q3ASM_SOURCE)/
+LIBRARY_DIRS  := $(Q3ASM_SOURCE)/ \
+									libs/q3lcc/ \
+									libs/q3rcc/ \
+									libs/q3cpp/ \
+									libs/lburg/
 
 # LAYOUT BUILD_DIRS UPFRONT
 BUILD_DIRS    := \
-	$(BUILD_DIR) \
+	$(BUILD_DIR).mkdir \
 	$(filter $(MAKECMDGOALS),clean) \
-	$(subst libs/,$(BUILD_DIR)/,$(LIBRARY_DIRS))
+	$(subst libs/,$(BUILD_DIR).mkdir/,$(LIBRARY_DIRS))
+
 
 define MKDIR_SH
-	@if [ ! -d "./$@" ]; \
-		then $(MKDIR) "./$@";fi;
+	@if [ ! -d "./$1" ]; \
+		then $(MKDIR) "./$1";fi;
 endef
 
-$(BUILD_DIR)/%/: libs/%/
-	$(MKDIR_SH)
+$(BUILD_DIR).mkdir/%/:
+	$(call MKDIR_SH,$(subst .mkdir,,$@))
 
-$(BUILD_DIR):
-	$(MKDIR_SH)
+$(BUILD_DIR).mkdir/:
+	$(call MKDIR_SH,$(subst .mkdir,,$@))
 
 #D_DIRS  := $(addprefix $(BUILD_DIR)/,$(WORKDIRS))
 D_FILES := $(shell find $(BUILD_DIR)/** -name '*.d' 2>/dev/null)
@@ -85,32 +104,145 @@ endif
 release: 
 	$(Q)$(MAKE) multigame engine \
 		plugin index build-tools deploy \
-		BUILD_DIR="build/release" \
+		BUILD_DIR="build/release-wasm-js" \
 		CFLAGS="$(RELEASE_CFLAGS)" \
 		LDFLAGS="$(RELEASE_LDFLAGS)"
 
 debug: 
 	$(Q)$(MAKE) multigame engine \
 		plugin index build-tools deploy \
-		BUILD_DIR="build/debug" \
+		BUILD_DIR="build/debug-wasm-js" \
 		CFLAGS="$(DEBUG_CFLAGS)" \
 		LDFLAGS="$(DEBUG_LDFLAGS)"
 
-multigame: q3asm q3lcc ui.qvm cgame.qvm qagame.qvm
+multigame: q3asm.wasm q3lcc.wasm ui.qvm cgame.qvm qagame.qvm
 
 # MAKE Q3LCC-WASM TO RECOMPILE GAME CODE IN BROWSER-WORKER
 Q3ASM_FILES  := $(wildcard $(Q3ASM_SOURCE)/*.c)
 Q3ASM_OBJS   := $(subst libs/,$(BUILD_DIR)/,$(Q3ASM_FILES:.c=.o))
 
-q3asm: $(BUILD_DIRS) $(Q3ASM_FILES) $(Q3ASM_OBJS)
-	$(echo_cmd) "WASM-LD $@"
-	$(Q)$(CC) -o $(BUILD_DIR)/$@.wasm $(Q3ASM_OBJS) $(CLIENT_LDFLAGS)
+define DO_Q3ASM_CC
+	$(echo_cmd) "Q3ASM_CC $<"
+	$(Q)$(CC) -o $@ $(CLIENT_CFLAGS) -c $<
+endef
+
+define DO_WASM_LD
+	$(echo_cmd) "WASM-LD $1"
+	$(Q)$(CC) -o $(BUILD_DIR)/$1 $2 $(CLIENT_LDFLAGS)
+endef
+
+
+
+
+define DO_CLI_LD
+	$(echo_cmd) "WASM-LD $1"
+	$(Q)$(CC) -o $(BUILD_DIR)/$1 $2 $(WASI_LDFLAGS)
+endef
+
+q3asm.wasm: $(BUILD_DIRS) $(Q3ASM_FILES) $(Q3ASM_OBJS)
+	$(call DO_CLI_LD,$@,$(Q3ASM_OBJS))
 
 $(BUILD_DIR)/q3asm/%.o: $(Q3ASM_SOURCE)/%.c
-	$(echo_cmd) "Q3ASM_CC $<"
-	$(Q)$(CC) -o $@ $(Q3ASM_CFLAGS) -c $<
+	$(DO_Q3ASM_CC)
 
-q3lcc: $(BUILD_DIRS) $(Q3LCC_FILES) $(Q3LCC_OBJS)
 
+
+define DO_CLIEXE_LD
+	$(echo_cmd) "WASM-LD $1"
+	$(Q)$(CC) -o $(BUILD_DIR)/$1 \
+		libs/wasi-sysroot/lib/wasm32-wasi/libwasi-emulated-signal.a \
+		libs/wasi-sysroot/lib/wasm32-wasi/libwasi-emulated-getpid.a \
+		$2 $(WASI_LDFLAGS)
+endef
+
+define DO_Q3LCC_CC
+	$(echo_cmd) "Q3LCC_CC $<"
+	$(Q)$(CC) -o $@ $(CLIENT_CFLAGS) -c $<
+endef
+
+Q3LCC_FILES  := $(wildcard $(Q3LCC_SOURCE)/*.c)
+Q3LCC_OBJS   := $(subst $(Q3LCC_SOURCE)/,$(BUILD_DIR)/q3lcc/,$(Q3LCC_FILES:.c=.o))
+
+q3lcc.wasm: q3rcc.wasm q3cpp.wasm $(Q3LCC_FILES) $(Q3LCC_OBJS)
+	$(call DO_CLIEXE_LD,$@,$(Q3LCC_OBJS))
+
+$(BUILD_DIR)/q3lcc/%.o: $(Q3LCC_SOURCE)/%.c
+	$(DO_Q3LCC_CC)
+
+
+
+
+
+
+define DO_LBURG_CC
+	$(echo_cmd) "LBURG_CC $<"
+	$(Q)$(CC) -o $@ $(CLIENT_CFLAGS) -c $<
+endef
+
+LBURG_FILES  := $(wildcard $(LBURG_SOURCE)/*.c)
+LBURG_OBJS  := $(subst $(LBURG_SOURCE)/,$(BUILD_DIR)/lburg/,$(LBURG_FILES:.c=.o))
+
+lburg.wasm: $(BUILD_DIRS) $(LBURG_FILES) $(LBURG_OBJS)
+	$(call DO_CLI_LD,$@,$(LBURG_OBJS))
+
+$(BUILD_DIR)/lburg/%.o: $(LBURG_SOURCE)/%.c
+	$(DO_LBURG_CC)
+
+$(BUILD_DIR)/q3rcc/dagcheck.c: lburg.wasm $(Q3RCC_SOURCE)/dagcheck.md
+	$(Q)node ./engine/wasm/bin/lburg.js -- \
+			$(Q3RCC_SOURCE)/dagcheck.md $@ 
+
+
+Q3RCC_CFLAGS := $(CLIENT_CFLAGS) \
+	-Wno-logical-op-parentheses \
+	-Wno-unused-variable \
+	-Wno-misleading-indentation \
+	-Wno-unused-label \
+	-Wno-parentheses \
+	-Wno-dangling-else \
+	-Wno-missing-braces \
+	-I$(Q3RCC_SOURCE)
+
+define DO_Q3RCC_CC
+	$(echo_cmd) "Q3RCC_CC $<"
+	$(Q)$(CC) -o $@ $(Q3RCC_CFLAGS) -c $<
+endef
+
+Q3RCC_FILES  := $(filter-out %/dagcheck.c,$(wildcard $(Q3RCC_SOURCE)/*.c))
+DAGCHK_FILES := $(Q3RCC_SOURCE)/dagcheck.md \
+								$(BUILD_DIR)/q3rcc/dagcheck.c
+Q3RCC_OBJS   := $(subst $(Q3RCC_SOURCE)/,$(BUILD_DIR)/q3rcc/,$(Q3RCC_FILES:.c=.o)) \
+								$(BUILD_DIR)/q3rcc/dagcheck.o
+# WTF IS DAGCHECK.C?
+q3rcc.wasm: lburg.wasm $(BUILD_DIRS) $(DAGCHK_FILES) \
+						$(Q3RCC_FILES) $(Q3RCC_OBJS)
+	$(call DO_CLI_LD,$@,$(Q3RCC_OBJS))
+
+$(BUILD_DIR)/q3rcc/%.o: $(Q3RCC_SOURCE)/%.c
+	$(DO_Q3RCC_CC)
+
+$(BUILD_DIR)/q3rcc/dagcheck.o: \
+	$(BUILD_DIR)/q3rcc/dagcheck.c
+	$(DO_Q3RCC_CC)
+
+
+
+define DO_Q3CPP_CC
+	$(echo_cmd) "Q3CPP_CC $<"
+	$(Q)$(CC) -o $@ $(Q3RCC_CFLAGS) -c $<
+endef
+
+Q3CPP_FILES  := $(wildcard $(Q3CPP_SOURCE)/*.c)
+Q3CPP_OBJS   := $(subst $(Q3CPP_SOURCE)/,$(BUILD_DIR)/q3cpp/,$(Q3CPP_FILES:.c=.o))
+
+q3cpp.wasm: $(BUILD_DIRS) $(Q3CPP_FILES) $(Q3CPP_OBJS)
+	$(call DO_CLI_LD,$@,$(Q3CPP_OBJS))
+
+$(BUILD_DIR)/q3cpp/%.o: $(Q3CPP_SOURCE)/%.c
+	$(DO_Q3CPP_CC)
+
+
+
+.NOTPARALLEL: clean $(BUILD_DIRS)
 
 
