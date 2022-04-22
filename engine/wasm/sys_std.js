@@ -207,14 +207,29 @@ function Sys_getenv(varname) {
 }
 */
 
+function Sys_exec() {
+  // try to find and execute wasm in same context like INSECURE DLLs in Windows
+  // we only have inmemory FS and specific system functions, there isn't much
+  //   anyone can do from here on native to break out of nodejs sandbox
+
+  // TODO: in browser, try to download wasm like normal only from host address
+  //   or from cl_dlurl address, localStorage or IndexedDB could be vulnerable.
+  // THATS WHY ITS ENCRYPTED AGAIN.
+
+}
+
+
+
 var STD = {
   sharedCounter: 0,
   stringToAddress,
   addressToString,
   stringsToMemory,
-__assert_fail: console.assert, // TODO: convert to variadic fmt for help messages
+  __assert_fail: console.assert, // TODO: convert to variadic fmt for help messages
   longjmp: function (id, code) { throw new Error('longjmp', id, code) },
   setjmp: function (id) { try {  } catch (e) { } },
+  Sys_exec: Sys_exec,
+  Sys_execv: Sys_exec,
   //Sys_getenv: Sys_getenv,
   /*
   memset: function (addr, val, count) {

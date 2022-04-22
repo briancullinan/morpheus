@@ -79,7 +79,13 @@ static List lccinputs;		/* list of input directories */
 
 extern void updatePaths( const char *lccBinary );
 
-int main(int argc, char *argv[]) {
+#ifdef __WASM__
+__attribute__((visibility("default")))
+int _start(int argc, char *argv[])
+#else
+int main(int argc, char *argv[])
+#endif
+{
 	int i, j, nf;
 	
 	progname = argv[0];
@@ -220,12 +226,22 @@ char *basepath(char *name) {
 #include <process.h>
 #else
 #define _P_WAIT 0
+#ifdef __WASM__
+#include "../../../engine/wasm/sys_overrides.h"
+#else
 extern int fork(void);
 extern int wait(int *);
+#endif
 
 static int _spawnvp(int mode, const char *cmdname, const char *const argv[]) {
 	int pid, n, status;
 
+	// TODO: I WAS THINKING SOMETHING FANCY WHERE YOU JUST
+	//   CALL JORK(SPAWNVP) AGAIN AND IT MAKES A WEB-WORKER HERE
+#ifdef __WASM__
+		status = execv(cmdname, (char **)argv);
+		return status;
+#else
 	switch (pid = fork()) {
 	case -1:
 		fprintf(stderr, "%s: no more processes\n", progname);
@@ -246,6 +262,7 @@ static int _spawnvp(int mode, const char *cmdname, const char *const argv[]) {
 		status |= 0400;
 	}
 	return (status>>8)&0377;
+#endif
 }
 #endif
 
@@ -802,10 +819,14 @@ int suffix(char *name, char *tails[], int n) {
 /* tempname - generate a temporary file name in tempdir with given suffix */
 char *tempname(char *suffix) {
 	static int n;
+#ifdef __WASM__
+	char *name = stringf("%s/lcc%d%d%s", tempdir, random(), n++, suffix);
+#else
 #ifdef _WIN32
 	char *name = stringf("%s/lcc%d%d%s", tempdir, _getpid(), n++, suffix);
 #else
 	char *name = stringf("%s/lcc%d%d%s", tempdir, getpid(), n++, suffix);
+#endif
 #endif
 
 	if (strstr(com[1], "win32") != NULL)

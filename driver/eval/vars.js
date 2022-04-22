@@ -10,6 +10,10 @@ async function runVariable(AST, runContext) {
   let beforeLine = runContext.bubbleLine - 1
   let bubbleColumn = runContext.bubbleColumn
   // TODO: add late binding, don't eval until it's accessed
+  // TODO: late binding will be needed for observables / change notify
+  //   and converting between language features like type interefencing JS -> C#
+  //   late binding can trace the type back through the tree to where it was assigned.
+
   // WOW! IMAGINE THAT! SHOW VARIABLES BEFORE AND AFTER ASSIGNMENT! GOOGLE CHROME DEBUGGER!
   doAssign(AST.id.name, beforeLine, bubbleColumn, runContext)
   let result 

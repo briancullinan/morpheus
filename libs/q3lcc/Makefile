@@ -13,11 +13,17 @@ PLATFORM := wasm
 ARCH := js
 OPT := wasm-opt 
 CC := ../$(COMPILE_PLATFORM)/wasi-sdk-14.0/bin/clang
-LCC_CFLAGS=-O2 -Wall -fno-strict-aliasing -MMD \
+LCC_CFLAGS = \
+	-O2 -Wall --target=wasm32 \
+	-fno-strict-aliasing -MMD \
 	-D__WASM__=1 \
+	-D__wasi__=1 \
+	-D__wasm32__=1 \
+	-D_WASI_EMULATED_SIGNAL \
 	-D_WASI_EMULATED_MMAN=1 \
 	-Wno-logical-op-parentheses \
 	-Wno-unused-variable \
+	-Wno-misleading-indentation \
 	-Wno-unused-label \
 	-Wno-parentheses \
 	-Wno-dangling-else \
@@ -56,7 +62,7 @@ endif
 
 # Need MACOS_X defined or this won't build.
 ifeq ($(PLATFORM),darwin)
-  LCC_CFLAGS += -DMACOS_X
+#  LCC_CFLAGS += -DMACOS_X
 endif
 
 ifeq ($(PLATFORM),sunos)
@@ -68,7 +74,7 @@ endif
 all: q3rcc lburg q3cpp q3lcc
 
 q3rcc: makedirs $(BD)q3rcc$(E)
-lburg: makedirs $(BD)lburg$(E)
+lburg: makedirs $(BD)lburg/lburg$(E)
 q3cpp: makedirs $(BD)q3cpp$(E)
 q3lcc: makedirs $(BD)q3lcc$(E)
 
@@ -121,7 +127,7 @@ $(BD)rcc/dagcheck$(O): $(BD)rcc/dagcheck.c
 	$(CC) $(LCC_CFLAGS) -Wno-unused -c -Isrc -o $@ $<
 
 $(BD)rcc/dagcheck.c: $(BD)lburg/lburg$(E) src/dagcheck.md
-	$(Q)node --inspect-brk -e "require('../../engine/wasm/bin/lburg.js') \
+	$(Q)node -e "require('../../engine/wasm/bin/lburg.js') \
 		('src/dagcheck.md', '$@')"
 
 
@@ -165,7 +171,10 @@ LCCOBJS= \
 	$(BD)etc/bytecode$(O)
 
 $(BD)q3lcc$(E): $(LCCOBJS)
-	$(LD) $(LDFLAGS) -o $@ $(LCCOBJS)
+	$(LD) $(LDFLAGS) \
+		../wasi-sysroot/lib/wasm32-wasi/libwasi-emulated-signal.a \
+		../wasi-sysroot/lib/wasm32-wasi/libwasi-emulated-getpid.a \
+	 -o $@ $(LCCOBJS)
 
 $(BD)etc/%$(O): etc/%.c
 	$(CC) $(LCC_CFLAGS) -DTEMPDIR=\"$(TEMPDIR)\" -DSYSTEM=\"\" -c -Isrc -o $@ $<

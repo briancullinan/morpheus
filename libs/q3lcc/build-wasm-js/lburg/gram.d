@@ -8,8 +8,9 @@ build-wasm-js/lburg/gram.o: lburg/gram.c ../wasi-sysroot/include/stdio.h \
   ../wasi-sysroot/include/__struct_iovec.h \
   ../wasi-sysroot/include/__seek.h ../wasi-sysroot/include/wasi/api.h \
   ../wasi-sysroot/include/stdint.h ../wasi-sysroot/include/bits/stdint.h \
-  lburg/lburg.h ../wasi-sysroot/include/assert.h \
-  ../wasi-sysroot/include/ctype.h ../wasi-sysroot/include/string.h \
+  lburg/lburg.h lburg/../../../engine/wasm/sys_overrides.h \
+  ../wasi-sysroot/include/assert.h ../wasi-sysroot/include/ctype.h \
+  ../wasi-sysroot/include/string.h \
   ../wasi-sysroot/include/__header_string.h \
   ../wasi-sysroot/include/__functions_memcpy.h \
   ../wasi-sysroot/include/strings.h ../wasi-sysroot/include/limits.h \

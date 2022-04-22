@@ -21,4 +21,5 @@ build-wasm-js/lburg/lburg.o: lburg/lburg.c \
   ../wasi-sysroot/include/__typedef_clock_t.h \
   ../wasi-sysroot/include/__header_time.h \
   ../wasi-sysroot/include/__struct_tm.h \
-  ../wasi-sysroot/include/threads.h lburg/lburg.h
+  ../wasi-sysroot/include/threads.h lburg/lburg.h \
+  lburg/../../../engine/wasm/sys_overrides.h

@@ -11,7 +11,7 @@ const {
 const {stringToAddress} = require('../sys_std.js')
 
 // TODO: compare to initWasm() and make match
-
+// TODO: move to sys_cli.js?
 async function readAll(inFile, outFile) {
 
 	let localName = outFile

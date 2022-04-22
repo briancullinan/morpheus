@@ -398,12 +398,15 @@ function Sys_FRead(bufferAddress, byteSize, count, pointer) {
     HEAPU8[bufferAddress + i] = FS.pointers[pointer][2].contents[FS.pointers[pointer][0]]
     FS.pointers[pointer][0]++
   }
+
   return (i - (i % byteSize)) / byteSize
 }
 
+
 function Sys_fgetc(fp) {
 	let c = stringToAddress('DEADBEEF')
-	if(Sys_fgets(c, 1, fp) != 1) {
+	HEAPU32[c>>2] = 0
+	if(Sys_FRead(c, 1, 1, fp) != 1) {
 		return -1
 	}
 	return HEAPU32[c>>2]
@@ -418,20 +421,23 @@ function Sys_fgets(buf, size, fp) {
 			.slice(FS.pointers[fp][0], FS.pointers[fp][0] + size)
 	let line = dataView.indexOf('\n'.charCodeAt(0))
 	let length
-	if(line < 0) {
+	if(line <= 1) {  // <- TODO: WTF IS THIS?
 		//length = Sys_FRead(buf, 1, size - 1, fp)
 		length = Sys_FRead(buf, 1, size, fp)
 		//HEAPU8[buf + length] = 0 // FILL THE BUFFER COMPLETELY?
 		return length ? buf : 0
 	} else {
-		length = Sys_FRead(buf, 1, line + 1, fp)
+		length = Sys_FRead(buf, 1, line + 1, fp) // DO I INCLUDE THE \n IN THE BUFFER?
 		HEAPU8[buf + length] = 0
 		return length ? buf : 0
 	}
 }
 
-
 function Sys_FWrite(buf, size, nmemb, pointer) {
+	// debugger // something wrong with breaking inside `node -e`
+	//   maybe someone at Google saw my stream because they made it even worse.
+	//   now it shows Nodejs system code all the time instead of only when I 
+	//   click on it like resharper. LOL!
   if(typeof FS.pointers[pointer] == 'undefined') {
     throw new Error('File IO Error') // TODO: POSIX
   }
@@ -442,6 +448,9 @@ function Sys_FWrite(buf, size, nmemb, pointer) {
   }
   tmp.set(HEAPU8.slice(buf, buf + size * nmemb), FS.pointers[pointer][0]);
   FS.pointers[pointer][0] += size * nmemb
+	// WE DON'T NEED FILE LOCKING BECAUSE IT'S SINGLE THREADED IN NATURE
+	//   IT WOULD BE IMPOSSIBLE FOR ANOTHER PROCESS TO COME ALONG AND
+	//   OVERWRITE OUR TMP CONTENTS MID FUNCTION.
   FS.pointers[pointer][2].contents = tmp
   return nmemb // k==size*nmemb ? nmemb : k/size;
 }
@@ -605,6 +614,7 @@ function fd_fdstat_get(fd, bufPtr) {
 // TODO: THIS MIGHT BE A MORE COMPREHENSIVE WRITE FUNCTION
 //   AND THE FS.VIRTUAL CODE COULD BE INSERTED AT THE BOTTOM
 function fd_write(fd, iovs, iovsLen, nwritten) {
+	debugger
 	var view = getModuleMemoryDataView();
 	var written = 0;
 	var bufferBytes = [];                   

@@ -103,6 +103,7 @@ char *basepath( char *fname )
 	return dp;
 }
 
+#ifndef __WASM__
 #ifndef __APPLE__
 /* memmove is defined here because some vendors don't provide it at
    all and others do a terrible job (like calling malloc) */
@@ -129,3 +130,5 @@ memmove(void *dp, const void *sp, size_t n)
 	return dp;
 }
 #endif
+#endif
+

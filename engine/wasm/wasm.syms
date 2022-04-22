@@ -12,6 +12,10 @@ Sys_FOpen
 Sys_GetFileStats
 DebugBreak
 
+Sys_exec
+Sys_execv
+
+
 popen
 pclose
 clock_gettime
