@@ -178,6 +178,7 @@ int main(int argc, char *argv[])
 			} else
 				error("can't find `%s'", argv[i]);
 		}
+	// I GUESS I DON'T CARE ABOUT REMOVE() IN VIRTUAL FS
 	rm(rmlist);	
 	return errcnt ? EXIT_FAILURE : EXIT_SUCCESS;
 }
@@ -431,7 +432,8 @@ static char *first(char *list) {
 //   THIS FUNCTION SPECIFICALLY CALLS EXECV("q3cpp") AND EXECV("q3rcc")
 //   IN SOME SPECIFIC ORDER TO GENERATE AN OBJECT FILE. IT ALSO USES /TMP 
 //   SO THAT DIRECTORY IS ADDED TO THE WASM-CLI.JS STARTUP. JUST LIKE IN UNIX.
-// THIS IS ALL I KNOW.
+// WE NEED TO ADD IDEMPOTENCE SO WE CAN USE REQUESTANIMATIONFRAME()
+//   TO CHECK THE STATUS OF PROCESSES. THIS IS ALL I KNOW.
 static int filename(char *name, char *base) {
 	int status = 0;
 	static char *stemp, *itemp;
