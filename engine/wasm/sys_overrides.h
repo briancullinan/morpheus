@@ -12,11 +12,14 @@ int Sys_putc(int c, FILE *f);
 #define putc(c, f) Sys_putc(c, f)
 int Sys_time(int *t);
 #define time(t) Sys_time(t)
+int Sys_access(const char *, int);
+#define access(p, i) Sys_access(p, i)
 
 // I'M BEING DANGEROUS
 int Sys_execv(const char *path, char *const argv[]);
 #define execv(p, a) Sys_execv(p, a)
-
+_Noreturn void Sys_Exit(int ec);
+#define exit(c) Sys_Exit(c)
 
 
 __attribute__((__visibility__("default")))

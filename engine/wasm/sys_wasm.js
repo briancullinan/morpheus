@@ -1,5 +1,3 @@
-const { Module } = require('module')
-
 // Launcher program for web browser and .wasm builds
 let isStreaming = false
 
@@ -76,7 +74,7 @@ function initEnvironment(ENGINE) {
 	ENV.env = ENV.wasi_snapshot_preview1 = ENV
 	// set window module because of LEGACY SDL audio
 	ENV.imports = ENV
-	ENV.Module = ENV
+	ENGINE.Module = ENV
 
 	Object.assign(ENV, ENGINE)
 	let startKeys = Object.keys(ENGINE)

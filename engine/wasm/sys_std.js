@@ -215,7 +215,7 @@ function Sys_exec() {
   // TODO: in browser, try to download wasm like normal only from host address
   //   or from cl_dlurl address, localStorage or IndexedDB could be vulnerable.
   // THATS WHY ITS ENCRYPTED AGAIN.
-
+  debugger
 }
 
 
@@ -228,8 +228,8 @@ var STD = {
   __assert_fail: console.assert, // TODO: convert to variadic fmt for help messages
   longjmp: function (id, code) { throw new Error('longjmp', id, code) },
   setjmp: function (id) { try {  } catch (e) { } },
-  Sys_exec: Sys_exec,
-  Sys_execv: Sys_exec,
+  //Sys_exec: Sys_exec,
+  //Sys_execv: Sys_exec,
   //Sys_getenv: Sys_getenv,
   /*
   memset: function (addr, val, count) {

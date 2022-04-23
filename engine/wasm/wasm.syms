@@ -8,12 +8,14 @@ Sys_putc
 Sys_fgetc
 Sys_getc
 Sys_feof
+Sys_access
 Sys_FOpen
 Sys_GetFileStats
 DebugBreak
 
 Sys_exec
 Sys_execv
+Sys_Exit
 
 
 popen

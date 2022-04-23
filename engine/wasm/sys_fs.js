@@ -17,7 +17,10 @@ const S_IRUSR = ((1 << 3) - 1) << 6
 const S_IROTH = ((1 << 3) - 1) << 0
 
 const ENOENT = 9968
-
+const R_OK = 1
+const W_OK = 2
+const X_OK = 3
+const F_OK = 4
 
 if(typeof window != 'undefined') {
 
@@ -486,6 +489,28 @@ function Sys_fprintf(fp, fmt, args) {
 	}
 }
 
+function Sys_access(filename, i) {
+	if(i != F_OK) {
+		throw new Error('Not implemented!')
+	}
+	let fileStr = addressToString(filename)
+	let localName = fileStr
+	if(localName.startsWith('/base')
+		|| localName.startsWith('/home'))
+		localName = localName.substring('/base'.length)
+	if(localName[0] == '/')
+		localName = localName.substring(1)
+
+	if(FS.virtual[localName]) {
+		return 0
+	} else {
+		if(errno) {
+			HEAPU32[errno>>2] = ENOENT
+		}
+		return 1
+	}
+}
+
 
 function Sys_feof(fp) {
   if(typeof FS.pointers[fp] == 'undefined') {
@@ -529,6 +554,7 @@ const FS = {
 	Sys_getc: Sys_fgetc,
 	Sys_fgetc: Sys_fgetc,
 	Sys_feof: Sys_feof,
+	Sys_access: Sys_access,
 }
 
 var WASI_ESUCCESS = 0;

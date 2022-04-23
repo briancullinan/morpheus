@@ -48,15 +48,16 @@ BASE_CFLAGS        := \
 CLIENT_CFLAGS      := $(BASE_CFLAGS) \
 											$(WASI_INCLUDES)
 
+WASI_SYSROOT       := libs/wasi-sysroot/lib/wasm32-wasi
 WASI_LDFLAGS       := $(LDFLAGS) \
 	-Wl,--import-memory -Wl,--import-table \
 	-Wl,--export-dynamic -Wl,--error-limit=200 \
 	-Wl,--export=sprintf -Wl,--export=malloc  \
 	-Wl,--export=stderr -Wl,--export=stdout  \
-	--no-standard-libraries \
+	-Wl,--export=errno --no-standard-libraries \
 	-Wl,--allow-undefined-file=engine/wasm/wasm.syms \
 	engine/wasm/wasi/libclang_rt.builtins-wasm32.a \
-	libs/wasi-sysroot/lib/wasm32-wasi/libc.a
+	$(WASI_SYSROOT)/libc.a
 
 CLIENT_LDFLAGS     := $(WASI_LDFLAGS) -Wl,--no-entry 
 	
@@ -64,8 +65,9 @@ CLIENT_LDFLAGS     := $(WASI_LDFLAGS) -Wl,--no-entry
 # WRITE THIS IN A WAY THAT THE FILE TREE
 #   CAN PARSE IT AND SHOW A SWEET LITTLE GRAPH
 #   OF COMMANDS THAT RUN FOR EACH FILE TO COMPILE.
-
-UIVM_SOURCE   := games/multigame/q3_ui
+GAME_SOURCE   := games/lobby
+UIVM_SOURCE   := $(GAME_SOURCE)/q3_ui
+GAME_SOURCE   := $(GAME_SOURCE)/game
 Q3ASM_SOURCE  := libs/q3asm
 Q3RCC_SOURCE  := libs/q3lcc/src
 LBURG_SOURCE  := libs/q3lcc/lburg
@@ -120,6 +122,18 @@ multigame: q3asm.wasm q3lcc.wasm ui.qvm cgame.qvm qagame.qvm
 
 
 
+Q3LCC_CFLAGS     := $(CLIENT_CFLAGS) \
+	-Wno-logical-op-parentheses \
+	-Wno-unused-variable \
+	-Wno-misleading-indentation \
+	-Wno-unused-label \
+	-Wno-parentheses \
+	-Wno-dangling-else \
+	-Wno-missing-braces \
+	-Wno-parentheses
+
+
+
 
 # MAKE Q3LCC-WASM TO RECOMPILE GAME CODE IN BROWSER-WORKER
 Q3ASM_FILES  := $(wildcard $(Q3ASM_SOURCE)/*.c)
@@ -127,7 +141,7 @@ Q3ASM_OBJS   := $(subst libs/,$(BUILD_DIR)/,$(Q3ASM_FILES:.c=.o))
 
 define DO_Q3ASM_CC
 	$(echo_cmd) "Q3ASM_CC $<"
-	$(Q)$(CC) -o $@ $(CLIENT_CFLAGS) -c $<
+	$(Q)$(CC) -o $@ $(Q3LCC_CFLAGS) -c $<
 endef
 
 define DO_WASM_LD
@@ -154,14 +168,14 @@ $(BUILD_DIR)/q3asm/%.o: $(Q3ASM_SOURCE)/%.c
 define DO_CLIEXE_LD
 	$(echo_cmd) "WASM-LD $1"
 	$(Q)$(CC) -o $(BUILD_DIR)/$1 \
-		libs/wasi-sysroot/lib/wasm32-wasi/libwasi-emulated-signal.a \
-		libs/wasi-sysroot/lib/wasm32-wasi/libwasi-emulated-getpid.a \
+		$(WASI_SYSROOT)/libwasi-emulated-signal.a \
+		$(WASI_SYSROOT)/libwasi-emulated-getpid.a \
 		$2 $(WASI_LDFLAGS)
 endef
 
 define DO_Q3LCC_CC
 	$(echo_cmd) "Q3LCC_CC $<"
-	$(Q)$(CC) -o $@ $(CLIENT_CFLAGS) -c $<
+	$(Q)$(CC) -o $@ $(Q3LCC_CFLAGS) -c $<
 endef
 
 Q3LCC_FILES  := $(wildcard $(Q3LCC_SOURCE)/*.c)
@@ -180,7 +194,7 @@ $(BUILD_DIR)/q3lcc/%.o: $(Q3LCC_SOURCE)/%.c
 
 define DO_LBURG_CC
 	$(echo_cmd) "LBURG_CC $<"
-	$(Q)$(CC) -o $@ $(CLIENT_CFLAGS) -c $<
+	$(Q)$(CC) -o $@ $(Q3LCC_CFLAGS) -c $<
 endef
 
 LBURG_FILES  := $(wildcard $(LBURG_SOURCE)/*.c)
@@ -197,15 +211,7 @@ $(BUILD_DIR)/q3rcc/dagcheck.c: lburg.wasm $(Q3RCC_SOURCE)/dagcheck.md
 			lburg.wasm $(Q3RCC_SOURCE)/dagcheck.md $@ 
 
 
-Q3RCC_CFLAGS := $(CLIENT_CFLAGS) \
-	-Wno-logical-op-parentheses \
-	-Wno-unused-variable \
-	-Wno-misleading-indentation \
-	-Wno-unused-label \
-	-Wno-parentheses \
-	-Wno-dangling-else \
-	-Wno-missing-braces \
-	-I$(Q3RCC_SOURCE)
+Q3RCC_CFLAGS := $(Q3LCC_CFLAGS) -I$(Q3RCC_SOURCE)
 
 define DO_Q3RCC_CC
 	$(echo_cmd) "Q3RCC_CC $<"
@@ -247,33 +253,38 @@ $(BUILD_DIR)/q3cpp/%.o: $(Q3CPP_SOURCE)/%.c
 
 
 
-
-WASM_LCC := $(Q)node ./engine/wasm/bin/wasm-cli.js -- \
-			q3lcc.wasm $(Q3RCC_SOURCE)/dagcheck.md $@ 
+WASM_ASM := $(Q)node --inspect-brk ./engine/wasm/bin/wasm-cli.js -- \
+			q3asm.wasm 
+WASM_LCC := $(Q)node --inspect-brk ./engine/wasm/bin/wasm-cli.js -- \
+			q3lcc.wasm 
 
 define DO_UIVM_CC
 	$(echo_cmd) "UIVM_CC $<"
-	$(Q)$(CC) -o $@ $(Q3RCC_CFLAGS) -c $<
+	$(Q)$(WASM_LCC) -DUI -o $@ -c $<
 endef
 
-UIVM_FILES  := $(wildcard $(UIVM_SOURCE)/*.c) \
+UIVM_FILES  := $(wildcard $(UIVM_SOURCE)/*.c)
+UI_SHARED   := \
 	$(UIVM_SOURCE)/../game/bg_lib.c \
 	$(UIVM_SOURCE)/../game/bg_misc.c \
 	$(UIVM_SOURCE)/../game/q_math.c \
 	$(UIVM_SOURCE)/../game/q_shared.c
 
-UIVM_OBJS := $(subst $(UIVM_SOURCE)/,$(BUILD_DIR)/uivm/,$(UIVM_FILES:.c=.o)) \
+UIVM_OBJS := $(subst $(UIVM_SOURCE)/,$(BUILD_DIR)/uivm/,$(UIVM_FILES:.c=.asm)) \
 	$(BUILD_DIR)/uivm/bg_lib.asm \
 	$(BUILD_DIR)/uivm/bg_misc.asm \
 	$(BUILD_DIR)/uivm/q_math.asm \
 	$(BUILD_DIR)/uivm/q_shared.asm \
 	$(UIVM_SOURCE)/../game/ui_syscalls.asm
 
-ui.qvm: $(BUILD_DIRS) $(UIVM_FILES) $(UIVM_OBJS)
-	$(echo_cmd) "LD $@"
-	$(Q)$(CC) $(GAME_CFLAGS) $(GAME_LDFLAGS) -o $@ $(CGOBJ)
+ui.qvm: $(BUILD_DIRS) $(UI_SHARED) $(UIVM_FILES) $(UIVM_OBJS)
+	$(echo_cmd) "Q3ASM $@"
+	$(Q)$(WASM_ASM) -o $@ -m $(UIVM_OBJS)
 
-$(BUILD_DIR)/uivm/%.o: $(UIVM_SOURCE)/%.c
+$(BUILD_DIR)/uivm/%.asm: $(UIVM_SOURCE)/%.c
+	$(DO_UIVM_CC)
+
+$(BUILD_DIR)/uivm/%.asm: $(GAMEVM_SOURCE)/%.c
 	$(DO_UIVM_CC)
 
 
