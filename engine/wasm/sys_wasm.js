@@ -60,20 +60,24 @@ function updateGlobalBufferAndViews(buf) {
 
 
 function initEnvironment(ENGINE) {
-	const importTable = new WebAssembly.Table({ 
-		initial: 2000, 
-		element: 'anyfunc', 
-		maximum: 10000 
-	})
-	ENV.table = ENV.__indirect_function_table = importTable
-	ENV.memory = new WebAssembly.Memory({ 
-		initial: 2048, 
-		/* 'shared': true */ 
-	})
-	// weird stuff WebAssembly requires
-	ENV.env = ENV.wasi_snapshot_preview1 = ENV
+	if(!ENV.table) {
+		const importTable = new WebAssembly.Table({ 
+			initial: 2000, 
+			element: 'anyfunc', 
+			maximum: 10000 
+		})
+		ENV.table = ENV.__indirect_function_table = importTable
+	}
+	if(!ENV.memory) {
+		ENV.memory = new WebAssembly.Memory({ 
+			initial: 2048, 
+			/* 'shared': true */ 
+		})
+		// weird stuff WebAssembly requires
+		ENV.env = ENV.wasi_snapshot_preview1 = ENV
+		ENV.imports = ENV
+	}
 	// set window module because of LEGACY SDL audio
-	ENV.imports = ENV
 	ENGINE.Module = ENV
 
 	Object.assign(ENV, ENGINE)
@@ -127,11 +131,23 @@ function updateEnvironment(program, ENV) {
 	if(!program) {
 		throw new Error("no program!")
 	}
+	let previousErr
+	if(typeof stderr != 'undefined') {
+		previousErr = FS.pointers[HEAPU32[stderr>>2]]
+	} else {
+		previousErr = null // used below
+	}
+
+	let previousOut
+	if(typeof stdout != 'undefined') {
+		previousOut = FS.pointers[HEAPU32[stdout>>2]]
+	} else {
+		previousOut = null
+	}
 	// THIS IS JUST INTENDED TO MEET MULTIPLE EXPECTATIONS FROM A PROGRAMMER
 	ENV.program = program || {}
 	ENV.instance = ENV.program.instance || {}
 	ENV.exports = ENV.instance.exports || {}
-	debugger
 	updateGlobalFunctions(ENV.exports)
 	// THIS IS ALSO STILL KIND OF A TEST THAT WINDOW INIT WORKS
 	//   STDLIB WOULD ALLOC AS THE LIBRARY LOADS, 
@@ -145,7 +161,12 @@ function updateEnvironment(program, ENV) {
 		FS.pointers[HEAPU32[stdout>>2]] = [
 			0,
 			'rw',
-			{
+			// this is weird, multiple WASMs in same scope, globals are messed up
+			//   because libc loads multiple times, there are multiple stderr
+			//   the OS only loads libc once and all kernels and programms call
+			//   into the system function, so it doesn't have to load a whole
+			//   space just for static string operations.
+			previousOut ? previousOut[2] : { 
 				timestamp: new Date(),
 				mode: FS_FILE,
 				contents: new Uint8Array()
@@ -158,7 +179,7 @@ function updateEnvironment(program, ENV) {
 		FS.pointers[HEAPU32[stderr>>2]] = [
 			0,
 			'rw',
-			{
+			previousErr ? previousErr[2] : {
 				timestamp: new Date(),
       	mode: FS_FILE,
       	contents: new Uint8Array()

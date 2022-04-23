@@ -1,6 +1,8 @@
 // ZERO DEPENDENCY BARE-BONES JAVASCRIPT FILE-SYSTEM FOR 
 //   POSIX WEB-ASSEMBLY
 
+const { stringToAddress } = require("./sys_std")
+
 
 const VFS_NOW = 3
 const ST_FILE = 8
@@ -381,14 +383,10 @@ function Sys_fputc(c, f) {
 }
 
 function Sys_fprintf(fp, fmt, args) {
-	debugger
 	let formatted = stringToAddress('DEADBEEF')
 	let length = sprintf(formatted, fmt, args)
-	let formatString
 	if(length < 1 || !HEAPU32[formatted>>2]) {
-		formatString = addressToString(fmt)
-	} else {
-		formatString = addressToString(formatted)
+		formatted = fmt
 	}
 	Sys_fputs(formatted, fp)
 }
@@ -544,7 +542,6 @@ function fd_fdstat_get(fd, bufPtr) {
 // TODO: THIS MIGHT BE A MORE COMPREHENSIVE WRITE FUNCTION
 //   AND THE FS.VIRTUAL CODE COULD BE INSERTED AT THE BOTTOM
 function fd_write(fd, iovs, iovsLen, nwritten) {
-	debugger
 	var view = getModuleMemoryDataView();
 	var written = 0;
 	var bufferBytes = [];                   
@@ -576,11 +573,12 @@ function fd_write(fd, iovs, iovsLen, nwritten) {
 	}
 
 	buffers.forEach(writev);
-
+	let newMessage = stringToAddress(String.fromCharCode.apply(null, bufferBytes))
+	debugger
 	if (fd === WASI_STDOUT_FILENO) 
-		console.log(String.fromCharCode.apply(null, bufferBytes));                            
+		Sys_FWrite(newMessage, 1, bufferBytes.length, HEAPU32[stdout>>2])
 	if (fd === WASI_STDERR_FILENO) 
-		console.error(String.fromCharCode.apply(null, bufferBytes));                            
+		Sys_FWrite(newMessage, 1, bufferBytes.length, HEAPU32[stderr>>2])
 	else {
 		debugger
 		throw new Error('wtf')
@@ -600,17 +598,11 @@ function proc_exit(rval) {
 	return WASI_ENOSYS;
 }
 
-function fd_close(fd) {
-	debugger
-	return WASI_ENOSYS;
-}
-
 function fd_seek(fd, offset, whence, newOffsetPtr) {
 	debugger
 }
 
 function fd_close(fd) {
-	debugger
 	return WASI_ENOSYS;
 }
 

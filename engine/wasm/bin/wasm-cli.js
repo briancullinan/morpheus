@@ -14,7 +14,6 @@ const {
 	updateEnvironment
 } = require('../sys_wasm.js')
 const {stringToAddress, addressToString} = require('../sys_std.js')
-const { stderr } = require('process')
 
 
 let foundFiles = []
@@ -53,30 +52,25 @@ async function readAll() {
 let errTimer
 let outTimer
 function Sys_notify(path, file, fp) {
-	if(fp > 1000) {
-		debugger
-	}
 	if(fp == HEAPU32[stderr>>2]) {
-		if(errTimer) {
-			clearTimeout(errTimer)
+		if(!errTimer) { // because it will happen later
+			errTimer = setTimeout(function () {
+				errTimer = null
+				console.error(Array.from(file.contents)
+					.map(function (c) { return String.fromCharCode(c) }).join(''))
+				file.contents = new Uint8Array()
+			}, 100)
 		}
-		errTimer = setTimeout(function () {
-			debugger
-			console.error(Array.from(file.contents)
-				.map(function (c) { return String.fromCharCode(c) }).join(''))
-			file.contents = new Uint8Array()
-		}, 100)
 	} else
 	if(fp == HEAPU32[stdout>>2]) {
-		if(outTimer) {
-			clearTimeout(outTimer)
+		if(!outTimer) {
+			outTimer = setTimeout(function () {
+				outTimer = null
+				console.log(Array.from(file.contents)
+					.map(function (c) { return String.fromCharCode(c) }).join(''))
+				file.contents = new Uint8Array()
+			}, 100)
 		}
-		outTimer = setTimeout(function () {
-			debugger
-			console.log(Array.from(file.contents)
-				.map(function (c) { return String.fromCharCode(c) }).join(''))
-			file.contents = new Uint8Array()
-		}, 100)
 	}
 
 }
@@ -93,7 +87,7 @@ let SYS = {
 function Sys_Exit(e) {
 	if(e) {
 		debugger
-		throw new Error('Exited: ' + e)
+		//throw new Error('Exited: ' + e)
 	} else {
 		SYS.exited = true
 	}
@@ -157,6 +151,9 @@ function Sys_exec(program, args) {
 	if(!fs.existsSync(programStr)) {
 		throw new Error('Command not found: ' + programStr)
 	}
+
+	//require('child_process').exec()
+
 	// skip arg[0] = program name, will fill it in when it resolves
 	//   this is always a system level decision, I think
 	let varg = args+4
