@@ -131,7 +131,7 @@ function updateEnvironment(program, ENV) {
 	ENV.program = program || {}
 	ENV.instance = ENV.program.instance || {}
 	ENV.exports = ENV.instance.exports || {}
-
+	debugger
 	updateGlobalFunctions(ENV.exports)
 	// THIS IS ALSO STILL KIND OF A TEST THAT WINDOW INIT WORKS
 	//   STDLIB WOULD ALLOC AS THE LIBRARY LOADS, 
@@ -140,7 +140,33 @@ function updateEnvironment(program, ENV) {
 	//   not to use a complex HEAP, just loop around on bytes[b % 128] and if 
 	//   something isn't cleared out, crash
 	// store some strings and crap
-	STD['sharedMemory'] = malloc(1024 * 1024) 
+	STD.sharedMemory = malloc(1024 * 1024)
+	if(ENV.exports.stdout) {
+		FS.pointers[HEAPU32[stdout>>2]] = [
+			0,
+			'rw',
+			{
+				timestamp: new Date(),
+				mode: FS_FILE,
+				contents: new Uint8Array()
+			},
+			1,
+			HEAPU32[stdout>>2]
+		]
+	}
+	if(ENV.exports.stderr) {
+		FS.pointers[HEAPU32[stderr>>2]] = [
+			0,
+			'rw',
+			{
+				timestamp: new Date(),
+      	mode: FS_FILE,
+      	contents: new Uint8Array()
+			},
+			2,
+			HEAPU32[stderr>>2]
+		]
+	}
 	return program
 }
 

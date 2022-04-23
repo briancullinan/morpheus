@@ -22,25 +22,6 @@ const W_OK = 2
 const X_OK = 3
 const F_OK = 4
 
-if(typeof window != 'undefined') {
-
-  function Sys_notify(ifile, path) {
-    openDatabase().then(function (db) {
-      writeStore(ifile, path)
-    })
-    // TODO: ADD FILESYSTEM WATCHERS API INOTIFY 
-    //   THAT READS A LIST GENERATED HERE
-    if(typeof window.updateFilelist != 'undefined') {
-      updateFilelist(FS.pointers[pointer][3])
-    }
-  }
-  
-} else if (typeof global != 'undefined') {
-	function Sys_notify(ifile, path) {
-
-	}
-}
-
 
 function Sys_Mkdir(filename) {
   let fileStr = addressToString(filename)
@@ -102,7 +83,8 @@ function Sys_FOpen(filename, mode) {
       0, // seek/tell
       modeStr,
       FS.virtual[localName],
-      localName
+      localName,
+			FS.filePointer
     ]
     // DO THIS ON OPEN SO WE CAN CHANGE ICONS
     Sys_notify(FS.virtual[localName], localName)
@@ -162,45 +144,16 @@ function Sys_FClose(pointer) {
   if(typeof FS.pointers[pointer] == 'undefined') {
     throw new Error('File IO Error') // TODO: POSIX
   }
-  Sys_notify(FS.pointers[pointer][2], FS.pointers[pointer][3])
+  Sys_notify(FS.pointers[pointer][2], FS.pointers[pointer][3], FS.pointers[pointer][4])
   FS.pointers[pointer] = void 0
 }
 
-function Sys_FWrite(buf, count, size, pointer) {
-  if(typeof FS.pointers[pointer] == 'undefined') {
-    throw new Error('File IO Error') // TODO: POSIX
-  }
-  let tmp = FS.pointers[pointer][2].contents
-  if(FS.pointers[pointer][0] + count * size > FS.pointers[pointer][2].contents.length) {
-    tmp = new Uint8Array(FS.pointers[pointer][2].contents.length + count * size);
-    tmp.set(new Uint8Array(FS.pointers[pointer][2].contents), 0);
-  }
-  tmp.set(new Uint8Array(HEAPU8.slice(buf, buf + count * size)), FS.pointers[pointer][0]);
-  FS.pointers[pointer][0] += count * size
-  FS.pointers[pointer][2].contents = tmp
-  return count * size
-}
 
 function Sys_FFlush(pointer) {
   if(typeof FS.pointers[pointer] == 'undefined') {
     throw new Error('File IO Error') // TODO: POSIX
   }
-  Sys_notify(FS.pointers[pointer][2], FS.pointers[pointer][3])
-}
-
-function Sys_FRead(bufferAddress, byteSize, count, pointer) {
-  if(typeof FS.pointers[pointer] == 'undefined') {
-    throw new Error('File IO Error') // TODO: POSIX
-  }
-  let i = 0
-  for(; i < count * byteSize; i++ ) {
-    if(FS.pointers[pointer][0] >= FS.pointers[pointer][2].contents.length) {
-      break
-    }
-    HEAPU8[bufferAddress + i] = FS.pointers[pointer][2].contents[FS.pointers[pointer][0]]
-    FS.pointers[pointer][0]++
-  }
-  return (i - (i % byteSize)) / byteSize
+  Sys_notify(FS.pointers[pointer][2], FS.pointers[pointer][3], FS.pointers[pointer][4])
 }
 
 function Sys_Remove(file) {
@@ -286,51 +239,6 @@ function Sys_ListFiles (directory, extension, filter, numfiles, wantsubs) {
   return listInMemory
 }
 
-function Sys_FOpen(filename, mode) {
-	// now we don't have to do the indexing crap here because it's built into the engine already
-	let fileStr = addressToString(filename)
-	let modeStr = addressToString(mode)
-	let localName = fileStr
-	if(localName.startsWith('/base')
-		|| localName.startsWith('/home'))
-		localName = localName.substring('/base'.length)
-	if(localName[0] == '/')
-		localName = localName.substring(1)
-
-
-	let createFP = function (name) {
-		FS.filePointer++
-		FS.pointers[FS.filePointer] = [
-			0, // seek/tell
-			modeStr,
-			FS.virtual[name],
-			localName
-		]
-		return FS.filePointer // not zero
-	}
-
-	// check if parent directory has been created, TODO: POSIX errno?
-	let parentDirectory = localName.substring(0, localName.lastIndexOf('/'))
-	// TODO: check mode?
-	if(typeof FS.virtual[localName] != 'undefined') {
-		// open the file successfully
-		return createFP(localName)
-	} else if (modeStr.includes('w')
-		&& ((parentDirectory = localName.substring(0, localName.lastIndexOf('/')))
-		&& typeof FS.virtual[parentDirectory] != 'undefined')
-	) {
-		// create the file for write because the parent directory exists
-		FS.virtual[localName] = {
-			timestamp: new Date(),
-			mode: FS_FILE,
-			contents: new Uint8Array(0)
-		}
-		return createFP(localName)
-	} else {
-		return 0 // POSIX
-	}
-}
-
 
 function Sys_stat(filename) {
 	let fileStr = addressToString(filename)
@@ -361,15 +269,15 @@ function Sys_stat(filename) {
 }
 
 
-function Sys_Mkdirp(path) {
-	let localName = addressToString(path)
+function Sys_Mkdirp(pathname) {
+	let localName = addressToString(pathname)
 	try {
 		if(localName.startsWith('/base')
 			|| localName.startsWith('/home'))
 			localName = localName.substring('/base'.length)
 		if(localName[0] == '/')
 			localName = localName.substring(1)
-		Sys_Mkdir(path, FS_DIR);
+		Sys_Mkdir(pathname, FS_DIR);
 	} catch (e) {
 		// make the subdirectory and then retry
 		if (e.message === 'ENOENT') {
@@ -378,12 +286,12 @@ function Sys_Mkdirp(path) {
 				throw e
 			}
 			Sys_Mkdirp(stringToAddress(parentDirectory));
-			Sys_Mkdir(path);
+			Sys_Mkdir(pathname);
 			return;
 		}
 
 		// if we got any other error, let's see if the directory already exists
-		if(Sys_stat(path)) {
+		if(Sys_stat(pathname)) {
 			throw e
 		}
 	}
@@ -437,7 +345,7 @@ function Sys_fgets(buf, size, fp) {
 }
 
 function Sys_FWrite(buf, size, nmemb, pointer) {
-	// debugger // something wrong with breaking inside `node -e`
+	// something wrong with breaking inside `node -e`
 	//   maybe someone at Google saw my stream because they made it even worse.
 	//   now it shows Nodejs system code all the time instead of only when I 
 	//   click on it like resharper. LOL!
@@ -455,6 +363,7 @@ function Sys_FWrite(buf, size, nmemb, pointer) {
 	//   IT WOULD BE IMPOSSIBLE FOR ANOTHER PROCESS TO COME ALONG AND
 	//   OVERWRITE OUR TMP CONTENTS MID FUNCTION.
   FS.pointers[pointer][2].contents = tmp
+  Sys_notify(FS.pointers[pointer][2], FS.pointers[pointer][3], FS.pointers[pointer][4])
   return nmemb // k==size*nmemb ? nmemb : k/size;
 }
 
@@ -472,6 +381,7 @@ function Sys_fputc(c, f) {
 }
 
 function Sys_fprintf(fp, fmt, args) {
+	debugger
 	let formatted = stringToAddress('DEADBEEF')
 	let length = sprintf(formatted, fmt, args)
 	let formatString
@@ -480,13 +390,7 @@ function Sys_fprintf(fp, fmt, args) {
 	} else {
 		formatString = addressToString(formatted)
 	}
-	if(fp == HEAPU32[stderr>>2]) {
-		console.error(formatString)
-	} else if (fp == HEAPU32[stdout>>2]) {
-		console.log(formatString)
-	} else {
-		Sys_fputs(formatted, fp)
-	}
+	Sys_fputs(formatted, fp)
 }
 
 function Sys_access(filename, i) {
@@ -523,6 +427,8 @@ function Sys_feof(fp) {
 }
 
 const FS = {
+	ST_FILE: ST_FILE,
+	ST_DIR: ST_DIR,
   FS_FILE: FS_FILE,
   FS_DIR: FS_DIR,
   ENOENT: ENOENT,
@@ -574,7 +480,6 @@ function getModuleMemoryDataView() {
 }
 
 function fd_prestat_get(fd, bufPtr) {
-	debugger
 	return WASI_EBADF;
 }
 
@@ -584,7 +489,6 @@ function fd_prestat_dir_name(fd, pathPtr, pathLen) {
 }
 
 function environ_sizes_get(environCount, environBufSize) {
-	debugger
 	var view = getModuleMemoryDataView();
 
 	view.setUint32(environCount, 0, !0);
@@ -678,6 +582,7 @@ function fd_write(fd, iovs, iovsLen, nwritten) {
 	if (fd === WASI_STDERR_FILENO) 
 		console.error(String.fromCharCode.apply(null, bufferBytes));                            
 	else {
+		debugger
 		throw new Error('wtf')
 	}
 	view.setUint32(nwritten, written, !0);

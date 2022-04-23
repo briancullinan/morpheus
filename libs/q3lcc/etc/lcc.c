@@ -239,8 +239,8 @@ static int _spawnvp(int mode, const char *cmdname, const char *const argv[]) {
 	// TODO: I WAS THINKING SOMETHING FANCY WHERE YOU JUST
 	//   CALL JORK(SPAWNVP) AGAIN AND IT MAKES A WEB-WORKER HERE
 #ifdef __WASM__
-		status = execv(cmdname, (char **)argv);
-		return status;
+	status = execv(cmdname, (char **)argv);
+	return status;
 #else
 	switch (pid = fork()) {
 	case -1:

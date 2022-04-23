@@ -198,6 +198,17 @@ function Sys_Frame() {
 	}
 }
 
+function Sys_notify(ifile, path) {
+	openDatabase().then(function (db) {
+		writeStore(ifile, path)
+	})
+	// TODO: ADD FILESYSTEM WATCHERS API INOTIFY 
+	//   THAT READS A LIST GENERATED HERE
+	if(typeof window.updateFilelist != 'undefined') {
+		updateFilelist(FS.pointers[pointer][3])
+	}
+}
+
 /*
 
 function alignUp(x, multiple) {

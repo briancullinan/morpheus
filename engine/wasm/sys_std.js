@@ -24,6 +24,12 @@ function addressToString(addr, length) {
 }
 
 function stringToAddress(str, addr) {
+  if(!STD.sharedMemory 
+    || typeof STD.sharedCounter != 'number'
+    || isNaN(STD.sharedCounter)) {
+      debugger
+      throw new Error('Memory not setup!')
+  }
 	let start = STD.sharedMemory + STD.sharedCounter
 	if(typeof str != 'string') {
 		str = str + ''
@@ -42,6 +48,10 @@ function stringToAddress(str, addr) {
 			STD.sharedCounter = 0
 		}
 	}
+  if(isNaN(STD.sharedCounter)) {
+    debugger
+    throw new Error('Memory not setup!')
+  }
 	return start
 }
 
@@ -51,6 +61,10 @@ function stringToAddress(str, addr) {
 //   overwritten the data won't be needed, should only keep shared storage around
 //   for events and stuff that might take more than 1 frame
 function stringsToMemory(list, length) {
+  if(!STD.sharedMemory || typeof STD.sharedCounter != 'number') {
+    debugger
+    throw new Error('Memory not setup!')
+  }
 	// add list length so we can return addresses like char **
 	let start = STD.sharedMemory + STD.sharedCounter
 	let posInSeries = start + list.length * 4
@@ -65,6 +79,10 @@ function stringsToMemory(list, length) {
 	if(STD.sharedCounter > 1024 * 512) {
 		STD.sharedCounter = 0
 	}
+  if(isNaN(STD.sharedCounter)) {
+    debugger
+    throw new Error('Memory not setup!')
+  }
 	return start
 }
 
@@ -108,22 +126,23 @@ function Sys_RandomBytes (string, len) {
 	return true;
 }
 
-function Com_RealTime(outAddress) {
+function Com_RealTime(tm) {
+	// locale time is really complicated
+	//   use simple Q3 time structure
 	let now = new Date()
-	let t = t.now() / 1000
-	HEAP32[(tm >> 2) + 5] = now.getFullYear() - 1900
-	HEAP32[(tm >> 2) + 4] = now.getMonth() // already subtracted by 1
-	HEAP32[(tm >> 2) + 3] = now.getDate() 
-	HEAP32[(tm >> 2) + 2] = (t / 60 / 60) % 24
-	HEAP32[(tm >> 2) + 1] = (t / 60) % 60
-	HEAP32[(tm >> 2) + 0] = t % 60
+	let t = now / 1000
+  if(tm) {
+    HEAP32[(tm >> 2) + 5] = now.getFullYear() - 1900
+    HEAP32[(tm >> 2) + 4] = now.getMonth() // already subtracted by 1
+    HEAP32[(tm >> 2) + 3] = now.getDate() 
+    HEAP32[(tm >> 2) + 2] = (t / 60 / 60) % 24
+    HEAP32[(tm >> 2) + 1] = (t / 60) % 60
+    HEAP32[(tm >> 2) + 0] = t % 60
+  }
 	return t
 }
 
-function Sys_time(t) {
-	// locate time is really complicated
-	//   use simple Q3 time structure
-}
+
 
 function clock_gettime(clk_id, tp) {
 	var now;
@@ -138,6 +157,11 @@ function clock_gettime(clk_id, tp) {
 	HEAP32[tp >> 2] = now / 1e3 | 0;
 	HEAP32[tp + 4 >> 2] = now % 1e3 * 1e3 * 1e3 | 0;
 	return 0
+}
+
+function Sys_time(tm) {
+	// locale time is really complicated
+	//   use simple Q3 time structure
 }
 
 var DATE = {
@@ -186,7 +210,7 @@ typedef struct qtime_s {
     return stringToAddress(new Date(t).toString())
   },
   Com_RealTime: Com_RealTime,
-  Sys_time: Sys_time,
+  Sys_time: Com_RealTime,
   Sys_RandomBytes: Sys_RandomBytes,
   Sys_Milliseconds: Sys_Milliseconds,
   Sys_Microseconds: Sys_Microseconds,
