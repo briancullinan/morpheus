@@ -17,6 +17,9 @@ static char rcsid[] = "$Id$";
 #include <io.h>
 #endif
 #include <fcntl.h>
+#ifdef __WASM__
+#include "../../../engine/wasm/sys_overrides.h"
+#endif
 
 #ifndef TEMPDIR
 #define TEMPDIR "/tmp"
@@ -226,9 +229,7 @@ char *basepath(char *name) {
 #include <process.h>
 #else
 #define _P_WAIT 0
-#ifdef __WASM__
-#include "../../../engine/wasm/sys_overrides.h"
-#else
+#ifndef __WASM__
 extern int fork(void);
 extern int wait(int *);
 #endif
@@ -413,7 +414,24 @@ static char *first(char *list) {
 		return list;
 }
 
+// INTERESTING: IS THIS WEIRD BACKTICK QUOTE MEANT TO FOOL SHELL EXECUTION?
+//   I'VE SEEN IT IN CONSOLE MESSAGES ALSO.
 /* filename - process file name argument `name', return status */
+// THIS IS THE PROCESS I HAVE TO OVERRIDE TO GET ASYNC TO WORK
+//   WHY?... MAIN CALLS FILENAME() AT THE BOTTOM IN A LOOP OVER
+//   THE INPUT FILES, WHICH MEANS I CAN SEND ONLY 1 FILE AT A TIME,
+//   AND ACHEIVE THE SAME LOGICAL CODE BRANCHES. WE DON'T WANT TO 
+//   REORDER THOSE, BECAUSE THAT'S A LOT MORE WORK. WE WANT THE EXACT
+//   SAME CODE PATH ON A FRAME BY FRAME BASIS.
+// WHY ELSE? THIS FUNCTION HAS FEW PARAMETERS AND THEY ARE PRIMITIVE TYPES
+//   STRUCTURES ARE HARDER TO PASS BACK AND FORTH BETWEEN C AND JAVASCRIPT
+//   SO A SINGLE INTEGER OR A SINGLE REFERENCE IS PREFERED.
+// THIS CONTROLS ALL FURTHER SEQUENCING. ALL THE FUNCTIONS BELOW THIS POINT
+//   ARE SELF CONTAINED AND DON'T REFER TO INFORMATION OUTSIDE THIS SCOPE.
+//   THIS FUNCTION SPECIFICALLY CALLS EXECV("q3cpp") AND EXECV("q3rcc")
+//   IN SOME SPECIFIC ORDER TO GENERATE AN OBJECT FILE. IT ALSO USES /TMP 
+//   SO THAT DIRECTORY IS ADDED TO THE WASM-CLI.JS STARTUP. JUST LIKE IN UNIX.
+// THIS IS ALL I KNOW.
 static int filename(char *name, char *base) {
 	int status = 0;
 	static char *stemp, *itemp;
@@ -591,6 +609,7 @@ static void opt(char *arg) {
 					plist = append("-D__CHAR_UNSIGNED__", plist);
 					plist = append("-U_CHAR_IS_SIGNED", plist);
 				}
+// MAYBE A TEMPLATE ISN'T VERY READABLE HERE? THIS IS WHY PEOPLE DON'T LIKE C PROGRAMMERS
 #define xx(name,k) \
 				if (strcmp(&arg[3], "-wchar_t=" #name) == 0) \
 					plist = append("-D_WCHAR_T_SIZE=" #k, plist);
@@ -820,7 +839,7 @@ int suffix(char *name, char *tails[], int n) {
 char *tempname(char *suffix) {
 	static int n;
 #ifdef __WASM__
-	char *name = stringf("%s/lcc%d%d%s", tempdir, random(), n++, suffix);
+	char *name = stringf("%s/lcc%d%d%s", tempdir, random() * time(0), n++, suffix);
 #else
 #ifdef _WIN32
 	char *name = stringf("%s/lcc%d%d%s", tempdir, _getpid(), n++, suffix);

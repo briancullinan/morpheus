@@ -51,14 +51,14 @@ async function readAll() {
 
 let errTimer
 let outTimer
-function Sys_notify(path, file, fp) {
+function Sys_notify(ifile, path, fp) {
 	if(fp == HEAPU32[stderr>>2]) {
 		if(!errTimer) { // because it will happen later
 			errTimer = setTimeout(function () {
 				errTimer = null
-				console.error(Array.from(file.contents)
+				console.error(Array.from(ifile.contents)
 					.map(function (c) { return String.fromCharCode(c) }).join(''))
-				file.contents = new Uint8Array()
+				ifile.contents = new Uint8Array()
 			}, 100)
 		}
 	} else
@@ -66,9 +66,9 @@ function Sys_notify(path, file, fp) {
 		if(!outTimer) {
 			outTimer = setTimeout(function () {
 				outTimer = null
-				console.log(Array.from(file.contents)
+				console.log(Array.from(ifile.contents)
 					.map(function (c) { return String.fromCharCode(c) }).join(''))
-				file.contents = new Uint8Array()
+				ifile.contents = new Uint8Array()
 			}, 100)
 		}
 	}
@@ -87,7 +87,7 @@ let SYS = {
 function Sys_Exit(e) {
 	if(e) {
 		debugger
-		//throw new Error('Exited: ' + e)
+		throw new Error('Exited: ' + e)
 	} else {
 		SYS.exited = true
 	}
@@ -105,10 +105,8 @@ async function initProgram(startArgs) {
 	let originalKeys = Object.keys(FS.virtual)
 	try {
 		Sys_Mkdirp(stringToAddress('tmp'))
-
 		_start(startArgs.length + 1, 
 			stringsToMemory([ wasmFile ].concat(startArgs)))
-
 	} catch (e) {
 		if(!SYS.exited || e.message != 'unreachable') {
 			SYS.exited = true
@@ -140,6 +138,9 @@ async function initProgram(startArgs) {
 
 
 function Sys_exec(program, args) {
+  // try to find and execute wasm in same context like INSECURE DLLs in Windows
+  // we only have inmemory FS and specific system functions, there isn't much
+  //   anyone can do from here on native to break out of nodejs sandbox
 	let programStr = addressToString(program)
 	if(programStr.length < 1) {
 		return 1
@@ -163,7 +164,14 @@ function Sys_exec(program, args) {
 		varg+=4
 	}
 	wasmFile = programStr
+	debugger
 	initProgram(startArgs)
+		// THIS IS WHAT HAPPENS WHEN A CHILD PROCESS DIES
+		.catch(e => {
+			// TODO: send something back to LCC?
+			console.error(e)
+			process.exit(1)
+		})
 	return 0 // INIT OK! POSIX WOOOO!
 }
 

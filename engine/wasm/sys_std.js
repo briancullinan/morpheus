@@ -27,8 +27,7 @@ function stringToAddress(str, addr) {
   if(!STD.sharedMemory 
     || typeof STD.sharedCounter != 'number'
     || isNaN(STD.sharedCounter)) {
-      debugger
-      throw new Error('Memory not setup!')
+    throw new Error('Memory not setup!')
   }
 	let start = STD.sharedMemory + STD.sharedCounter
 	if(typeof str != 'string') {
@@ -232,10 +231,6 @@ function Sys_getenv(varname) {
 */
 
 function Sys_exec() {
-  // try to find and execute wasm in same context like INSECURE DLLs in Windows
-  // we only have inmemory FS and specific system functions, there isn't much
-  //   anyone can do from here on native to break out of nodejs sandbox
-
   // TODO: in browser, try to download wasm like normal only from host address
   //   or from cl_dlurl address, localStorage or IndexedDB could be vulnerable.
   // THATS WHY ITS ENCRYPTED AGAIN.

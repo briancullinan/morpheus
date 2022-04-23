@@ -253,9 +253,9 @@ $(BUILD_DIR)/q3cpp/%.o: $(Q3CPP_SOURCE)/%.c
 
 
 
-WASM_ASM := $(Q)node --inspect-brk ./engine/wasm/bin/wasm-cli.js -- \
+WASM_ASM := $(Q)node ./engine/wasm/bin/wasm-cli.js -- \
 			q3asm.wasm 
-WASM_LCC := $(Q)node --inspect-brk ./engine/wasm/bin/wasm-cli.js -- \
+WASM_LCC := $(Q)node  ./engine/wasm/bin/wasm-cli.js -- \
 			q3lcc.wasm 
 
 define DO_UIVM_CC
