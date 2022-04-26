@@ -42,6 +42,7 @@ function doMessage(request, sender, reply) {
 		body: AST.body,
 		script: request.script,
 		runId: request.runId,
+		senderId: sender.tab.id,
 	}), 300)
 
 	reply({ started: request.runId })

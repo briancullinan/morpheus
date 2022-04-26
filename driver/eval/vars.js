@@ -148,7 +148,7 @@ async function runMember(AST, runContext) {
 
   if(typeof parent == 'object' && parent // BUG: null, whoops
     && typeof parent._accessor != 'undefined') {
-    return await parent._accessor(i, AST, AST, runContext)
+    return await parent._accessor(0, AST, AST, runContext)
   }
 
   if(!parent || (!parent.hasOwnProperty(property) && !parent[property])) {

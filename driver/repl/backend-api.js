@@ -80,7 +80,7 @@ function _Promise(runContext, resolve) {
 
 }
 
-async function createEnvironment(sender, runContext) {
+async function createEnvironment(runContext) {
 	// TODO: this is where we add Chrome security model,
 	//    this they decided "IT'S TOO DANGEROUS"
 	// A nice design was never explored.
@@ -92,7 +92,7 @@ async function createEnvironment(sender, runContext) {
 			}
 			// TODO: call tree? multiple level? 
 			let memberName = member.object.name + '.' + member.property.name
-			let response = await chrome.tabs.sendMessage(sender.tab.id, { accessor: memberName })
+			let response = await chrome.tabs.sendMessage(runContext.senderId, { accessor: memberName })
 			if(typeof response.function != 'undefined') {
 				debugger
 				return function () {
@@ -114,7 +114,7 @@ async function createEnvironment(sender, runContext) {
 	let env = {
 		thisWindow: thisWindow,
 		window: thisWindow,
-		tabId: sender.tab.id,
+		tabId: runContext.senderId,
 		chrome: {
 			tabs: {
 				get: chrome.tabs.get,
@@ -124,7 +124,7 @@ async function createEnvironment(sender, runContext) {
 				sendMessage: chrome.tabs.sendMessage
 						// allow the library script to send messages 
 						//   back to frontend
-						.bind(chrome.tabs, sender.tab.id)
+						.bind(chrome.tabs, runContext.senderId)
 			},
 			windows: {
 				get: chrome.windows.get,
@@ -136,7 +136,7 @@ async function createEnvironment(sender, runContext) {
 		},
 		module: WEBDRIVER_API,
 		console: {
-			log: doConsole.bind(console, sender.tab.id)
+			log: doConsole.bind(console, runContext.senderId)
 		},
 		// TODO: micro-manage garbage collection?
 		Object: Object,
@@ -160,7 +160,6 @@ async function createEnvironment(sender, runContext) {
 		libraryLoaded: false,
 		localVariables: env,
 		localFunctions: {},
-		senderId: sender.tab.id,
 		asyncRunners: 0,
 		async: false,
 		ended: false,

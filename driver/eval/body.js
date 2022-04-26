@@ -210,22 +210,22 @@ async function runBody(AST, runContext) {
 
 async function doPlay(runContext) {
 	try {
-		await createEnvironment(sender, runContext)
+		await createEnvironment(runContext)
 		threads[runContext.runId] = runContext
 		// attach debugger
-		await attachDebugger(sender.tab.id)
+		await attachDebugger(runContext.senderId)
 		// run code from client
 		let result = await runBody(runContext.body, runContext)
 		if(!isStillRunning(runContext)) {
 			// TODO: send async status?
 		} else if (runContext.async) {
-			chrome.tabs.sendMessage(sender.tab.id, { 
+			chrome.tabs.sendMessage(runContext.senderId, { 
 				async: runContext.runId 
 			}, function(response) {
 
 			});
 		} else {
-			chrome.tabs.sendMessage(sender.tab.id, { result: result + '' }, function(response) {
+			chrome.tabs.sendMessage(runContext.senderId, { result: result + '' }, function(response) {
 
 			});
 		}

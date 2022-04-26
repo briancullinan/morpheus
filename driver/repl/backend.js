@@ -183,7 +183,7 @@ function doError(err, runContext) {
 			//   THEY DON'T OWE YOU ANYTHING, NOT EVEN LIFE SUPPORT. FUCK OFF FOSS, FOSS OWES ME
 			//   EVERYTHING BECAUSE I'LL BE THE ONE STUCK CLEANING THIS SHIT CODE UP.
 			//   TECHNICAL DEBT APPLIES TO PUBLISHING INCORRECT CODE DO. CODE IS LIKE LITTER.
-			locals: doAssignments(runContext.bubbleAST),
+			locals: runContext.bubbleAST ? doAssignments(runContext.bubbleAST) : [],
 		}, function(response) {
 	
 		});

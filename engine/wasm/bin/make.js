@@ -32,7 +32,7 @@ function normalReplace(indexFile, cssFile, scriptFile, skinFile, wasmFile) {
     [/<link[^>]*>/, '<style>'+rfs(cssFile)+'</style>'],
     [/<script[^>]*>/, '<script>'+rfs(scriptFile)+'</script>'],
     [/<img[^>]*>/, '<img title="gfx/2d/bigchars.png" src="data:image/png;base64,'
-      +rfs(skinFile, 'base64')+ '" />'],
+      + rfs(skinFile, 'base64')+ '" />'],
     [/<\/html>/, '<script async type="application/javascript">' 
       + formatForVFS(wasmFile, path.basename(wasmFile)) + '</script></html>'],
     [/quake3e\.wasm/ig, path.basename(wasmFile)],

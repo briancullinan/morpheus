@@ -88,6 +88,7 @@ BUILD_DIRS     := \
 	$(BUILD_DIR).mkdir/q3cpp/ \
 	$(BUILD_DIR).mkdir/lburg/ \
 	$(BUILD_DIR).mkdir/uivm/ \
+	$(BUILD_DIR).mkdir/plugin/ \
 	$(BUILD_DIR).mkdir/engine/ \
 	$(BUILD_DIR).mkdir/engine/glsl/ \
 	$(BUILD_DIR).mkdir/sdl/ \
@@ -256,11 +257,12 @@ FRONTEND_EMBEDS:= \
 	$(HTTP_SOURCE)/index.css \
 	engine/renderer2/bigchars.png \
 
-
 INDEX_FILES    := morph.wasm $(FRONTEND_EMBEDS) $(FRONTEND_JS)
 INDEX_OBJS     := $(BUILD_DIR)/morph.wasm $(BUILD_DIR)/morph.js
 
 ifdef USE_UGLIFY
+
+
 
 else
 
@@ -268,7 +270,6 @@ $(BUILD_DIR)/morph.js: $(FRONTEND_JS)
 	$(Q)cat $(FRONTEND_JS) > $@
 
 endif
-
 
 morph.html: $(INDEX_FILES) $(INDEX_OBJS)
 	$(Q)cp -r -f $(HTTP_SOURCE)/index.html $(BUILD_DIR)/morph.html
@@ -283,11 +284,37 @@ multigame: # q3asm.wasm q3lcc.wasm ui.qvm cgame.qvm qagame.qvm
 engine: morph.wasm morph.opt
 	@:
 
+PLUGIN_FILES   := driver/manifest.json  \
+	$(BUILD_DIR)/frontend.js \
+	$(BUILD_DIR)/backend.js \
+	$(HTTP_SOURCE)/index.html \
+	$(HTTP_SOURCE)/index.css \
+	$(HTTP_SOURCE)/redpill.png 
+
+
 plugin: engine morph.zip
+	$(Q)cp driver/manifest.json $(BUILD_DIR)/plugin/manifest.json
+	$(Q)cp $(HTTP_SOURCE)/index.html $(BUILD_DIR)/plugin/index.html
+	$(Q)cp $(HTTP_SOURCE)/redpill.png $(BUILD_DIR)/plugin/redpill.png
 	@:
 
-morph.zip: 
+morph.zip: backend.js frontend.js
 	@:
+
+BACKEND_FILES  := \
+	$(wildcard driver/eval/*.js) \
+	$(wildcard driver/repl/backend*.js) \
+	driver/utils/acorn.js driver/utils/acorn-loose.js \
+	driver/utils/crypt.js driver/utils/jsencrypt.js
+FRONTEND_FILES := driver/repl/frontend.js \
+	driver/utils/jsencrypt.js driver/utils/crypt.js \
+	driver/utils/iso.js
+
+backend.js: $(BACKEND_FILES)
+	$(Q)cat $(BACKEND_FILES) > $(BUILD_DIR)/plugin/backend.js
+
+frontend.js: $(FRONTEND_FILES)
+	$(Q)cat $(FRONTEND_FILES) > $(BUILD_DIR)/plugin/frontend.js
 
 index: morph.html
 	cp $(BUILD_DIR)/morph.html index.html
