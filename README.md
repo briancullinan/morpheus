@@ -27,7 +27,7 @@ With a little Devil icon. A play on the demo, demon, and daemon.
 ## Short term
 1) DONE: Componentize engine, combine with Ace9
 2) Give Morpheus form, animations and world geometry, 
-    tc_vis for tracemap grid snapping
+    tc_vis for tracemap grid snapping, Morpheus offers you a quine.
 3) Modularize goals, separate QVMs
 4) POC DONE: Stream browser automation through plugin
 5) Automate LinkedIn lobby, find gamers

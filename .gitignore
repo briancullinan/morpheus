@@ -11,3 +11,4 @@
 /driver/morph.wasm
 /driver/morph-wasm.js
 /node_modules/
+/.vscode/

@@ -1,3 +1,6 @@
+// ALL THAT MAKEFILE WORK JUST SO I FEEL ORGANIZED ENOUGH TO EXPAND.
+
+
 // need to improve file list
 //   need to render a list of widgets for section collapsing
 // tables of contents should sort by entity type and alphabetically or locationally

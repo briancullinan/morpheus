@@ -53,8 +53,34 @@ function normalReplace(indexFile, cssFile, scriptFile, skinFile, wasmFile) {
 
 }
 
+function normalEmbed(indexFile, directory, pathMatch, pathReplace) {
+	const {
+    readFileSync: rfs, 
+    writeFileSync: wfs,
+    readdirSync: rds,
+  } = require('fs')
+  let index = rfs(indexFile).toString('utf-8')
+  let scripts = rds(directory)
+    .map(f => path.join(directory, f)) // TODO: BUILD SUB-DIRS
+  // INTERESTING LEAF, KEEP THE SAME CODE BECAUSE IT'S PRETTY SIMPLE, LEFT VARIABLE NAMES THE SAME
+  //   SOMETHING FOR CODE REVIEWS, LOTS OF NEW VARIABLE NAMES, OR REOCCURING VARIABLE NAMES?
+  // GOD, CAN SOURCETREE NOT REFRESH CONSTANTLY IN THE BACKGROUND? ONCE WHEN I SWITCH TO THE WINDOW
+  //   MAYBE ONCE AGAIN IF IT THINKS A BUILD SCRIPT WAS RUNNING? WONDER IF GITKRAKEN DOES THIS,
+  //   I ALREADY HAVE PROBLEMS WITH GITKRAKEN SHOWING THE CORRECT CODE. NO ONE CARES.
+  for(let i = 0; i < scripts.length; i++) {
+    let replacements = [/<\/html>/, '<script async type="application/javascript">' 
+      + formatForVFS(scripts[i], scripts[i].replace(pathMatch, pathReplace)) + '</script></html>']
+    let matchString = index.match(replacements[0])
+    index = index.substring(0, matchString.index)
+      + replacements[1] + index.substring(matchString.index
+      + matchString[0].length, index.length)
+  }
+  wfs(indexFile, index)
+}
+
 module.exports = {
   formatForVFS,
   normalReplace,
+  normalEmbed,
 
 }

@@ -38,9 +38,24 @@ function getQueryCommands() {
 		'+set', 'r_customHeight', '' + GL.canvas.clientHeight || 0,
 		'+set', 'r_customWidth', '' + GL.canvas.clientWidth || 0,
 	])
-	if(window.location.hostname) {
+	// meant to do this a lot sooner, with a download, we can just package
+	//   whatever pk3/autoexec we want with the game.
+	// but with web, we might be serving multiple sources, file:///index.html
+	//   http://localhost/ and public quake.games/lvlworld. so i don't have
+	//   to repackage for every source, check the domain we're on.
+	let hostname = (/^(.*?)\./i).exec(window.location.hostname)
+	let basename = false
+	if(hostname) {
+		basename = hostname[1]
+	} else
+	if(window.location.protocol == 'file:') {
+		basegame = 'localhost'
+	}
+
+	if(basegame) {
 		startup.push.apply(startup, [
-			'+exec', 'autoexec-' + (window.location.hostname).match(/^(.*?)\./i) [1] + '.cfg', 
+			'+set', 'fs_basegame', basegame,
+			'+set', 'fs_game', 'lobby',
 		])
 	}
 	var search = /([^&=]+)/g
@@ -83,16 +98,31 @@ function Sys_Edit() {
 		return
 	}
 
+	let basegamedir = addressToString(FS_GetBaseGameDir())
+	let gamedir = addressToString(FS_GetCurrentGameDir())
 	let filename = Cmd_Argv(1)
 	let filenameStr = addressToString(filename)
+	if(filenameStr.startsWith('/')) {
+		filenameStr = filenameStr.substr(1)
+	}
+	if(filenameStr.startsWith(gamedir)) {
+		filenameStr = filenameStr.substr(gamedir.length)
+	}
+	if(filenameStr.startsWith(basegamedir)) {
+		filenameStr = filenameStr.substr(basegamedir.length)
+	}
+	if(filenameStr.startsWith('/')) {
+		filenameStr = filenameStr.substr(1)
+	}
 	if(!filenameStr || !filenameStr.length) {
 		Com_Printf(stringToAddress('Usage: edit [filename]\n'))
 		return
 	}
+	let openFilename = stringToAddress(filenameStr)
 
 	let buf = stringToAddress('DEADBEEF') // pointer to pointer
 	let length
-	if ((length = FS_ReadFile(filename, buf)) > 0 && HEAPU32[buf >> 2] > 0) {
+	if ((length = FS_ReadFile(openFilename, buf)) > 0 && HEAPU32[buf >> 2] > 0) {
 		let imageView = Array.from(HEAPU8.slice(HEAPU32[buf >> 2], HEAPU32[buf >> 2] + length))
 		let utfEncoded = imageView.map(function (c) { return String.fromCharCode(c) }).join('')
 		FS_FreeFile(HEAPU32[buf >> 2])
@@ -103,7 +133,7 @@ function Sys_Edit() {
 		ACE.filename = filenameStr
 	} else {
 		let vargs = stringToAddress('DEADBEEF') // pointer to pointer
-		HEAPU32[vargs >> 2] = filename
+		HEAPU32[vargs >> 2] = openFilename
 		HEAPU32[(vargs >> 2) + 1] = 0
 		Com_Printf(stringToAddress('File not found \'%s\'.\nUsage: edit [filename]\n'), vargs)
 	}

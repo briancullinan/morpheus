@@ -135,8 +135,6 @@ debug:
 		LDFLAGS="$(DEBUG_LDFLAGS)"
 
 
-
-
 define DO_ENGINE_LD
 	$(echo_cmd) "WASM-LD $1"
 	$(Q)$(CC) -o $(BUILD_DIR)/$1 $2 $(CLIENT_LDFLAGS)
@@ -278,6 +276,8 @@ morph.html: $(INDEX_FILES) $(INDEX_OBJS)
 		'$(BUILD_DIR)/morph.html', '$(HTTP_SOURCE)/index.css', \
 		'$(BUILD_DIR)/morph.js', 'engine/renderer2/bigchars.png', \
 		'$(BUILD_DIR)/morph.wasm')"
+	node -e "require('./engine/wasm/bin/make').normalEmbed( \
+		'$(BUILD_DIR)/morph.html', 'driver/library', 'driver/', 'localhost/')"
 
 multigame: # q3asm.wasm q3lcc.wasm ui.qvm cgame.qvm qagame.qvm
 	@:
