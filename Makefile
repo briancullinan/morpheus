@@ -251,6 +251,7 @@ FRONTEND_JS    := \
 	driver/utils/crypt.js \
 	driver/utils/quine.js \
 	$(wildcard engine/wasm/http/ace/*.js) \
+	engine/wasm/http/nipplejs.js \
 	$(wildcard engine/wasm/sys_*.js)
 FRONTEND_EMBEDS:= \
 	$(HTTP_SOURCE)/index.html \
@@ -290,7 +291,6 @@ PLUGIN_FILES   := driver/manifest.json  \
 	$(HTTP_SOURCE)/index.html \
 	$(HTTP_SOURCE)/index.css \
 	$(HTTP_SOURCE)/redpill.png 
-
 
 plugin: engine morph.zip
 	$(Q)cp driver/manifest.json $(BUILD_DIR)/plugin/manifest.json
