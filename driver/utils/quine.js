@@ -24,7 +24,7 @@ async function emitDownload() {
 	}
 
 	if(ACE.downloaded) {
-		onError({line: -1, error: 'Error connecting to DevTools service.'})
+		doError({line: -1, error: 'Error connecting to DevTools service.'})
 		document.body.classList.remove('starting')
 		document.body.classList.add('running')
 		document.body.classList.add('error')

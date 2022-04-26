@@ -3,6 +3,9 @@
 let functionCounter = 0
 
 
+const FUNC_COMMENTS = /(^|\s*[^\/\s]+.*\n)(\s*\/\/.*\n)+(async|function|\s).*?$/
+const ASPECTS_REGEX = /\s+|\n+|\(|\)|function|async/g
+
 
 // return an array of evaluated expression to pass into the next function call
 async function runParameters(params, runContext) {
@@ -124,8 +127,7 @@ async function runFunction(AST, runContext) {
     if(attributeComments) {
       let attribs = attributeComments[0].split(ASPECTS_REGEX)
       for(let k = 0; k < attribs.length; k++) {
-        if(attribs[k].trim().length == 0
-          || !attribs[k].includes('@')) {
+        if(attribs[k].trim().length == 0 || !attribs[k].includes('@')) {
           continue
         } else
         if(attribs[k] == '@Before') {
@@ -167,23 +169,44 @@ async function runCall(AST, runContext) {
   }
 
   runContext.bubbleMember = null
-  let calleeFunc = await runStatement(0, [AST.callee], runContext)
-  if(!isStillRunning(runContext)) {
-    return // bubble up
-  }
+  let calleeFunc
+  if(AST.callee.type == 'Identifier') {
+    // handle identifiers here because looking it up with bubble up an error
+    try {
+      // TODO: should probably have a better way of handling NOT-ERROR
+      calleeFunc = await runPrimitive(AST.callee, runContext)
+    } catch (up) {
+      if(!up.message.includes('not defined')) {
+        throw up
+      }
+    }
 
-  if(calleeFunc) {
-
+    // TODO: incase libraries aren't sent, preprocessed libs are used here
+    if (!calleeFunc) {
+      calleeFunc = await runContext.localVariables.thisWindow._accessor(void 0, {
+        // WOOHOO my first polyfill
+        object: {
+          name: 'exports'
+        },
+        property: {
+          name: AST.callee.name
+        }
+      }, void 0, runContext, void 0)
+    }
   } else
-  // TODO: incase libraries aren't sent, preprocessed libs are used here
-  if (WEBDRIVER_API[AST.callee.name]) {
-    calleeFunc = WEBDRIVER_API[AST.callee.name]
+  if(AST.callee.type) {
+    calleeFunc = await runStatement(0, [AST.callee], runContext)
+    if(!isStillRunning(runContext)) {
+      return // bubble up
+    }
+
   } else {
-    throw new Error('Function not defined: ' + AST.callee.name)
+    throw new Error('CallExpression: Not implemented!')
   }
+
   if(!calleeFunc) {
     debugger
-    throw new Error('CallExpression: Not implemented!')
+    throw new Error('Function not defined: ' + AST.callee.name)
   }
 
   let beforeLine = runContext.bubbleLine

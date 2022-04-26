@@ -65,7 +65,7 @@ function getLimitedLine(prevLine) {
 	return prevLine
 }
 
-function onStatus(request) {
+function doStatus(request) {
 	let prevLine = getLimitedLine(request.line)
 
 	//if(!ACE.statusLine) {
@@ -103,7 +103,7 @@ function onStarted(request) {
 }
 
 
-function onAccessor(request) {
+function doAccessor(request) {
 	if(!document.body.className.includes('running')
 		// because pause it allowed to happen mid flight finish the accessor request
 		&& !document.body.className.includes('paused')
@@ -135,7 +135,7 @@ function onAccessor(request) {
 
 
 
-function onError(request) {
+function doError(request) {
 	if(request.error.includes('No script')) {
 		document.body.classList.remove('runnning')
 		document.body.classList.remove('starting')
@@ -173,7 +173,7 @@ function onError(request) {
 	if(typeof request.locals != 'undefined') {
 		let lines = Object.keys(request.locals)
 		for(let j = 0; j < lines.length; j++) {
-			onAssign({
+			doAssign({
 				assign: request.locals[lines[j]],
 				line: lines[j],
 			})
@@ -362,7 +362,7 @@ function doDialog(request, newDialog) {
 }
 
 
-function onAssign(request) {
+function doAssign(request) {
 	let prevLine = getLimitedLine(request.line)
 	// TODO: status line always out of view because sleep is in library.js
 	if(prevLine < 0) {
@@ -397,7 +397,7 @@ function onAssign(request) {
 }
 
 
-function onConsole(request) {
+function doConsole(request) {
 	if (!ace.session || !ace.session.lineWidgets) {
 		return
 	}
@@ -454,7 +454,7 @@ function onMessage(message) {
 	}
 
 	if(typeof request.accessor != 'undefined') {
-		onAccessor(request)
+		doAccessor(request)
 	} else 
 	if(typeof request.service != 'undefined') {
 		debugger
@@ -475,10 +475,10 @@ function onMessage(message) {
 		processResponse(request.warning, request.line, false)
 	} else
 	if(typeof request.console != 'undefined') {
-		onConsole(request)
+		doConsole(request)
 	} else 
 	if(typeof request.error != 'undefined') {
-		onError(request)
+		doError(request)
 	} else 
 	if(typeof request.result != 'undefined') {
 		document.body.classList.remove('running')
@@ -491,10 +491,10 @@ function onMessage(message) {
 		onStarted(request)
 	} else 
 	if(typeof request.status != 'undefined') {
-		onStatus(request)
+		doStatus(request)
 	} else 
 	if(typeof request.assign != 'undefined') {
-		onAssign(request)
+		doAssign(request)
 	} else 
 	if(typeof request.stopped != 'undefined') {
 		document.body.classList.remove('paused')

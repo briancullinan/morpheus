@@ -275,7 +275,7 @@ morph.html: $(INDEX_FILES) $(INDEX_OBJS)
 	node -e "require('./engine/wasm/bin/make').normalReplace( \
 		'$(BUILD_DIR)/morph.html', '$(HTTP_SOURCE)/index.css', \
 		'$(BUILD_DIR)/morph.js', 'engine/renderer2/bigchars.png', \
-		'$(BUILD_DIR)/morph.wasm')"
+		'$(BUILD_DIR)/morph.wasm', 'driver/landing/ide.html')"
 	node -e "require('./engine/wasm/bin/make').normalEmbed( \
 		'$(BUILD_DIR)/morph.html', 'driver/library', 'driver/', 'localhost/')"
 

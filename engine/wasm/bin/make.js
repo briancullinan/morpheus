@@ -25,10 +25,14 @@ window.preFS['${path}']='${file2Base64(resource)}';
 // GODDAMNIT I HATE THIS REGEX JAVASCRIPT FEATURE, I JUST WANT ONE STRING
 //   REPLACEMENT THAT ISN'T EXACT FUCKING TEXT.
 
-function normalReplace(indexFile, cssFile, scriptFile, skinFile, wasmFile) {
+function normalReplace(indexFile, cssFile, scriptFile, skinFile, wasmFile
+   // masterfile really?
+   , htmlBody) {
 	const {readFileSync: rfs, writeFileSync: wfs} = require('fs');
   let index = rfs(indexFile).toString('utf-8')
   let replacements = [
+    // INTERESTING FOR CODE REVIEWS. PRE-PROGRAMMED SMELL TO PREVENT FUTURES SMELLS? LOL!
+    [/<canvas/, rfs(htmlBody) + '<canvas'],
     [/<link[^>]*>/, '<style>'+rfs(cssFile)+'</style>'],
     [/<script[^>]*>/, '<script>'+rfs(scriptFile)+'</script>'],
     [/<img[^>]*>/, '<img title="gfx/2d/bigchars.png" src="data:image/png;base64,'

@@ -12,8 +12,7 @@ async function enterLogin(url) {
 
 
 async function doDialog(dialog) {
-
-	// chrome.storage.sync.set({ mytext: txtValue });
+// chrome.storage.sync.set({ mytext: txtValue });
 	let tryTimes = 15
 	let response
 	do {

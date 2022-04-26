@@ -17,49 +17,7 @@
 </div>
 <div id="left-joystick"></div><div id="right-joystick"></div>
 <div id="viewport-frame">
-		<div id="command-bar">
-			<label for="liveReload"><input type="checkbox" id="liveReload" name="liveReload" /> Live<span></span></label>
-			<label for="codeFold"><input type="checkbox" id="codeFold" name="codeFold" /> Fold<span></span></label>
-			<label for="lineWrap"><input type="checkbox" id="lineWrap" name="lineWrap" /> Wrap<span></span></label>
-			<label for="fontSize"><select name="fontSize"><option>12</option><option>16</option><option>20</option></select> Font</label>
-			<label for="language"><select name="language"><option>JS</option><option>C#</option><option>PY</option></select></label>
-			<textarea id="run-script"></textarea>
-			<button id="run-button" class="run-button" onclick="runBlock(-1)">&nbsp;</button>
-			<button id="run-accessor" class="run-accessor" onclick="runAccessor(-1)">&nbsp;</button>
-		</div>
-		<div id="file-list">
-			<ol>
-				
-			</ol>
-		</div>
-		<div id="editor">// after installing the plugin, DevTools can start
-// instructions: 
-// https://developer.chrome.com/docs/extensions/mv3/getstarted/#unpacked
-function createWindow() {
-	let title = documentTitle()
-	console.log(title)
-	let newWin = newWindow()
-	// should now have a window on the right ->
-	navigateTo('https://console.cloud.google.com/')
-	let host = newWin.location.host
-	if(host.includes('accounts.google.com')) {
-		enterLogin()
-	}
-	screenshot()
-}
-
-function main() {
-	createWindow()
-}
-
-// TODO: 
-// enterPassword(url)
-// metaSearch(terms)
-// morpheusLab()
-
-
-</div>
-<canvas></canvas>
+	<canvas></canvas>
 </div>
 
 

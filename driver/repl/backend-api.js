@@ -1,36 +1,72 @@
 // TODO: NOT ENTIRELY SURE WHAT TO EXPOSE HERE
 //   SO KEEP IT LIMITED FOR NOW   ;)
 
+// OH NO! I WENT TO FAR! I CAN RUN CODE FROM FRONT TO BACK
+//   AND BACK TO FRONT!
+function _makeLibraryAccessor(callArgs, runContext) {
+	runContext.localVariables.module.exports._accessor 
+		= runContext.localVariables.thisWindow._accessor
+	// also get a list of library functions
+	runContext.localVariables.module._accessor 
+		= runContext.localVariables.thisWindow._accessor
+}
 
 
+async function doAccessor(i, member, AST, ctx, callback) {
+	if(!member.object.name || !member.property.name
+	//	|| member.object.name != 'window' /* no safety? */
+	) {
+		throw new Error('MemberExpression: Not implemented!')
+	}
+	// TODO: call tree? multiple level? 
+	let memberName = member.object.name + '.' + member.property.name
+	let response = await chrome.tabs.sendMessage(ctx.senderId, { accessor: memberName })
+	if(typeof response.function != 'undefined') {
+		debugger
+		return function () {
+			debugger
+		}
+	} else if (typeof response.object != 'undefined') {
+		// TODO: add an _accessor to Objects?
+		debugger
+	} else if (typeof response.result != 'undefined') {
+		return response.result
+	} else if (typeof response.fail != 'undefined') {
+		throw new Error('Member access failed: ' + member)
+	} else {
+		throw new Error('Couldn\'t understand response.')
+	}
+	// window.screenLeft, window.outerHeight
+}
 
 
+// this _accessor template is getting pretty big, TODO: combine with above but differentiate eval versus ask
 function _makeWindowAccessor(result, runContext) {
-	if(typeof result == 'object' && result) {
-		result._accessor = async function (i, member, AST, ctx, callback) {
-			if(member.property.name == 'location') {
-				let location = await chrome.debugger.sendCommand({
-					tabId: ctx.localVariables.tabId
-				}, 'Runtime.evaluate', {
-					expression: 'JSON.stringify(window.location)'
-				})
-				if(!location || !location.result
-					|| location.result.type != 'string') {
-					throw new Error('Member access error: ' + member)
-				} else {
-					return JSON.parse(location.result.value)
-				}
-
-			} else
-			if(result.hasOwnProperty(member)
-				|| result[member]) {
-				return result[member]
-			} else {
+	if(typeof result != 'object' || !result) {
+		return result
+	}
+	result._accessor = async function (i, member, AST, ctx, callback) {
+		if(member.property.name == 'location') {
+			let location = await chrome.debugger.sendCommand({
+				tabId: ctx.localVariables.tabId
+			}, 'Runtime.evaluate', {
+				expression: 'JSON.stringify(window.location)'
+			})
+			if(!location || !location.result
+				|| location.result.type != 'string') {
 				throw new Error('Member access error: ' + member)
+			} else {
+				return JSON.parse(location.result.value)
 			}
+
+		} else
+		if(result.hasOwnProperty(member)
+			|| result[member]) {
+			return result[member]
+		} else {
+			throw new Error('Member access error: ' + member)
 		}
 	}
-	return result
 }
 
 
@@ -85,31 +121,7 @@ async function createEnvironment(runContext) {
 	//    this they decided "IT'S TOO DANGEROUS"
 	// A nice design was never explored.
 	let thisWindow = {
-		_accessor: async function (i, member, AST, ctx, callback) {
-			if(!member.object.name || !member.property.name
-				|| member.object.name != 'window' /* safety? */) {
-				throw new Error('MemberExpression: Not implemented!')
-			}
-			// TODO: call tree? multiple level? 
-			let memberName = member.object.name + '.' + member.property.name
-			let response = await chrome.tabs.sendMessage(runContext.senderId, { accessor: memberName })
-			if(typeof response.function != 'undefined') {
-				debugger
-				return function () {
-					debugger
-				}
-			} else if (typeof response.object != 'undefined') {
-				// TODO: add an _accessor to Objects?
-				debugger
-			} else if (typeof response.result != 'undefined') {
-				return response.result
-			} else if (typeof response.fail != 'undefined') {
-				throw new Error('Member access failed: ' + member)
-			} else {
-				throw new Error('Couldn\'t understand response.')
-			}
-		},
-		// window.screenLeft, window.outerHeight
+		_accessor: doAccessor
 	}
 	let env = {
 		thisWindow: thisWindow,
@@ -149,6 +161,7 @@ async function createEnvironment(runContext) {
 		clearTimeout: _clearTimeout.bind(null, runContext),
 		clearInterval: _clearInterval.bind(null, runContext),
 		_makeWindowAccessor: _makeWindowAccessor,
+		_makeLibraryAccessor: _makeLibraryAccessor,
 
 	}
 	Object.assign(runContext, {
