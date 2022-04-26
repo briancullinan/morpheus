@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/qcommon.h"
 #include "../qcommon/vm_local.h"
 #include "../renderer2/tr_public.h"
-#include "../ui/ui_public.h"
+#include <ui_public.h>
 #include "keys.h"
 #include "snd_public.h"
 #include "../cgame/cg_public.h"

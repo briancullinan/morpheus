@@ -239,11 +239,11 @@ static int _spawnvp(int mode, const char *cmdname, const char *const argv[]) {
 	int pid, n, status;
 
 	// TODO: I WAS THINKING SOMETHING FANCY WHERE YOU JUST
-	//   CALL JORK(SPAWNVP) AGAIN AND IT MAKES A WEB-WORKER HERE
-#ifdef __WASM__
-	status = execv(cmdname, (char **)argv);
-	return status;
-#else
+	//   CALL FORK(SPAWNVP) AGAIN AND IT MAKES A WEB-WORKER HERE
+	//   I DON'T REALLY UNDERSTAND THIS EXECV AT ALL.
+	// I UNDERSTAND LCC CALLS COMMANDS TO PARSE, LINK, CREATE COMMON OBJ
+	//   I MEAN I DON'T UNDERSTAND THE INTERNAL WORKINGS OF FORKING A PROCESS
+	//   NEED TO GO DEEPER INTO UNIX.
 	switch (pid = fork()) {
 	case -1:
 		fprintf(stderr, "%s: no more processes\n", progname);
@@ -264,7 +264,6 @@ static int _spawnvp(int mode, const char *cmdname, const char *const argv[]) {
 		status |= 0400;
 	}
 	return (status>>8)&0377;
-#endif
 }
 #endif
 
@@ -307,6 +306,8 @@ static int callsys(char **av) {
 		}
 		if (verbose < 2)
 			status = _spawnvp(_P_WAIT, argv[0], (const char * const *)argv);
+			// TODO: LOOK THIS DOES NOTHING BUT CHECK THE ERROR, AS IF STDERR
+			//   IS PIPED OR SOMETHING? THAT DOESN'T APPLY NOW
 		if (status == -1) {
 			fprintf(stderr, "%s: ", progname);
 			perror(argv[0]);
@@ -448,10 +449,23 @@ static int filename(char *name, char *base) {
 			break;
 		}
 		if (itemp == NULL)
-			itemp = tempname(first(suffixes[1]));
+			itemp = tempname(first(suffixes[1])); // .C -> .I SUFFIX
 		compose(cpp, plist, append(name, 0), append(itemp, 0));
+// TRYING TO WRITE THIS IN A WAY THAT CAN BE AUTOMATICALLY APPLIED
+//   BY A SIMPLE SYNTAX PARSER BY DETECTING CLOSURE BLOCKS, SPLIT THE
+//   FUNCTION INTO SEPARATE PARTS, AND CALL THE NEXT ASYNC STEP.
+//   OBVIOUSLY, NEED TO DETECT CALLS TO ASYNC FUNCTIONS ONCE THEY REACH
+//   JAVASCRIPT (FS/EXEC/NET).
+#ifdef __WASM__
+		if( ) // pid something
+#endif
 		status = callsys(av);
-		if (status == 0)
+#ifdef __WASM__
+		return;
+// fallout1?
+asyncAfterCFile:
+#endif
+		if (status == 0) // RECURSIVE, CALLS ITSELF WITH A NEW SUFFIX
 			return filename(itemp, base);
 		break;
 	case 1:	/* preprocessed source files */

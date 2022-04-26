@@ -446,7 +446,6 @@ body.started.running .run-button.small:hover {
   bottom: 0;
   right: 0;
   overflow: hidden;
-  background-image: url('/quakejs-border.png');
   background-color: transparent;
   background-repeat: no-repeat;
   background-position: center;
@@ -550,37 +549,6 @@ body.no-gl #editor {
   perspective: 1000px;
 }
 
-.done-loading #flipper {
-  /* opacity: 0.0; */
-  z-index: -1;
-}
-
-/* flip the pane when hovered */
-#flipper {
-  animation: rotatequake 1s infinite ease-in-out;
-  transform-style: preserve-3d;
-  position: relative;
-  height: 100%;
-  width: 100%;
-  position: absolute;
-  top:0;
-  left:0;
-  z-index: -1;
-  opacity: 1.0;
-}
-
-.front, .back {
-  backface-visibility: hidden;
-  background-image: url('/quakejs-noborder-transparent.png');
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 24em;
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
 
 .front {
   z-index: 2;

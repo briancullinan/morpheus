@@ -5,6 +5,8 @@
 // because games can change separately from the main system version, we need a
 // second version that must match between game and cgame
 
+#ifndef _BG_PUBLIC_H
+#define _BG_PUBLIC_H
 #define	GAME_VERSION		"baseq3-1"
 
 #define	DEFAULT_GRAVITY		800
@@ -169,6 +171,7 @@ typedef struct {
 	usercmd_t	cmd;
 	int			tracemask;			// collide against these types of surfaces
 	int			debugLevel;			// if set, diagnostic output will be printed
+	//qboolean	noFootsteps;		// if the game is setup for no footsteps by the server
 	qboolean	gauntletHit;		// true if a gauntlet attack would actually hit something
 
 	int			framecount;
@@ -988,7 +991,6 @@ qboolean replace1( const char match, const char replace, char *str );
 
 qboolean  BigEndian( void );
 
-//#endif // __BG_PUBLIC_H
 #define MAX_MAP_SIZE 65536
 
 // Tracemap
@@ -1001,3 +1003,6 @@ float BG_GetSkyGroundHeightAtPoint( vec3_t pos );
 float BG_GetGroundHeightAtPoint( vec3_t pos );
 int BG_GetTracemapGroundFloor( void );
 int BG_GetTracemapGroundCeil( void );
+
+
+#endif // __BG_PUBLIC_H

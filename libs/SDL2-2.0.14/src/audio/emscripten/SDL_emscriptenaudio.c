@@ -26,7 +26,7 @@
 #include "../SDL_audio_c.h"
 #include "SDL_emscriptenaudio.h"
 
-#include <emscripten/emscripten.h>
+#include <emscripten.h>
 
 static void
 FeedAudioDevice(_THIS, const void *buf, const int buflen)

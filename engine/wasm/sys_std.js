@@ -115,6 +115,9 @@ function Sys_Milliseconds() {
 }
 
 function Sys_RandomBytes (string, len) {
+  if(!HEAP8.buffer.length) {
+    updateGlobalBufferAndViews()
+  }
 	if(typeof crypto != 'undefined') {
 		crypto.getRandomValues(HEAP8.subarray(string, string+(len / 4)))
 	} else {
@@ -238,15 +241,39 @@ function Sys_exec() {
 }
 
 
+function Sys_fork() {
+  // TODO: prepare worker to call into
+  //return ++Sys.threadCount
+  return 0
+}
+
+
+function Sys_wait(status) {
+  // lookup by address status? does this work on git code?
+  if(typeof Sys.waitListeners[status] == 'undefined') {
+    Sys.waitListeners[status] = 0
+  } else {
+    ++Sys.waitListeners[status]
+  }
+  HEAPU32[status>>2] = Sys.waitListeners[status]
+  return 0 // TODO: return error if it happens in _start()
+}
+
+
 
 var STD = {
+  threadCount: 0,
+  waitListeners: {},
   sharedCounter: 0,
   stringToAddress,
   addressToString,
   stringsToMemory,
+  updateGlobalBufferAndViews: updateGlobalBufferAndViews,
   __assert_fail: console.assert, // TODO: convert to variadic fmt for help messages
-  longjmp: function (id, code) { throw new Error('longjmp', id, code) },
-  setjmp: function (id) { try {  } catch (e) { } },
+  Sys_longjmp: function (id, code) { throw new Error('longjmp', id, code) },
+  Sys_setjmp: function (id) { try {  } catch (e) { } },
+  Sys_fork: Sys_fork,
+  Sys_wait: Sys_wait,
   //Sys_exec: Sys_exec,
   //Sys_execv: Sys_exec,
   //Sys_getenv: Sys_getenv,

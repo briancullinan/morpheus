@@ -1,5 +1,9 @@
 // OPINIONATED FRONTENDS FOR MISSING WASI FILESYSTEM/MISC
 
+#ifndef __SYS_OVERRIDES_H
+#define __SYS_OVERRIDES_H
+#include <stdio.h>
+
 // I'M BEING DANGEROUS
 int Sys_execv(const char *path, char *const argv[]);
 #define execv(p, a) Sys_execv(p, a)
@@ -41,3 +45,15 @@ int Sys_time(int *t);
 #define time(t) Sys_time(t)
 int Sys_access(const char *, int);
 #define access(p, i) Sys_access(p, i)
+void Sys_FClose(FILE *f);
+#define fclose(p) Sys_FClose(p)
+size_t Sys_FWrite(const void* restrict ptr, size_t size, size_t nmemb,
+              FILE* restrict stream);
+#define fwrite(a, b, c, d) Sys_FWrite(a, b, c, d)
+int Sys_FTell(FILE *f);
+#define ftell(p) Sys_FTell(p)
+int Sys_FSeek(FILE *f, long offset, int mode);
+#define fseek(a, b, c) Sys_FSeek(a, b, c)
+
+#endif
+

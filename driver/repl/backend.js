@@ -7,6 +7,8 @@ let threads = {
 const FUNC_COMMENTS = /(\n\s*\/\/.*)*(async|function|\s)*?$/
 const ASPECTS_REGEX = /\s+|\n+|\(|\)|function|async/g
 
+
+// log an object.property to the console
 function doProperty(value, noRecurse) {
 	// TODO: detect runCallStatements symbols on function.AST and call code generation worker
 

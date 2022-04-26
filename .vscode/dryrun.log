@@ -1,0 +1,57 @@
+make -f /Users/briancullinan/morpheus/Makefile --dry-run --keep-going --print-directory
+make: Entering directory `/Users/briancullinan/morpheus'
+/Applications/Xcode.app/Contents/Developer/usr/bin/make V= multigame engine \
+		plugin index build-tools deploy \
+		BUILD_DIR="build/release-wasm-js" \
+		CFLAGS="" \
+ 
+		LDFLAGS=""
+ 
+make[1]: Entering directory `/Users/briancullinan/morpheus'
+:
+if [ ! -d "./build/release-wasm-js" ]; then mkdir -p "./build/release-wasm-js";fi;
+ 
+if [ ! -d "./build/release-wasm-js/q3asm" ]; then mkdir -p "./build/release-wasm-js/q3asm";fi;
+if [ ! -d "./build/release-wasm-js/q3lcc" ]; then mkdir -p "./build/release-wasm-js/q3lcc";fi;
+if [ ! -d "./build/release-wasm-js/q3rcc" ]; then mkdir -p "./build/release-wasm-js/q3rcc";fi;
+if [ ! -d "./build/release-wasm-js/q3cpp" ]; then mkdir -p "./build/release-wasm-js/q3cpp";fi;
+if [ ! -d "./build/release-wasm-js/lburg" ]; then mkdir -p "./build/release-wasm-js/lburg";fi;
+if [ ! -d "./build/release-wasm-js/uivm" ]; then mkdir -p "./build/release-wasm-js/uivm";fi;
+if [ ! -d "./build/release-wasm-js/engine" ]; then mkdir -p "./build/release-wasm-js/engine";fi;
+if [ ! -d "./build/release-wasm-js/engine/glsl" ]; then mkdir -p "./build/release-wasm-js/engine/glsl";fi;
+if [ ! -d "./build/release-wasm-js/sdl" ]; then mkdir -p "./build/release-wasm-js/sdl";fi;
+if [ ! -d "./build/release-wasm-js/sdl/audio" ]; then mkdir -p "./build/release-wasm-js/sdl/audio";fi;
+if [ ! -d "./build/release-wasm-js/sdl/audio/emscripten" ]; then mkdir -p "./build/release-wasm-js/sdl/audio/emscripten";fi;
+if [ ! -d "./build/release-wasm-js/sdl/atomic" ]; then mkdir -p "./build/release-wasm-js/sdl/atomic";fi;
+if [ ! -d "./build/release-wasm-js/sdl/events" ]; then mkdir -p "./build/release-wasm-js/sdl/events";fi;
+if [ ! -d "./build/release-wasm-js/sdl/thread" ]; then mkdir -p "./build/release-wasm-js/sdl/thread";fi;
+if [ ! -d "./build/release-wasm-js/sdl/thread/generic" ]; then mkdir -p "./build/release-wasm-js/sdl/thread/generic";fi;
+if [ ! -d "./build/release-wasm-js/sdl/timer" ]; then mkdir -p "./build/release-wasm-js/sdl/timer";fi;
+if [ ! -d "./build/release-wasm-js/sdl/timer/unix" ]; then mkdir -p "./build/release-wasm-js/sdl/timer/unix";fi;
+ 
+echo "WASM-LD morph.wasm"
+ 
+libs/darwin/wasi-sdk-14.0/bin/clang -o build/release-wasm-js/morph.wasm build/release-wasm-js/engine/be_aas_bspq3.o build/release-wasm-js/engine/be_aas_cluster.o build/release-wasm-js/engine/be_aas_debug.o build/release-wasm-js/engine/be_aas_entity.o build/release-wasm-js/engine/be_aas_file.o build/release-wasm-js/engine/be_aas_main.o build/release-wasm-js/engine/be_aas_move.o build/release-wasm-js/engine/be_aas_optimize.o build/release-wasm-js/engine/be_aas_reach.o build/release-wasm-js/engine/be_aas_route.o build/release-wasm-js/engine/be_aas_routealt.o build/release-wasm-js/engine/be_aas_sample.o build/release-wasm-js/engine/be_ai_char.o build/release-wasm-js/engine/be_ai_chat.o build/release-wasm-js/engine/be_ai_gen.o build/release-wasm-js/engine/be_ai_goal.o build/release-wasm-js/engine/be_ai_move.o build/release-wasm-js/engine/be_ai_weap.o build/release-wasm-js/engine/be_ai_weight.o build/release-wasm-js/engine/be_ea.o build/release-wasm-js/engine/be_interface.o build/release-wasm-js/engine/l_crc.o build/release-wasm-js/engine/l_libvar.o build/release-wasm-js/engine/l_log.o build/release-wasm-js/engine/l_memory.o build/release-wasm-js/engine/l_precomp.o build/release-wasm-js/engine/l_script.o build/release-wasm-js/engine/l_struct.o build/release-wasm-js/engine/cl_avi.o build/release-wasm-js/engine/cl_cgame.o build/release-wasm-js/engine/cl_cin.o build/release-wasm-js/engine/cl_cin_ogm.o build/release-wasm-js/engine/cl_cin_roq.o build/release-wasm-js/engine/cl_cin_webm.o build/release-wasm-js/engine/cl_console.o build/release-wasm-js/engine/cl_input.o build/release-wasm-js/engine/cl_keys.o build/release-wasm-js/engine/cl_main.o build/release-wasm-js/engine/cl_net_chan.o build/release-wasm-js/engine/cl_parse.o build/release-wasm-js/engine/cl_scrn.o build/release-wasm-js/engine/cl_tc_vis.o build/release-wasm-js/engine/cl_ui.o build/release-wasm-js/engine/snd_adpcm.o build/release-wasm-js/engine/snd_codec.o build/release-wasm-js/engine/snd_codec_ogg.o build/release-wasm-js/engine/snd_dma.o build/release-wasm-js/engine/snd_main.o build/release-wasm-js/engine/snd_mem.o build/release-wasm-js/engine/snd_mix.o build/release-wasm-js/engine/snd_wavelet.o build/release-wasm-js/engine/cm_load.o build/release-wasm-js/engine/cm_patch.o build/release-wasm-js/engine/cm_polylib.o build/release-wasm-js/engine/cm_test.o build/release-wasm-js/engine/cm_trace.o build/release-wasm-js/engine/cmd.o build/release-wasm-js/engine/cmd_descriptions.o build/release-wasm-js/engine/common.o build/release-wasm-js/engine/cvar.o build/release-wasm-js/engine/cvar_descriptions.o build/release-wasm-js/engine/files.o build/release-wasm-js/engine/files_async.o build/release-wasm-js/engine/history.o build/release-wasm-js/engine/huffman.o build/release-wasm-js/engine/huffman_static.o build/release-wasm-js/engine/keys.o build/release-wasm-js/engine/md4.o build/release-wasm-js/engine/md5.o build/release-wasm-js/engine/msg.o build/release-wasm-js/engine/net_chan.o build/release-wasm-js/engine/net_ip.o build/release-wasm-js/engine/puff.o build/release-wasm-js/engine/q_math.o build/release-wasm-js/engine/q_shared.o build/release-wasm-js/engine/splines.o build/release-wasm-js/engine/unzip.o build/release-wasm-js/engine/vm.o build/release-wasm-js/engine/vm_interpreted.o build/release-wasm-js/engine/tr_animation.o build/release-wasm-js/engine/tr_backend.o build/release-wasm-js/engine/tr_bsp.o build/release-wasm-js/engine/tr_cmds.o build/release-wasm-js/engine/tr_curve.o build/release-wasm-js/engine/tr_dsa.o build/release-wasm-js/engine/tr_extensions.o build/release-wasm-js/engine/tr_extramath.o build/release-wasm-js/engine/tr_fbo.o build/release-wasm-js/engine/tr_flares.o build/release-wasm-js/engine/tr_font.o build/release-wasm-js/engine/tr_glsl.o build/release-wasm-js/engine/tr_image.o build/release-wasm-js/engine/tr_image_bmp.o build/release-wasm-js/engine/tr_image_dds.o build/release-wasm-js/engine/tr_image_jpg.o build/release-wasm-js/engine/tr_image_pcx.o build/release-wasm-js/engine/tr_image_png.o build/release-wasm-js/engine/tr_image_tga.o build/release-wasm-js/engine/tr_init.o build/release-wasm-js/engine/tr_light.o build/release-wasm-js/engine/tr_main.o build/release-wasm-js/engine/tr_marks.o build/release-wasm-js/engine/tr_mesh.o build/release-wasm-js/engine/tr_model.o build/release-wasm-js/engine/tr_model_iqm.o build/release-wasm-js/engine/tr_noise.o build/release-wasm-js/engine/tr_postprocess.o build/release-wasm-js/engine/tr_scene.o build/release-wasm-js/engine/tr_shade.o build/release-wasm-js/engine/tr_shade_calc.o build/release-wasm-js/engine/tr_shader.o build/release-wasm-js/engine/tr_shadows.o build/release-wasm-js/engine/tr_sky.o build/release-wasm-js/engine/tr_surface.o build/release-wasm-js/engine/tr_vbo.o build/release-wasm-js/engine/tr_world.o build/release-wasm-js/engine/sv_bot.o build/release-wasm-js/engine/sv_bsp.o build/release-wasm-js/engine/sv_bsp_atlantis.o build/release-wasm-js/engine/sv_bsp_chutes.o build/release-wasm-js/engine/sv_bsp_cube.o build/release-wasm-js/engine/sv_bsp_maze.o build/release-wasm-js/engine/sv_bsp_mini.o build/release-wasm-js/engine/sv_bsp_monaco.o build/release-wasm-js/engine/sv_bsp_portals.o build/release-wasm-js/engine/sv_bsp_tools.o build/release-wasm-js/engine/sv_ccmds.o build/release-wasm-js/engine/sv_client.o build/release-wasm-js/engine/sv_demo_mv.o build/release-wasm-js/engine/sv_filter.o build/release-wasm-js/engine/sv_game.o build/release-wasm-js/engine/sv_init.o build/release-wasm-js/engine/sv_main.o build/release-wasm-js/engine/sv_net_chan.o build/release-wasm-js/engine/sv_snapshot.o build/release-wasm-js/engine/sv_world.o build/release-wasm-js/engine/sv_zip.o build/release-wasm-js/engine/sdl_snd.o build/release-wasm-js/engine/sys_main.o build/release-wasm-js/engine/glsl/bokeh_fp.o build/release-wasm-js/engine/glsl/bokeh_vp.o build/release-wasm-js/engine/glsl/calclevels4x_fp.o build/release-wasm-js/engine/glsl/calclevels4x_vp.o build/release-wasm-js/engine/glsl/depthblur_fp.o build/release-wasm-js/engine/glsl/depthblur_vp.o build/release-wasm-js/engine/glsl/dlight_fp.o build/release-wasm-js/engine/glsl/dlight_vp.o build/release-wasm-js/engine/glsl/down4x_fp.o build/release-wasm-js/engine/glsl/down4x_vp.o build/release-wasm-js/engine/glsl/fogpass_fp.o build/release-wasm-js/engine/glsl/fogpass_vp.o build/release-wasm-js/engine/glsl/generic_fp.o build/release-wasm-js/engine/glsl/generic_vp.o build/release-wasm-js/engine/glsl/lightall_fp.o build/release-wasm-js/engine/glsl/lightall_vp.o build/release-wasm-js/engine/glsl/pshadow_fp.o build/release-wasm-js/engine/glsl/pshadow_vp.o build/release-wasm-js/engine/glsl/shadowfill_fp.o build/release-wasm-js/engine/glsl/shadowfill_vp.o build/release-wasm-js/engine/glsl/shadowmask_fp.o build/release-wasm-js/engine/glsl/shadowmask_vp.o build/release-wasm-js/engine/glsl/ssao_fp.o build/release-wasm-js/engine/glsl/ssao_vp.o build/release-wasm-js/engine/glsl/texturecolor_fp.o build/release-wasm-js/engine/glsl/texturecolor_vp.o build/release-wasm-js/engine/glsl/tonemap_fp.o build/release-wasm-js/engine/glsl/tonemap_vp.o build/release-wasm-js/sdl/SDL.o build/release-wasm-js/sdl/SDL_assert.o build/release-wasm-js/sdl/SDL_error.o build/release-wasm-js/sdl/SDL_dataqueue.o build/release-wasm-js/sdl/SDL_hints.o build/release-wasm-js/sdl/audio/SDL_audio.o build/release-wasm-js/sdl/audio/SDL_mixer.o build/release-wasm-js/sdl/audio/emscripten/SDL_emscriptenaudio.o build/release-wasm-js/sdl/audio/SDL_audiotypecvt.o build/release-wasm-js/sdl/audio/SDL_audiocvt.o build/release-wasm-js/sdl/atomic/SDL_atomic.o build/release-wasm-js/sdl/events/SDL_events.o build/release-wasm-js/sdl/atomic/SDL_spinlock.o build/release-wasm-js/sdl/thread/generic/SDL_sysmutex.o build/release-wasm-js/sdl/thread/SDL_thread.o build/release-wasm-js/sdl/timer/unix/SDL_systimer.o build/release-wasm-js/sdl/thread/generic/SDL_syssem.o build/release-wasm-js/sdl/thread/generic/SDL_systls.o build/release-wasm-js/sdl/thread/generic/SDL_systhread.o  -Wl,--import-memory -Wl,--import-table -Wl,--export-dynamic -Wl,--error-limit=200 -Wl,--export=sprintf -Wl,--export=malloc -Wl,--export=stderr -Wl,--export=stdout -Wl,--export=errno --n 
+o-standard-libraries -Wl,--allow-undefined-file=engine/wasm/wasm.syms engine/wasm/wasi/libclang_rt.builtins-wasm32.a libs/wasi-sysroot/lib/wasm32-wasi/libc.a -Wl,--no-entry 
+echo "OPT_CC build/release-wasm-js/morph.wasm"
+wasm-opt -Os --no-validation -o build/release-wasm-js/morph.opt build/release-wasm-js/morph.wasm
+mv build/release-wasm-js/morph.wasm build/release-wasm-js/morph.wasm.bak 2> /dev/null
+mv build/release-wasm-js/morph.opt build/release-wasm-js/morph.wasm 2> /dev/null
+rm build/release-wasm-js/morph.wasm.bak 2> /dev/null
+:
+:
+:
+ 
+cp -r -f engine/wasm/http/index.html build/release-wasm-js/morph.html
+node -e "require('./engine/wasm/bin/make').normalReplace( \
+		'build/release-wasm-js/morph.html', 'engine/wasm/http/index.css', \
+		'build/release-wasm-js/morph.js', 'engine/renderer2/bigchars.png', \
+		'build/release-wasm-js/morph.wasm')"
+cp build/release-wasm-js/morph.html index.html
+:
+:
+ 
+make[1]: Leaving directory `/Users/briancullinan/morpheus'
+ 
+make: Leaving directory `/Users/briancullinan/morpheus'
+ 

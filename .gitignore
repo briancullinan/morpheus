@@ -3,7 +3,7 @@
 #./build
 
 /libs/darwin/*
-/build/
+/build/*
 # generated targets
 /driver/index.html
 /driver/driver.js

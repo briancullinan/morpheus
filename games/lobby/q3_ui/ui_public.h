@@ -1,24 +1,4 @@
-/*
-===========================================================================
-Copyright (C) 1999-2005 Id Software, Inc.
-
-This file is part of Quake III Arena source code.
-
-Quake III Arena source code is free software; you can redistribute it
-and/or modify it under the terms of the GNU General Public License as
-published by the Free Software Foundation; either version 2 of the License,
-or (at your option) any later version.
-
-Quake III Arena source code is distributed in the hope that it will be
-useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with Quake III Arena source code; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-===========================================================================
-*/
+// Copyright (C) 1999-2000 Id Software, Inc.
 //
 #ifndef __UI_PUBLIC_H__
 #define __UI_PUBLIC_H__
@@ -125,7 +105,14 @@ typedef enum {
 	UI_FS_SEEK,
 	UI_SET_PBCLSTATUS,
 
-	UI_FLOOR = 107,
+	UI_MEMSET = 100,
+	UI_MEMCPY,
+	UI_STRNCPY,
+	UI_SIN,
+	UI_COS,
+	UI_ATAN2,
+	UI_SQRT,
+	UI_FLOOR,
 	UI_CEIL,
 
 	// engine extensions
@@ -163,7 +150,7 @@ typedef enum {
 //	void	UI_Shutdown( void );
 
 	UI_KEY_EVENT,
-//	void	UI_KeyEvent( int key, int down );
+//	void	UI_KeyEvent( int key );
 
 	UI_MOUSE_EVENT,
 //	void	UI_MouseEvent( int dx, int dy );
@@ -182,7 +169,6 @@ typedef enum {
 
 	UI_DRAW_CONNECT_SCREEN,
 //	void	UI_DrawConnectScreen( qboolean overlay );
-
 	UI_HASUNIQUECDKEY,
 // if !overlay, the background will be drawn, otherwise it will be
 // overlayed over whatever the cgame has drawn.

@@ -1,9 +1,6 @@
 // ZERO DEPENDENCY BARE-BONES JAVASCRIPT FILE-SYSTEM FOR 
 //   POSIX WEB-ASSEMBLY
 
-const { stringToAddress } = require("./sys_std")
-
-
 const VFS_NOW = 3
 const ST_FILE = 8
 const ST_DIR = 4

@@ -1,5 +1,8 @@
 let window = self;
 
+// TODO: WAS GOING TO USE THIS AS A TEMPLATE FOR 
+//   BOOKMARKS2PDF. NO SCRIPTING, NO ACE, JUST BACKEND
+//   CMD RUNNER. HIDDEN WINDOW?
 
 function doMessage(request, sender, reply) {
 	let AST

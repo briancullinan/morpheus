@@ -36,7 +36,8 @@ for(let i = 0; i < startKeys.length; i++) {
 	updateGlobalFunctions(startValues[i])
 }
 
-function updateGlobalBufferAndViews(buf) {
+function updateGlobalBufferAndViews() {
+	let buf = ENV.memory.buffer
 	if(typeof window != 'undefined') {
 		Module.HEAP8 = window.HEAP8 = new Int8Array(buf);
 		Module.HEAPU8 = window.HEAPU8 = new Uint8Array(buf);
@@ -89,7 +90,7 @@ function initEnvironment(ENGINE) {
 	}
 
 	// THIS IS ALSO KIND OF A TEST THAT WINDOW.INIT WORKS
-	updateGlobalBufferAndViews(ENV.memory.buffer)
+	updateGlobalBufferAndViews()
 	NET.cacheBuster = Date.now() // for comparing times
 	return ENV
 }
@@ -225,66 +226,67 @@ function initEngine(program) {
 
 function initBrowser() {
 	const viewport = document.getElementById('viewport-frame')
-	GL.canvas = viewport.getElementsByTagName('CANVAS')[0]
+	GL.canvas = document.getElementsByTagName('canvas')[0]
 	const ENGINE = initEnvironment({
 		SYS: SYS,
-		GL: EMGL,
+		GL: GL,
+		EMGL: EMGL,
 		INPUT: INPUT,
 	})
 	ENGINE.canvas = GL.canvas
 
-	const initFilesystem = new Promise(function (resolve) {
-		setTimeout(function () {
-			// might as well start this early, transfer 
-			//    IndexedDB from disk/memory to application memory
-			readAll()
-			resolve()
-		}, 200)
-	})
+	function initFilesystem() {
+		return new Promise(function (resolve) {
+			setTimeout(function () {
+				// might as well start this early, transfer 
+				//    IndexedDB from disk/memory to application memory
+				readAll()
+				resolve()
+			}, 200)
+		})
+	}
 
 	// slight delay to let window settle from big wasm data
-	const initPreload = new Promise(function (resolve) {
-		setTimeout(function () {
-			resolve(FS.virtual['quake3e.wasm'].contents)
-		}, 200)
-	})
+	function initPreload() {
+		return new Promise(function (resolve) {
+			setTimeout(function () {
+				resolve(FS.virtual['quake3e.wasm'].contents)
+			}, 200)
+		})
+	}
 
 	// no delay on remote loads
-	const initStreaming = fetch('./quake3e.wasm?time=' + NET.cacheBuster)
-		.catch(function (e) { console.error(e) })
-		.then(function (response) {
-			if(response && response.status == 200) {
-				if(isStreaming) {
-					return response
-				} else {
-					return response.arrayBuffer()
+	function initStreaming() {
+		return fetch('./quake3e.wasm?time=' + NET.cacheBuster)
+			.catch(function (e) { console.error(e) })
+			.then(function (response) {
+				if(response && response.status == 200) {
+					if(isStreaming) {
+						return response
+					} else {
+						return response.arrayBuffer()
+					}
 				}
+			})
+	}
+
+	isStreaming = false
+	return initFilesystem()
+		.then(function () {
+			if(typeof FS.virtual['quake3e.wasm'] != 'undefined') {
+				return Promise.resolve(initPreload())
+			} else {
+				isStreaming = true
+				return Promise.resolve(initStreaming())
 			}
 		})
-
-	if(typeof FS.virtual['quake3e.wasm'] != 'undefined') {
-		isStreaming = false
-		return initFilesystem
-			.then(initPreload)
-			.then(function (bytes) {
-				return initWasm(bytes, ENGINE)
-			})
-			.then(function (program) {
-				return updateEnvironment(program, ENGINE)
-			})
-			.then(initEngine)
-	} else {
-		isStreaming = true
-		return initFilesystem
-			.then(initStreaming)
-			.then(function (bytes) {
-				return initWasm(bytes, ENGINE)
-			})
-			.then(function (program) {
-				return updateEnvironment(program, ENGINE)
-			})
-			.then(initEngine)
-	}
+		.then(function (bytes) {
+			return initWasm(bytes, ENGINE)
+		})
+		.then(function (program) {
+			return updateEnvironment(program, ENGINE)
+		})
+		.then(initEngine)
 
 }
 

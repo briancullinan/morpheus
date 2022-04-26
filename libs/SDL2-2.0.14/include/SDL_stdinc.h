@@ -588,7 +588,7 @@ extern DECLSPEC char *SDLCALL SDL_iconv_string(const char *tocode,
 
 /* force builds using Clang's static analysis tools to use literal C runtime
    here, since there are possibly tests that are ineffective otherwise. */
-#if defined(__clang_analyzer__) && !defined(SDL_DISABLE_ANALYZE_MACROS)
+#if (defined(__clang_analyzer__) && !defined(SDL_DISABLE_ANALYZE_MACROS)) || defined(__WASM__)
 
 /* The analyzer knows about strlcpy even when the system doesn't provide it */
 #ifndef HAVE_STRLCPY
@@ -631,6 +631,16 @@ size_t strlcat(char* dst, const char* src, size_t size);
 #define SDL_vsscanf vsscanf
 #define SDL_snprintf snprintf
 #define SDL_vsnprintf vsnprintf
+#define SDL_getenv getenv
+#define SDL_atoi atoi
+#define SDL_pow pow
+#define SDL_sqrt sqrt
+#define SDL_sinf sinf
+#define SDL_ceil ceil
+#ifdef __WASM__
+#define SDL_Log Com_Printf
+#endif
+#define SDL_strtoll strtoll
 #endif
 
 SDL_FORCE_INLINE void *SDL_memcpy4(SDL_OUT_BYTECAP(dwords*4) void *dst, SDL_IN_BYTECAP(dwords*4) const void *src, size_t dwords)

@@ -49,8 +49,7 @@ function openDatabase(noWait) {
 }
 
 
-function loadEntry(event) {
-  let cursor = event.target.result
+function loadEntry(cursor) {
   if(!cursor) {
     return resolve()
   }
@@ -94,7 +93,13 @@ function readAll() {
     let objStore = transaction.objectStore(DB_STORE_NAME)
     let tranCursor = objStore.openCursor()
     return new Promise(function (resolve) {
-      tranCursor.onsuccess = loadEntry
+      tranCursor.onsuccess = function (event) {
+        let cursor = event.target.result
+        if(!cursor) {
+          return resolve()
+        }
+        loadEntry(cursor)
+      }
       tranCursor.onerror = function (error) {
         console.error(error)
         resolve(error)

@@ -119,9 +119,9 @@ function Sys_Exit(code) {
 		SYS.frameInterval = null
 	}
 	// redirect to lvlworld
-	let returnUrl = addressToString(Cvar_VariableString('cl_returnURL'))
+	let returnUrl = addressToString(Cvar_VariableString(stringToAddress('cl_returnURL')))
 	if(returnUrl) {
-		window.location = returnUrl
+	//	window.location = returnUrl
 	}
 }
 
@@ -198,14 +198,14 @@ function Sys_Frame() {
 	}
 }
 
-function Sys_notify(ifile, path) {
+function Sys_notify(ifile, path, fp) {
 	openDatabase().then(function (db) {
 		writeStore(ifile, path)
 	})
 	// TODO: ADD FILESYSTEM WATCHERS API INOTIFY 
 	//   THAT READS A LIST GENERATED HERE
 	if(typeof window.updateFilelist != 'undefined') {
-		updateFilelist(FS.pointers[pointer][3])
+		updateFilelist(path)
 	}
 }
 
@@ -293,8 +293,8 @@ var SYS = {
 	evaledCount: 0,
 	DebugBreak: function () { debugger },
 	DebugTrace: function () { console.log(new Error()) },
-	emscripten_resize_heap: _emscripten_resize_heap,
-	emscripten_get_heap_size: _emscripten_get_heap_size,
+	//emscripten_resize_heap: _emscripten_resize_heap,
+	//emscripten_get_heap_size: _emscripten_get_heap_size,
 	Sys_RandomBytes: Sys_RandomBytes,
 	Sys_Milliseconds: Sys_Milliseconds,
 	Sys_Microseconds: Sys_Microseconds,
