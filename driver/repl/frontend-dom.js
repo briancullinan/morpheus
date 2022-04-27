@@ -68,10 +68,28 @@ function getLimitedLine(prevLine) {
 function doStatus(request) {
 	let prevLine = getLimitedLine(request.line)
 
-	//if(!ACE.statusLine) {
-	//  createLineWidget('.', 0, 'morph_cursor')
-	//  ACE.statusLine = ace.session.lineWidgets[0]
-	//}
+	if(!ACE.statusLine) {
+	  createLineWidget('.', 0, 'morph_cursor') // TODO: morph_status
+	  ACE.statusLine = ace.session.lineWidgets[0]
+	}
+	ACE.statusLine.row = prevLine
+	// https://www.youtube.com/watch?v=tvguv-lvq3k - Bassnectar - The Matrix (ft. D.U.S.T.)
+	// TODO: put another instance of ACE in the status widget
+	debugger
+	let previousCall = request.stack.pop.split(' ')[0]
+	if(typeof ACE.libraryFunctions[previousCall] != 'undefined') {
+		if(ACE.libraryFunctions[previousCall]) { // incase null means we already looked
+			// slowly open function without affecting scroll
+		}
+	} else {
+		ACE.libraryFunctions[previousCall] = doLibraryLookup(previousCall)
+	}
+	if(request.stack
+		&& (!ACE.callStack 
+			|| ACE.callStack.length != request.stack.length)) {
+		ACE.callStack = request.stack
+	}
+
 	if(request.line >= ACE.libraryLines) {
 		ACE.previousNonLibrary = prevLine
 	} else {
@@ -81,6 +99,23 @@ function doStatus(request) {
 	statusWidgets[prevLine] = Date.now()
 }
 
+
+function doLibraryLookup(functionName) {
+	let libraryFiles = Object.keys(FS.virtual)
+		.filter(function (p) { return p.includes('/library/') })
+	for(let i = 0; i < libraryFiles.length; i++) {
+		let libraryCode = Array.from(FS.virtual[libraryFiles[i]].contents)
+			.map(function (c) { return String.fromCharCode(c) })
+			.join('')
+		if(libraryCode.includes('function ' + functionName)) {
+			return {
+				library: libraryCode,
+				name: libraryFiles[i],
+				// TODO: a hash value?
+			}
+		}
+	}
+}
 
 
 function onFrontend() {
@@ -129,6 +164,20 @@ function doAccessor(request) {
 		return
 
 		default:
+			if(request.accessor.startsWith('exports.')) {
+				// TODO: this is where we ask the Language-Server which file 
+				//   the symbol is in and figure out if it needs to be translated.
+				// for now though, just check driver/library/index.js
+				let lib = doLibraryLookup(request.accessor.split('.')[1])
+				if(lib) {
+					window['run-script'].value = JSON.stringify(lib)
+					window['run-accessor'].click()
+				} else {
+					window['run-script'].value = ''
+					window['run-accessor'].click()
+				}
+				return
+			}
 		debugger
 	}
 }

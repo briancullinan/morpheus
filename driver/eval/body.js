@@ -210,7 +210,8 @@ async function runBody(AST, runContext) {
 
 async function doPlay(runContext) {
 	try {
-		await createEnvironment(runContext)
+		let env = await createEnvironment(runContext)
+		await createRunContext(runContext, env)
 		threads[runContext.runId] = runContext
 		// attach debugger
 		await attachDebugger(runContext.senderId)

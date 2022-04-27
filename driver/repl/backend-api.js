@@ -21,20 +21,41 @@ async function doAccessor(i, member, AST, ctx, callback) {
 	// TODO: call tree? multiple level? 
 	let memberName = member.object.name + '.' + member.property.name
 	let response = await chrome.tabs.sendMessage(ctx.senderId, { accessor: memberName })
-	if(typeof response.function != 'undefined') {
+	if (typeof response.fail != 'undefined') {
+		throw new Error('Member access failed: ' + member)
+	} else if (typeof response.result == 'undefined') {
+		throw new Error('Couldn\'t understand response.')
+	}
+
+	if(typeof response.result.function != 'undefined') {
 		debugger
 		return function () {
 			debugger
 		}
-	} else if (typeof response.object != 'undefined') {
+	} else 
+	if (typeof response.result.library != 'undefined') {
+		// TODO: extract static functionality and convert to C# style static initializer
+		//   that way, in the future, I can do the same thing to game code for static-build.
+		let libraryAST = acorn.parse(
+			'(function () {\n' + response.result.library + '\n})()\n'
+			, {ecmaVersion: 2020, locations: true, onComment: []})
+		let newLibrary = libraryAST.body[0].expression.callee.body.body
+		for(let i = 0; i < newLibrary.length; i++) {
+			if(newLibrary[i].type == 'FunctionDeclaration'
+				&& newLibrary[i].id) {
+				let newFunction = await runFunction(newLibrary[i], ctx)
+				WEBDRIVER_API[newLibrary[i].id.name] = newFunction
+			}
+		}
+		if(WEBDRIVER_API.hasOwnProperty(member.property.name)) {
+			return WEBDRIVER_API[member.property.name]
+		}
+	} else 
+	if (typeof response.result.object != 'undefined') {
 		// TODO: add an _accessor to Objects?
 		debugger
-	} else if (typeof response.result != 'undefined') {
-		return response.result
-	} else if (typeof response.fail != 'undefined') {
-		throw new Error('Member access failed: ' + member)
 	} else {
-		throw new Error('Couldn\'t understand response.')
+		return response.result
 	}
 	// window.screenLeft, window.outerHeight
 }
@@ -116,6 +137,29 @@ function _Promise(runContext, resolve) {
 
 }
 
+async function createRunContext(runContext, env) {
+	Object.assign(runContext, {
+		timers: {},
+		bubbleStack: [],
+		bubbleLine: -1,
+		bubbleColumn: 0,
+		libraryLines: 0,
+		libraryLoaded: false,
+		localVariables: env,
+		localFunctions: {},
+		asyncRunners: 0,
+		async: false,
+		ended: false,
+		paused: false,
+		continue: false, // TODO: implement continuations / long jumps for debugger
+		// I think by pushing runStatement(AST[i]) <- i onto a stack and restoring for()?
+		// TODO: continuations, check for anonymous functions, variable/function declarations
+		// TODO: allow moving cursor to any symbol using address of symbol in AST
+	})
+	return runContext
+}
+
+
 async function createEnvironment(runContext) {
 	// TODO: this is where we add Chrome security model,
 	//    this they decided "IT'S TOO DANGEROUS"
@@ -164,24 +208,7 @@ async function createEnvironment(runContext) {
 		_makeLibraryAccessor: _makeLibraryAccessor,
 
 	}
-	Object.assign(runContext, {
-		timers: {},
-		bubbleStack: [],
-		bubbleLine: -1,
-		bubbleColumn: 0,
-		libraryLines: 0,
-		libraryLoaded: false,
-		localVariables: env,
-		localFunctions: {},
-		asyncRunners: 0,
-		async: false,
-		ended: false,
-		paused: false,
-		continue: false, // TODO: implement continuations / long jumps for debugger
-		// I think by pushing runStatement(AST[i]) <- i onto a stack and restoring for()?
-		// TODO: continuations, check for anonymous functions, variable/function declarations
-		// TODO: allow moving cursor to any symbol using address of symbol in AST
-	})
+	return env
 }
 
 

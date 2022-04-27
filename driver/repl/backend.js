@@ -79,11 +79,16 @@ function doAssign(varName, lineNumber, bubbleColumn, runContext) {
 
 
 async function doStatus(runContext, doSleep) {
+	if(!runContext.senderId) {
+		return
+	}
 	try {
 		chrome.tabs.sendMessage(runContext.senderId, { 
 			status: '.',
 			// always subtract 1 because code is wrapping in a 1-line function above
 			line: runContext.bubbleLine - 1,
+			stack: runContext.bubbleStack,
+			file: runContext.bubbleFile,
 		}, function(response) {
 	
 		});
@@ -166,6 +171,7 @@ function doError(err, runContext) {
 			error: err.message + '',
 			// always subtract 1 because code is wrapping in a 1-line function above
 			line: runContext.bubbleLine - 1,
+			file: runContext.bubbleFile,
 			stack: runContext.bubbleStack,
 			// LOOK AT THIS FANCY SHIT GOOGLE CHROME DEBUGGER!
 			//   MAKE A LIST OF ASSIGNMENTS NEARBY AND SEND THEIR CURRENT VALUE TO THE FRONTEND

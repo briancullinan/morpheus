@@ -209,6 +209,11 @@ async function runCall(AST, runContext) {
     throw new Error('Function not defined: ' + AST.callee.name)
   }
 
+  let previousFile = runContext.bubbleFile
+  if(calleeFunc.filename) {
+    runContext.bubbleFile = calleeFunc.filename
+  }
+
   let beforeLine = runContext.bubbleLine
   try {
     let result;
@@ -242,9 +247,10 @@ async function runCall(AST, runContext) {
     if(!isStillRunning(runContext)) {
       return // bubble up
     }
-    if(runContext.libraryLines == 0) {
-      throw new Error('Library not loaded!')
-    }
+    // TODO: check for auto imports
+    //if(runContext.libraryLines == 0) {
+    //  throw new Error('Library not loaded!')
+    //}
 
     // automatically pause for a second on user functions
     //   to allow users to observe the result of the API
@@ -257,6 +263,8 @@ async function runCall(AST, runContext) {
 
   } catch (e) {
     doError(e, runContext)
+  } finally {
+    runContext.bubbleFile = previousFile
   }
 
 }

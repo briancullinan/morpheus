@@ -32,6 +32,7 @@ function anyParentsCollapsed(segments) {
 		}, 0)
 }
 
+
 function updateFilelist(filepath) {
 	if(!ACE.fileList) {
 		ACE.fileList = document.getElementById('file-list')
@@ -42,7 +43,16 @@ function updateFilelist(filepath) {
 	if(!ACE.filetypes) {
 		ACE.filetypes = {}
 	}
-
+	if(!ACE.filelistWidgets) {
+		ACE.filelistWidgets = [
+			'Local Storage'
+		]
+		ACE.filelistWidgetRows = [
+			0
+		]
+	}
+	ACE.filelistWidgetRows.sort()
+	
 	let newFiles = Object.keys(FS.virtual)
 	let startLength = newFiles.length
 
@@ -62,6 +72,12 @@ function updateFilelist(filepath) {
 	newFiles = newFiles.sort().filter(function (f, i, arr) { 
 		return f && arr.indexOf(f) == i
 	})
+
+	for(let i = 0; i < newFiles.length; i++) {
+		if(ACE.filelistWidgets[i]) {
+			newFiles.splice(i, 0, ACE.filelistWidgets[i]);
+		}
+	}
 
 	if(ACE.fileslist) {
 		let prevCollapse = ACE.filescollapsed
@@ -137,6 +153,18 @@ function doFileClick(evt) {
 }
 
 
+function getWidgetAtRow(row) {
+	let count = 0
+	do {
+		if(ACE.filelistWidgetRows[count] == row - count) {
+			return ACE.filelistWidgets[row - count]
+		}
+		count++
+	} while (count < ACE.filelistWidgetRows.length
+		&& ACE.filelistWidgetRows[count] < row)
+}
+
+
 
 // DO THE SAME KIND OF VIRTUAL RENDERING TECHNIQUE ACE USES ON CODE,
 //   AND APPLY IT TO THE FILE LIST IN CASE THERE'S EVER LIKE, 10,000
@@ -207,14 +235,30 @@ function renderFilelist() {
 			let segments = ACE.fileslist[j].split('/')
 			link.setAttribute('aria-id', j) // WTF WAS THIS CRAP???
 			link.innerText = segments.slice(-1)[0]
-			link.style.paddingLeft = (segments.length * 20 + 20) + 'px'
 			link.style.backgroundPosition = ((segments.length - 1) * 20 + 10) + 'px 50%'
-			if(isDirectory(ACE.fileslist[j])) {
-				if(item.className != 'folder')
-					item.className = 'folder'
+			if(getWidgetAtRow(j)) {
+				link.style.paddingLeft = '10px'
+				if(!item.classList.contains('filelist-widget'))
+					item.classList.add('filelist-widget')
+				if(!ACE.filescollapsed[ACE.fileslist[j]] && !item.classList.contains('open'))
+					item.classList.add('open')
+				if(ACE.filescollapsed[ACE.fileslist[j]] && item.classList.contains('open'))
+					item.classList.remove('open')
 			} else {
-				if(item.className != 'file')
+				link.style.paddingLeft = (segments.length * 20 + 20) + 'px'
+				if(isDirectory(ACE.fileslist[j])) {
+					if(!item.classList.contains('folder'))
+						item.classList.add('folder')
+					if(!ACE.filescollapsed[ACE.fileslist[j]] && !item.classList.contains('open'))
+						item.classList.add('open')
+					if(ACE.filescollapsed[ACE.fileslist[j]] && item.classList.contains('open'))
+						item.classList.remove('open')
+					if(!item.classList.contains('file'))
+						item.classList.remove('file')
+				} else
+				if(item.className != 'file') {
 					item.className = 'file'
+				}
 			}
 			item.style.display = 'block'
 		}

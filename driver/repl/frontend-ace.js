@@ -201,17 +201,20 @@ function updatePlay() {
 
 function initLibraries() {
 	// automatically load libraries
-	let buf = stringToAddress('DEADBEEF') // pointer to pointer
-	let length
-	if ((length = FS_ReadFile(stringToAddress('driver/library.js'), buf)) 
-			> 0 && HEAPU32[buf >> 2] > 0
-	) {
-		let imageView = Array.from(HEAPU8.slice(HEAPU32[buf >> 2], HEAPU32[buf >> 2] + length))
-		let utfEncoded = imageView.map(function (c) { return String.fromCharCode(c) }).join('')
-		FS_FreeFile(HEAPU32[buf >> 2])
-		ACE.libraryCode = utfEncoded
-		ACE.libraryLines = utfEncoded.split('\n').length
-	}
+//	let buf = stringToAddress('DEADBEEF') // pointer to pointer
+//	let length
+//	if ((length = FS_ReadFile(stringToAddress('driver/library.js'), buf)) 
+//			> 0 && HEAPU32[buf >> 2] > 0
+//	) {
+//		let imageView = Array.from(HEAPU8.slice(HEAPU32[buf >> 2], HEAPU32[buf >> 2] + length))
+//		let utfEncoded = imageView.map(function (c) { return String.fromCharCode(c) }).join('')
+//		FS_FreeFile(HEAPU32[buf >> 2])
+	// THIS SHOULD REALLY BE SOMETHING LINE 'IMPORT...' from settings.json: auto-imports: []
+	// default.json ?? allow Q3 to read settings from json/yml
+	//   then I can modularize cvar system.
+	ACE.libraryCode = '\n\n'
+	ACE.libraryLines = 3 // utfEncoded.split('\n').length
+//	}
 
 }
 
