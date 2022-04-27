@@ -17,23 +17,23 @@ async function runLoop(init, test, update, body, runContext) {
 	let safety = LONG_LOOPS
 	for(;testResults && safety > 0; safety--) {
 		let thisAndThat = await runThisAndThat(body, update, runContext)
+		result = thisAndThat[0]
 		if(runContext.broken) {
 			runContext.broken = false
-			if(!isStillRunning(runContext)) {
-				return
-			}
 			break
 		}
 		if(!isStillRunning(runContext)) {
 			return
 		}
-		result = thisAndThat[0]
 		testResults = await runStatement(0, [test], runContext)
 		if(!isStillRunning(runContext)) {
 			return
 		}
 	}
-	// SO I'M NOT A HYPOCRITE LETS PUT SOME REASONABLE BOUNDS!
+	if(!isStillRunning(runContext)) {
+		return
+	}
+// SO I'M NOT A HYPOCRITE LETS PUT SOME REASONABLE BOUNDS!
 	if(safety == 0) {
 		throw new Error('Long running for loop!')
 	}
@@ -45,6 +45,10 @@ async function runWhile(AST, runContext) {
   let safety = LONG_LOOPS
   do {
     result = await runStatement(0, [AST.body], runContext)
+		if(runContext.broken) {
+			runContext.broken = false
+			break
+		}
     if(!isStillRunning(runContext)) {
       return
     }
@@ -53,4 +57,8 @@ async function runWhile(AST, runContext) {
       return
     }
   } while (testResults && --safety > 0)
+	if(!isStillRunning(runContext)) {
+		return
+	}
+	return result
 }

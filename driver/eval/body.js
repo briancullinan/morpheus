@@ -82,9 +82,9 @@ async function runStatement(i, AST, runContext) {
 			return await runStatement(0, [AST[i].argument], runContext)
 		} else
 		if(AST[i].type == 'ReturnStatement') {
-			runContext.returned = true
 			if(AST[i].argument && AST[i].argument.type) {
 				runContext.bubbleReturn = await runStatement(0, [AST[i].argument], runContext)
+				runContext.returned = true
 				return runContext.bubbleReturn
 			} else {
 				return
@@ -201,7 +201,7 @@ async function runBody(AST, runContext) {
 
 		let result = await runParameters(AST, runContext)
 		if(!isStillRunning(runContext)) {
-			return
+			return result.pop()
 		}
 		// remove anything created in the past context
 		//Object.assign(runContext.localFunctions, startFuncs)

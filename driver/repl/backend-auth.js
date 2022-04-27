@@ -17,7 +17,7 @@ async function doMorpheusPass(required) {
 		morphKey = JSON.parse(result._morpheusKey)
 	}
 	let response = await currentContext.localFunctions['doLoginDialog']()
-	debugger
+	currentContext.returned = false // because fuck-arounds above, ^
 	if(!isStillRunning(currentContext)) {
 		return
 	}
@@ -96,6 +96,7 @@ async function doMorpheusKey() {
 	}
 	// chrome.storage.sync.set({ mytext: txtValue });
 	let response = await currentContext.localFunctions['doKeyDialog']()
+	currentContext.returned = false // because fuck-arounds above, ^
 	if(!isStillRunning(currentContext)) {
 		return
 	}

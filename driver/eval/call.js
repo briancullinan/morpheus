@@ -15,7 +15,7 @@ async function runParameters(params, runContext) {
 		let arg = params[i]
 		result.push(await runStatement(0, [arg], runContext))
 		if(!isStillRunning(runContext)) {
-			return // bubble up
+			return result // bubble up
 		}
 	}
 	return result
@@ -89,7 +89,7 @@ async function runCallStatements(runContext, functionName, parameterDefinition, 
 		} else {
 			throw new Error('Attribute @After not found: ' + after)
 		}
-		result = await afterFunc(result, runContext)
+		runContext.bubbleReturn = result = await afterFunc(result, runContext)
 	}
 
 	//Object.assign(runContext.localVariables, startVars) // reset references
@@ -260,7 +260,11 @@ async function runCall(AST, runContext) {
         console.log('WARNING: not bubbling correctly: ' + functionName)
       }
       result = runContext.bubbleReturn
+      delete runContext.bubbleReturn
     }
+    // must come after runContext.returned is adjusted 
+    //   because this bubbles out of whatever block or 
+    //   for-loop is in scope.
     if(!isStillRunning(runContext)) {
       return // bubble up
     }
