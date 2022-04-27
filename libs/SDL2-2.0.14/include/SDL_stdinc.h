@@ -515,9 +515,11 @@ extern DECLSPEC int SDLCALL SDL_vsscanf(const char *text, const char *fmt, va_li
 extern DECLSPEC int SDLCALL SDL_snprintf(SDL_OUT_Z_CAP(maxlen) char *text, size_t maxlen, SDL_PRINTF_FORMAT_STRING const char *fmt, ... ) SDL_PRINTF_VARARG_FUNC(3);
 extern DECLSPEC int SDLCALL SDL_vsnprintf(SDL_OUT_Z_CAP(maxlen) char *text, size_t maxlen, const char *fmt, va_list ap);
 
+#ifndef __WASM__
 #ifndef HAVE_M_PI
 #ifndef M_PI
 #define M_PI    3.14159265358979323846264338327950288   /**< pi */
+#endif
 #endif
 #endif
 
@@ -643,10 +645,12 @@ size_t strlcat(char* dst, const char* src, size_t size);
 #define SDL_strtoll strtoll
 #endif
 
+#ifndef __WASM__
 SDL_FORCE_INLINE void *SDL_memcpy4(SDL_OUT_BYTECAP(dwords*4) void *dst, SDL_IN_BYTECAP(dwords*4) const void *src, size_t dwords)
 {
     return SDL_memcpy(dst, src, dwords * 4);
 }
+#endif
 
 /* Ends C function definitions when using C++ */
 #ifdef __cplusplus

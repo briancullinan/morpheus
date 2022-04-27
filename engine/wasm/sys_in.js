@@ -28,7 +28,7 @@ function GLimp_StartDriverAndSetMode(mode, modeFS, fullscreen, fallback) {
   }
 
   // set the window to do the grabbing, when ungrabbing this doesn't really matter
-  if(!INPUT.firstClick) {
+  if(!HEAPU32[first_click>>2]) {
     //GL.canvas.requestPointerLock();
   } else {
     SDL_ShowCursor()
@@ -110,7 +110,7 @@ function InputPushFocusEvent (evt) {
 
 function InputPushMovedEvent (evt) {
   if (evt.toElement === null && evt.relatedTarget === null) {
-    INPUT.firstClick = true
+    HEAPU32[first_click>>2] = 1
     if(SYS.frameInterval) {
       clearInterval(SYS.frameInterval)
     }
@@ -289,8 +289,6 @@ function InputPushTextEvent (evt) {
       if(Key_GetCatcher() & KEYCATCH_CONSOLE) {
         SDL_ShowCursor()
         HEAP32[gw_active >> 2] = false
-      } else if(!INPUT.firstClick) {
-        //GL.canvas.requestPointerLock();      
       }
     }, 100)
   } else {
@@ -330,18 +328,8 @@ function InputPushWheelEvent(evt) {
 function InputPushMouseEvent (evt) {
   let down = evt.type == 'mousedown'
 
-  if(down && INPUT.firstClick) {
-    INPUT.firstClick = false
-    SNDDMA_Init()
-
-    HEAP32[gw_active >> 2] = 1
-    HEAP32[s_soundStarted >> 2] = 1
-    HEAP32[s_soundMuted >> 2] = 0
-    S_Base_SoundInfo();
-    S_Base_BeginRegistration()
-}
-
-  if(!(Key_GetCatcher() & KEYCATCH_CONSOLE)) {
+  if(!(Key_GetCatcher() & KEYCATCH_CONSOLE)
+    || HEAPU32[first_click>>2]) {
     if (evt.type == 'mousemove') {
       if(Key_GetCatcher() === 0) {
         Sys_QueEvent( Sys_Milliseconds(), SE_MOUSE, 
@@ -362,7 +350,6 @@ function InputPushMouseEvent (evt) {
       SDL_ShowCursor()
       // ruins sound //HEAP32[gw_active >> 2] = false
     }
-    //INPUT.firstClick = true
     return;
   }
 
@@ -688,7 +675,6 @@ var INPUT = {
   touchhats: [[0,0],[0,0],[0,0],[0,0]], // x/y values for nipples
   joysticks: [],
   keystrings: {},
-  firstClick: true,
   IN_Init: IN_Init,
   GLimp_Shutdown: GLimp_Shutdown,
   GLimp_StartDriverAndSetMode:GLimp_StartDriverAndSetMode,
@@ -699,8 +685,5 @@ var INPUT = {
   SDL_SetWindowGrab: SDL_SetWindowGrab,
   Com_MaxFPSChanged: Com_MaxFPSChanged,
   Sys_ConsoleInput: Sys_ConsoleInput,
-  IN_FirstClick: function () {
-    return INPUT.firstClick
-  }
 }
 

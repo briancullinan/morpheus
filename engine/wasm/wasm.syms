@@ -26,10 +26,10 @@ Sys_Exit
 Sys_longjmp
 Sys_setjmp
 
-
+Sys_gettime
 popen
 pclose
-clock_gettime
+Sys_clock_gettime
 
 updateGlobalBufferAndViews
 Com_RealTime
@@ -39,7 +39,6 @@ SDL_StopTextInput
 NET_GetPacket
 NET_AdrToString
 Sys_IsLANAddress
-IN_FirstClick
 SDL_GetTicks
 SDL_Delay
 Sys_SendPacket

@@ -62,9 +62,7 @@ MUSL_OBJS          := string/stpcpy.o  string/memset.o  string/memcpy.o    \
 											\
 											multibyte/mbrtowc.o   multibyte/mbstowcs.o multibyte/wctomb.o \
 											multibyte/mbsrtowcs.o multibyte/wcrtomb.o  multibyte/mbsinit.o \
-											multibyte/mbtowc.o    multibyte/btowc.o    multibyte/internal.o \
-											\
-											time/gettimeofday.o
+											multibyte/mbtowc.o    multibyte/btowc.o    multibyte/internal.o
 
 MORPH_OBJS         := $(addprefix $(BUILD_DIR)/sdl/,$(SDL_OBJS)) \
 											$(addprefix $(BUILD_DIR)/musl/,$(MUSL_OBJS)) \

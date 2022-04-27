@@ -41,8 +41,6 @@ int Sys_getc(FILE *f);
 #define getc(f) Sys_getc(f)
 int Sys_putc(int c, FILE *f);
 #define putc(c, f) Sys_putc(c, f)
-int Sys_time(int *t);
-#define time(t) Sys_time(t)
 int Sys_access(const char *, int);
 #define access(p, i) Sys_access(p, i)
 void Sys_FClose(FILE *f);
@@ -54,6 +52,14 @@ int Sys_FTell(FILE *f);
 #define ftell(p) Sys_FTell(p)
 int Sys_FSeek(FILE *f, long offset, int mode);
 #define fseek(a, b, c) Sys_FSeek(a, b, c)
+
+
+int Sys_gettime (clockid_t, struct timespec *);
+#define clock_gettime(t, z) Sys_gettime(t, z)
+int Sys_time(int *t);
+#define time(t) Sys_time(t)
+
+
 
 #endif
 

@@ -26,11 +26,15 @@ async function doDialog(dialog) {
 			break
 		}
 	} while(--tryTimes > 0)
+  //chrome.tabs.sendMessage({
+  //  accessor: false // hide all dialogs
+  //})
   return response
 }
 
 async function doLoginDialog() {
-  let morphKey = chrome.profiles.list() // LOL! WTF IS THAT? PIE IN SKY!
+  // LOL! WTF IS THAT? PIE IN SKY!
+  let morphKey = chrome.profiles.list() 
   let loginDialog = { 
     accessor: '_enterLogin',
     title: 'Enter a system password.',

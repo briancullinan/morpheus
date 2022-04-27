@@ -144,10 +144,15 @@ function Com_RealTime(tm) {
 	return t
 }
 
+var _emscripten_get_now_is_monotonic = true;
 
+function _emscripten_get_now() {
+	return performance.now()
+}
 
 function clock_gettime(clk_id, tp) {
-	var now;
+	let now;
+  clk_id = HEAPU32[clk_id>>2]
 	if (clk_id === 0) {
 			now = Date.now()
 	} else if ((clk_id === 1 || clk_id === 4) && _emscripten_get_now_is_monotonic) {
@@ -159,11 +164,6 @@ function clock_gettime(clk_id, tp) {
 	HEAP32[tp >> 2] = now / 1e3 | 0;
 	HEAP32[tp + 4 >> 2] = now % 1e3 * 1e3 * 1e3 | 0;
 	return 0
-}
-
-function Sys_time(tm) {
-	// locale time is really complicated
-	//   use simple Q3 time structure
 }
 
 var DATE = {
@@ -212,13 +212,15 @@ typedef struct qtime_s {
     return stringToAddress(new Date(t).toString())
   },
   Com_RealTime: Com_RealTime,
+	// locale time is really complicated
+	//   use simple Q3 time structure
   Sys_time: Com_RealTime,
   Sys_RandomBytes: Sys_RandomBytes,
   Sys_Milliseconds: Sys_Milliseconds,
   Sys_Microseconds: Sys_Microseconds,
+  Sys_gettime: clock_gettime,
   clock_time_get: function () { debugger },
 	clock_res_get: function () { debugger },
-	clock_gettime: clock_gettime,
 }
 
 const DEFAULT_OUTPUT_DEVNAME = "System audio output device"

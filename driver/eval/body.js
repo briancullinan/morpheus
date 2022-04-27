@@ -10,8 +10,8 @@ const DEFAULT_SHORT_DELAY = 100
 
 // INTERESTING FOR CODE REVEIWS, HABIT OF EXTRACTING DOUBLE NEGATIVES?
 function isStillRunning(runContext) {
-	if(!runContext.paused && !runContext.ended
-			&& !runContext.broken) {
+	if(!runContext.paused && !runContext.ended 
+		&& !runContext.broken && !runContext.returned) {
 		return true
 	}
 	return false
@@ -82,7 +82,13 @@ async function runStatement(i, AST, runContext) {
 			return await runStatement(0, [AST[i].argument], runContext)
 		} else
 		if(AST[i].type == 'ReturnStatement') {
-			return await runStatement(0, [AST[i].argument], runContext)
+			runContext.returned = true
+			if(AST[i].argument && AST[i].argument.type) {
+				runContext.bubbleReturn = await runStatement(0, [AST[i].argument], runContext)
+				return runContext.bubbleReturn
+			} else {
+				return
+			}
 		} else
 		if(AST[i].type == 'VariableDeclaration') {
 			let result

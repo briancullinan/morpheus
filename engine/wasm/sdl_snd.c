@@ -198,17 +198,16 @@ static int SNDDMA_KHzToHz( int khz )
 	}
 }
 
-
-#ifdef __WASM__
-extern qboolean IN_FirstClick( void );
-#endif
-
 /*
 ===============
 SNDDMA_Init
 ===============
 */
 #ifdef __WASM__
+__attribute__((visibility("default")))
+qboolean first_click = qtrue;
+
+
 Q_EXPORT
 #endif
 qboolean SNDDMA_Init( void )
@@ -218,7 +217,7 @@ qboolean SNDDMA_Init( void )
 	int tmp;
 
 #ifdef __WASM__
-	if(IN_FirstClick()) {
+	if(first_click) {
 		return qfalse;
 	}
 #endif

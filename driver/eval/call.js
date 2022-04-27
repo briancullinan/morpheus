@@ -254,7 +254,13 @@ async function runCall(AST, runContext) {
     }
     runContext.bubbleMember = null
     runContext.bubbleProperty = ''
-
+    if(runContext.returned) {
+      runContext.returned = false
+      if(result !== runContext.bubbleReturn) {
+        console.log('WARNING: not bubbling correctly: ' + functionName)
+      }
+      result = runContext.bubbleReturn
+    }
     if(!isStillRunning(runContext)) {
       return // bubble up
     }

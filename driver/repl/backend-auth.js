@@ -17,6 +17,7 @@ async function doMorpheusPass(required) {
 		morphKey = JSON.parse(result._morpheusKey)
 	}
 	let response = await currentContext.localFunctions['doLoginDialog']()
+	debugger
 	if(!isStillRunning(currentContext)) {
 		return
 	}

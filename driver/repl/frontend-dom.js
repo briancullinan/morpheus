@@ -189,6 +189,9 @@ function doAccessor(request) {
 		return
 
 		default:
+			if(request.accessor === false) {
+				hideAllDialogs()
+			} else
 			if(request.accessor.startsWith('exports.')) {
 				// TODO: this is where we ask the Language-Server which file 
 				//   the symbol is in and figure out if it needs to be translated.
@@ -208,6 +211,17 @@ function doAccessor(request) {
 }
 
 
+function hideAllDialogs() {
+	let dialogs = document.getElementsByClassName('dialog')
+	for(let i = 0; i < dialogs.length; i++) {
+		dialogs[i].style.display = 'none'
+		if(dialogs[i].timeout) {
+			clearTimeout(dialogs[i].timeout)
+		}
+	}
+}
+
+
 
 function doError(request) {
 	if(request.error.includes('No script')) {
@@ -219,16 +233,10 @@ function doError(request) {
 
 	document.body.classList.remove('running')
 	document.body.classList.add('stopped')
+	hideAllDialogs()
 	// SEARCH GITHUB: getElementsByClassName('.
 	//   WHAT IF MY BOT COULD DEBUG OTHER PEOPLE'S CODE
 	//   WHILE THEY ARE SLEEP LIKE THE SANDMAN?
-	let dialogs = document.getElementsByClassName('dialog')
-	for(let i = 0; i < dialogs.length; i++) {
-		dialogs[i].style.display = 'none'
-		if(dialogs[i].timeout) {
-			clearTimeout(dialogs[i].timeout)
-		}
-	}
 	if (!ace.session) {
 		return
 	}
@@ -278,9 +286,17 @@ function collectForm(dialog) {
 		}
 	}
 	// in case of any other snoopy/loggy plugins
-	let encrypted = crypt(ACE.lastRunId, JSON.stringify(formResults))
-	window['run-script'].value = '"' + encrypted + '"'
+	let waitTime = 100
+	if(!document.body.classList.contains('accessor')) {
+		// whoops missed the dialog
+		waitTime = 300
+	}
 	clearTimeout(dialog.timeout)
+	setTimeout(function () {
+		let encrypted = crypt(ACE.lastRunId, JSON.stringify(formResults))
+		window['run-script'].value = '"' + encrypted + '"'
+		window['run-accessor'].click()
+	}, waitTime)
 }
 
 function createDialog(request) {
@@ -375,7 +391,6 @@ function createDialog(request) {
 			newField = document.createElement('BUTTON')
 			newField.type = 'submit'
 			newField.onclick = collectForm.bind(newField, newDialog)
-			newField.className = 'run-accessor'
 			newField.id = fields[i]
 			newField.innerText = fields[i]
 			newDialog.children[0].appendChild(newField)
@@ -425,12 +440,16 @@ function doDialog(request, newDialog) {
 	// IMPORTANT: prevents inputs from display in game
 	INPUT.editorActive = true
 	newDialog.timeout = setTimeout(function () {
+		// debounce the dialog a little so scripts can
+		//   run and get an answer, or continue without an answer
+		document.body.classList.remove('accessor') // but leave dialog open in case prompted again
 		window['run-script'].value = ''
 		// circle back around so server can always control dialog
+		//   if we don't get a response within 400ms close the dialog
 		newDialog.timeout = setTimeout(function () {
 			newDialog.style.display = 'none'
-		}, 1200)
-	}, 2200)
+		}, 400)
+	}, 2800)
 	// async skip click
 	return newDialog
 }

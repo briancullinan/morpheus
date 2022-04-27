@@ -32,7 +32,7 @@ WASI_INCLUDES  := \
 
 BASE_CFLAGS    := \
 	$(CFLAGS) -Wall --target=wasm32 \
-	-Wimplicit -fstrict-aliasing \
+	-Wimplicit -fstrict-aliasing  -fno-inline \
 	-ftree-vectorize -fsigned-char -MMD \
 	-ffast-math -fno-short-enums  -fPIC \
 	-D_XOPEN_SOURCE=700 \
@@ -44,8 +44,7 @@ BASE_CFLAGS    := \
 	-D_WASI_EMULATED_MMAN=1 \
 	-std=gnu11
 
-CLIENT_CFLAGS  := \
-	$(BASE_CFLAGS) $(WASI_INCLUDES)
+CLIENT_CFLAGS  := $(BASE_CFLAGS) $(WASI_INCLUDES)
 
 WASI_SYSROOT   := libs/wasi-sysroot/lib/wasm32-wasi
 WASI_LDFLAGS   := $(LDFLAGS) \
@@ -181,7 +180,7 @@ ENGINE_INCLUDES:= \
 	-I$(SDL_SOURCE)/include \
 	-Iengine/wasm
 
-ENGINE_CFLAGS  := $(CLIENT_CFLAGS) \
+ENGINE_CFLAGS  := $(BASE_CFLAGS) \
 	-DGL_GLEXT_PROTOTYPES=1 -DGL_ARB_ES2_compatibility=1 \
 	-DGL_EXT_direct_state_access=1 -DUSE_Q3KEY=1 \
 	-DBUILD_MORPHEUS=1  -DUSE_RECENT_EVENTS=1 \
@@ -189,7 +188,8 @@ ENGINE_CFLAGS  := $(CLIENT_CFLAGS) \
 	-DUSE_SDL=0         -DNO_VM_COMPILED=1 \
 	-DUSE_ABS_MOUSE=1   -DUSE_LAZY_LOAD=1 \
 	-DUSE_LAZY_MEMORY=1 -DUSE_MASTER_LAN=1 \
-	$(ENGINE_INCLUDES)
+	$(ENGINE_INCLUDES) \
+	$(WASI_INCLUDES)
 
 $(BUILD_DIR)/engine/%.o: $(ENGINE_SOURCE)/botlib/%.c
 	$(echo_cmd) "BOTLIB_CC $<"
@@ -229,7 +229,7 @@ SDL_CFLAGS          := \
 	$(ENGINE_CFLAGS) -Wno-macro-redefined \
 	-DSDL_VIDEO_DISABLED=1 -DSDL_JOYSTICK_DISABLED=1 \
 	-DSDL_SENSOR_DISABLED=1 -DSDL_HAPTIC_DISABLED=1 \
-	-DSDL_TIMER_UNIX=1 -DHAVE_CLOCK_GETTIME=1 \
+	-DSDL_TIMER_UNIX=1 -DHAVE_MEMORY_H=1 -DHAVE_CLOCK_GETTIME=1 \
 	-D_GNU_SOURCE=1 -DHAVE_STDLIB_H=1 -DHAVE_GETENV=0 \
 	-DHAVE_UNISTD_H=1 -DHAVE_MATH_H=1 -DHAVE_M_PI=1 \
 	-DHAVE_STDIO_H=1 -DHAVE_ALLOCA_H=1 -DHAVE_STRING_H=1 \
@@ -330,6 +330,8 @@ ifneq ($(BUILD_DIR),)
 
 clean:
 	-rm ./$(BUILD_DIR)/*/*.o ./$(BUILD_DIR)/*/*.d
+	-rm ./$(BUILD_DIR)/*/*/*.o ./$(BUILD_DIR)/*/*/*.d
+	-rm ./$(BUILD_DIR)/*/*/*/*.o ./$(BUILD_DIR)/*/*/*/*.d
 	-rm ./$(BUILD_DIR)/*.wasm $(BUILD_DIR)/*.html
 
 endif
