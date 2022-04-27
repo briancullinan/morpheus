@@ -1,4 +1,7 @@
 
+const LONG_LOOPS = 10000
+
+
 async function runLoop(init, test, update, body, runContext) {
 	let result
 	if(body.type != 'BlockStatement') {
@@ -11,9 +14,16 @@ async function runLoop(init, test, update, body, runContext) {
 
 	let testResults = initAndTest[1]
 	// TODO: turn off safety feature with an attribute @LongLoops
-	let safety = 10000
+	let safety = LONG_LOOPS
 	for(;testResults && safety > 0; safety--) {
 		let thisAndThat = await runThisAndThat(body, update, runContext)
+		if(runContext.broken) {
+			runContext.broken = false
+			if(!isStillRunning(runContext)) {
+				return
+			}
+			break
+		}
 		if(!isStillRunning(runContext)) {
 			return
 		}
@@ -32,7 +42,7 @@ async function runLoop(init, test, update, body, runContext) {
 
 async function runWhile(AST, runContext) {
   let result
-  let safety = 10000
+  let safety = LONG_LOOPS
   do {
     result = await runStatement(0, [AST.body], runContext)
     if(!isStillRunning(runContext)) {

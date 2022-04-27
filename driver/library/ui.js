@@ -16,8 +16,13 @@ async function doDialog(dialog) {
 	let tryTimes = 15
 	let response
 	do {
-		response = await chrome.tabs.sendMessage(dialog)
-		if(response && response.result) {
+    //try {
+      response = await chrome.tabs.sendMessage(dialog)
+      
+    //} catch (e) {
+    //  if(e.message.includes(''))
+    //}
+		if(response && typeof response.result != 'undefined') {
 			break
 		}
 	} while(--tryTimes > 0)

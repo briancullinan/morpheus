@@ -38,12 +38,15 @@ async function doMorpheusPass(required) {
 			}
 			return decrypt(morpheusPass, data)
 		}
-	})(response.pass)
+	// decrypt with the current runId incase of extra snoopy/loggy plugins
+	})(JSON.parse(decrypt(currentContext.runId, response.pass)))
+
 	temporaryEncrypter = (function (morpheusPass) {
 		return async function (data) {
 			return crypt(morpheusPass, data)
 		}
-	})(response.pass)
+	// decrypt with the current runId incase of extra snoopy/loggy plugins
+	})(JSON.parse(decrypt(currentContext.runId, response.pass)))
 
 	// STORE THE USERNAME, SO WE DON'T HAVE TO KEEP TYPING IT
 	//   THE HASH USERNAME b****n@g****m AND THE PASSWORD ARE

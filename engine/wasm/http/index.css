@@ -223,8 +223,13 @@ body > img {
   background-image: url( "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctitle%3Edefault_folder_opened%3C/title%3E%3Cpath d='M27.4,5.5H18.2L16.1,9.7H4.3V26.5H29.5V5.5Zm0,18.7H6.6V11.8H27.4Zm0-14.5H19.2l1-2.1h7.1V9.7Z' style='fill:%23dcb67a'/%3E%3Cpolygon points='25.7 13.7 0.5 13.7 4.3 26.5 29.5 26.5 25.7 13.7' style='fill:%23dcb67a'/%3E%3C/svg%3E" );
 }
 #file-list .filelist-widget {
-  background: #222;
-  color: white;
+  background: #272727;
+}
+#file-list .filelist-widget a {
+  color: #EEE;
+}
+#file-list .filelist-widget a:hover {
+  background-color: transparent;
 }
 
 #file-list a:hover {
@@ -237,6 +242,12 @@ body > img {
 .morph_error .ace_comment {
   font-weight: bold;
   color: #B0B080;
+}
+.morph_status {
+  background-color: #000000;
+}
+.morph_status .ace_comment {
+  color: #D0F0C0;
 }
 .morph_cursor {
   background-color: #206020;

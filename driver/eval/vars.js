@@ -155,6 +155,7 @@ async function runMember(AST, runContext) {
     throw new Error('Member access error: ' + property)
   } else {
     runContext.bubbleMember = parent
+    runContext.bubbleProperty = (runContext.bubbleProperty || AST.object.name) + '.' + property
     return parent[property]
   }
 }

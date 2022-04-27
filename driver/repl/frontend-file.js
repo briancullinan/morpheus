@@ -43,14 +43,14 @@ function updateFilelist(filepath) {
 	if(!ACE.filetypes) {
 		ACE.filetypes = {}
 	}
-	if(!ACE.filelistWidgets) {
+	//if(!ACE.filelistWidgets) {
 		ACE.filelistWidgets = [
 			'Local Storage'
 		]
 		ACE.filelistWidgetRows = [
 			0
 		]
-	}
+	//}
 	ACE.filelistWidgetRows.sort()
 	
 	let newFiles = Object.keys(FS.virtual)
@@ -73,9 +73,19 @@ function updateFilelist(filepath) {
 		return f && arr.indexOf(f) == i
 	})
 
+	if(ACE.callStack){
+		ACE.filelistWidgets[newFiles.length] = 'Call Stack'
+		ACE.filelistWidgetRows.push(newFiles.length)
+		for(let i = 0; i < ACE.callStack.length; i++) {
+			newFiles[newFiles.length] = ACE.callStack[i]
+		}
+	}
+
+	let numWidgets = 0
 	for(let i = 0; i < newFiles.length; i++) {
 		if(ACE.filelistWidgets[i]) {
-			newFiles.splice(i, 0, ACE.filelistWidgets[i]);
+			newFiles.splice(i + numWidgets, 0, ACE.filelistWidgets[i]);
+			numWidgets++
 		}
 	}
 
@@ -83,22 +93,28 @@ function updateFilelist(filepath) {
 		let prevCollapse = ACE.filescollapsed
 		// save expand/collapse state even if files are added or removed
 		ACE.filescollapsed = newFiles.reduce(function (obj, i) {
-			obj[i] = prevCollapse[i]
+			let isTopLevel = i.split('/').length == 1
+			if(prevCollapse.hasOwnProperty(i)) {
+				obj[i] = prevCollapse[i]
+			} else {
+				obj[i] = i.split('/').length > 1 ? 0 : 1
+			}
 			// MAINTAIN THIS VISIBILITY INDEX SO USER 
 			//   INTERACTION CAN BE VERY SPECIFIC AND FAST
-			ACE.filesvisible[i] = obj[i] 
+			ACE.filesvisible[i] = isTopLevel
 					|| !anyParentsCollapsed(i.split('/'))
 			return obj
 		}, {})
 	} else {
 		ACE.filesvisible = {} // I CAN DO THIS ALL DAY
 		//   TODO: CHECK V8 USES HASH TABLES OR IF PHP IS FASTER
-		ACE.filescollapsed = 
-		newFiles.reduce(function (obj, i) {
-			obj[i] = i.split('/').length > 1 ? 0 : 1
-			ACE.filesvisible[i] = obj[i]
-			return obj
-		}, {})
+		ACE.filescollapsed = newFiles.reduce(
+			function (obj, i) {
+				let isTopLevel = i.split('/').length == 1
+				obj[i] = isTopLevel ? 1 : 0
+				ACE.filesvisible[i] = isTopLevel
+				return obj
+			}, {})
 	}
 	ACE.fileslist = newFiles
 	ACE.filescount = Object.values(ACE.filesvisible)
@@ -113,16 +129,26 @@ function isDirectory(i) {
 	return !FS.virtual[i] || FS.virtual[i].mode == FS_DIR
 }
 
+
+
+
+
 function toggleCollapse(row, dataRow) {
+	if(!ACE.filescollapsed) {
+		return
+	}
 	let collapse = !ACE.filescollapsed[dataRow]
+	ACE.filescollapsed[dataRow] = collapse
 	for(let i = row; i < ACE.fileslist.length; i++) {
 		if(ACE.fileslist[i].substring(0, dataRow.length)
 			.localeCompare(dataRow)) {
 			break // no more files under this sorted folder
 		}
 		// don't make the row we clicked on invisible
-		if(ACE.fileslist[i] !== dataRow) {
-			ACE.filesvisible[ACE.fileslist[i]] = !collapse
+		if(ACE.fileslist[i].localeCompare(dataRow) !== 0) {
+			ACE.filesvisible[ACE.fileslist[i]] = !anyParentsCollapsed(ACE.fileslist[i].split('/'))
+		} else {
+			continue // don't count self?
 		}
 		if(!collapse) {
 			ACE.filescount++
@@ -130,7 +156,6 @@ function toggleCollapse(row, dataRow) {
 			ACE.filescount--
 		}
 	}
-	ACE.filescollapsed[dataRow] = collapse
 	ACE.filesmoved = true
 }
 
@@ -244,7 +269,13 @@ function renderFilelist() {
 					item.classList.add('open')
 				if(ACE.filescollapsed[ACE.fileslist[j]] && item.classList.contains('open'))
 					item.classList.remove('open')
+				if(item.classList.contains('folder'))
+					item.classList.remove('folder')
+				if(item.classList.contains('file'))
+					item.classList.remove('file')
 			} else {
+				if(item.classList.contains('filelist-widget'))
+					item.classList.remove('filelist-widget')
 				link.style.paddingLeft = (segments.length * 20 + 20) + 'px'
 				if(isDirectory(ACE.fileslist[j])) {
 					if(!item.classList.contains('folder'))
@@ -253,11 +284,13 @@ function renderFilelist() {
 						item.classList.add('open')
 					if(ACE.filescollapsed[ACE.fileslist[j]] && item.classList.contains('open'))
 						item.classList.remove('open')
-					if(!item.classList.contains('file'))
+					if(item.classList.contains('file'))
 						item.classList.remove('file')
-				} else
-				if(item.className != 'file') {
-					item.className = 'file'
+				} else {
+					if(item.className != 'file')
+						item.className = 'file'
+					if(item.classList.contains('folder'))
+						item.classList.remove('folder')
 				}
 			}
 			item.style.display = 'block'

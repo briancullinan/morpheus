@@ -2,6 +2,7 @@
 
 let functionCounter = 0
 
+const MAX_CALL = 10000
 
 const FUNC_COMMENTS = /(^|\s*[^\/\s]+.*\n)(\s*\/\/.*\n)+(async|function|\s).*?$/
 const ASPECTS_REGEX = /\s+|\n+|\(|\)|function|async/g
@@ -39,7 +40,7 @@ async function runCallStatements(runContext, functionName, parameterDefinition, 
 	let startVars = Object.assign({}, runContext.localVariables)
 
 	let beforeLine = runContext.bubbleLine - 1 // -1 for wrapper function
-	runContext.bubbleStack.push(functionName + ' . ' + beforeLine)
+	//runContext.bubbleStack.push(functionName + ' . ' + beforeLine)
 
 	// THIS SHIT IS IMPORTANT. MAKE COMPLICATED SIMPLE.
 	// I MENTION THIS TO PEOPLE AND THEY HAVE NO IDEA
@@ -101,7 +102,7 @@ async function runCallStatements(runContext, functionName, parameterDefinition, 
 	// TODO: search the contexts stack for the variable
 
 
-	runContext.bubbleStack.pop()
+	//runContext.bubbleStack.pop()
 
 	return result
 }
@@ -169,12 +170,15 @@ async function runCall(AST, runContext) {
   }
 
   runContext.bubbleMember = null
+  runContext.bubbleProperty = ''
   let calleeFunc
+  let functionName
   if(AST.callee.type == 'Identifier') {
     // handle identifiers here because looking it up with bubble up an error
     try {
       // TODO: should probably have a better way of handling NOT-ERROR
       calleeFunc = await runPrimitive(AST.callee, runContext)
+      functionName = AST.callee.name
     } catch (up) {
       if(!up.message.includes('not defined')) {
         throw up
@@ -183,6 +187,7 @@ async function runCall(AST, runContext) {
 
     // TODO: incase libraries aren't sent, preprocessed libs are used here
     if (!calleeFunc) {
+      functionName = AST.callee.name
       calleeFunc = await runContext.localVariables.thisWindow._accessor(void 0, {
         // WOOHOO my first polyfill
         object: {
@@ -199,6 +204,7 @@ async function runCall(AST, runContext) {
     if(!isStillRunning(runContext)) {
       return // bubble up
     }
+    functionName = runContext.bubbleProperty
 
   } else {
     throw new Error('CallExpression: Not implemented!')
@@ -214,7 +220,12 @@ async function runCall(AST, runContext) {
     runContext.bubbleFile = calleeFunc.filename
   }
 
-  let beforeLine = runContext.bubbleLine
+  let beforeLine = runContext.bubbleLine - 1
+  runContext.bubbleStack.push(functionName + ' . ' + beforeLine)
+  if(runContext.bubbleStack.length > MAX_CALL) {
+    throw new Error('Call stack exceeded!')
+  }
+
   try {
     let result;
     currentContext = runContext
@@ -242,7 +253,7 @@ async function runCall(AST, runContext) {
       throw new Error('Not a function! ' + AST.callee.name)
     }
     runContext.bubbleMember = null
-
+    runContext.bubbleProperty = ''
 
     if(!isStillRunning(runContext)) {
       return // bubble up
@@ -255,8 +266,8 @@ async function runCall(AST, runContext) {
     // automatically pause for a second on user functions
     //   to allow users to observe the result of the API
     if(AST.callee.name != 'sleep'
-      && beforeLine > runContext.libraryLines) {
-      console.log('LONG DELAY!!! ' + beforeLine)
+      && runContext.bubbleFile == '<eval>') {
+      console.log('LONG DELAY!!! ' + functionName + ' . ' + beforeLine)
       await new Promise(resolve => setTimeout(resolve, DEFAULT_DELAY))
     }
     return result
@@ -264,6 +275,7 @@ async function runCall(AST, runContext) {
   } catch (e) {
     doError(e, runContext)
   } finally {
+    runContext.bubbleStack.pop()
     runContext.bubbleFile = previousFile
   }
 

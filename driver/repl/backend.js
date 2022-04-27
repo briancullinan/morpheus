@@ -79,9 +79,6 @@ function doAssign(varName, lineNumber, bubbleColumn, runContext) {
 
 
 async function doStatus(runContext, doSleep) {
-	if(!runContext.senderId) {
-		return
-	}
 	try {
 		chrome.tabs.sendMessage(runContext.senderId, { 
 			status: '.',
@@ -94,10 +91,8 @@ async function doStatus(runContext, doSleep) {
 		});
 		console.log(runContext.bubbleLine)
 		// don't sleep on library functions
-		if(doSleep
-			&& runContext.libraryLoaded 
-			&& runContext.bubbleLine > runContext.libraryLines) {
-				console.log('DELAYING! ' + runContext.bubbleLine)
+		if(doSleep && runContext.bubbleFile == '<eval>') {
+			console.log('DELAYING! ' + runContext.bubbleLine)
 			await new Promise(resolve => setTimeout(resolve, DEFAULT_SHORT_DELAY))
 		}
 	} catch (e) {
@@ -205,6 +200,10 @@ function doError(err, runContext) {
 function doStatusResponse(request, reply) {
 	let runContext = threads[request.runId]
 	if(typeof runContext == 'undefined') {
+		reply({ 
+			stopped: '.', 
+			line: 0
+		})
 		return
 	}
 	
@@ -221,7 +220,8 @@ function doStatusResponse(request, reply) {
 		if(request.pause) {
 			reply({ 
 				paused: '.', 
-				line: runContext.bubbleLine - 1
+				line: runContext.bubbleLine - 1,
+				stack: runContext.bubbleStack,
 			})
 	
 		} else {
@@ -235,7 +235,8 @@ function doStatusResponse(request, reply) {
 	// now every status check will report on current line number also
 	reply({ 
 		status: '.', 
-		line: runContext.bubbleLine - 1
+		line: runContext.bubbleLine - 1,
+		stack: runContext.bubbleStack,
 	})
 }
 

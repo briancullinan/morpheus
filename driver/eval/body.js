@@ -10,7 +10,8 @@ const DEFAULT_SHORT_DELAY = 100
 
 // INTERESTING FOR CODE REVEIWS, HABIT OF EXTRACTING DOUBLE NEGATIVES?
 function isStillRunning(runContext) {
-	if(!runContext.paused && !runContext.ended) {
+	if(!runContext.paused && !runContext.ended
+			&& !runContext.broken) {
 		return true
 	}
 	return false
@@ -38,6 +39,11 @@ async function runStatement(i, AST, runContext) {
 		if(AST[i].type == 'Literal' || AST[i].type == 'Identifier') {
 			return runPrimitive(AST[i], runContext)
 		} else 
+		if(AST[i].type == 'BreakStatement') {
+			runContext.broken = true // TODO: check how detailed parser is, 
+			//   break and continue are statements in for-loop? or general statements?
+			return
+		} else
 		if(AST[i].type == 'BlockStatement') {
 			return await runBody(AST[i].body, runContext)
 		} else
@@ -110,11 +116,7 @@ async function runStatement(i, AST, runContext) {
 			return await runObject(AST[i], runContext)
 		} else
 		if(AST[i].type == 'UnaryExpression') {
-			if(AST[i].operator == 'void') {
-				return void (await runStatement(0, [AST[i].argument], runContext))
-			} else {
-				throw new Error(AST[i].type + ': Not implemented!')
-			}
+			return await runUnary(AST[i], runContext)
 		} else 
 		if(AST[i].type == 'IfStatement') {
 			let result = await runStatement(0, [AST[i].test], runContext)
@@ -216,7 +218,7 @@ async function doPlay(runContext) {
 		// attach debugger
 		await attachDebugger(runContext.senderId)
 		// run code from client
-		let result = await runBody(runContext.body, runContext)
+		let result = await runBody(runContext.body[0].expression.callee.body.body, runContext)
 		if(!isStillRunning(runContext)) {
 			// TODO: send async status?
 		} else if (runContext.async) {

@@ -47,9 +47,7 @@ function runBlock(start) {
 	ace.focus()
 }
 
-let statusWidgets = [
 
-]
 
 function getLimitedLine(prevLine) {
 	if(!ACE.libraryLoaded) {
@@ -65,38 +63,55 @@ function getLimitedLine(prevLine) {
 	return prevLine
 }
 
+
+
 function doStatus(request) {
 	let prevLine = getLimitedLine(request.line)
 
 	if(!ACE.statusLine) {
-	  createLineWidget('.', 0, 'morph_cursor') // TODO: morph_status
-	  ACE.statusLine = ace.session.lineWidgets[0]
+	  ACE.statusLine = createLineWidget('.', 0, 'morph_status')
 	}
-	ACE.statusLine.row = prevLine
+	if(!ACE.statusWidgets) {
+		ACE.statusWidgets = []
+	}
 	// https://www.youtube.com/watch?v=tvguv-lvq3k - Bassnectar - The Matrix (ft. D.U.S.T.)
 	// TODO: put another instance of ACE in the status widget
-	debugger
-	let previousCall = request.stack.pop.split(' ')[0]
-	if(typeof ACE.libraryFunctions[previousCall] != 'undefined') {
-		if(ACE.libraryFunctions[previousCall]) { // incase null means we already looked
-			// slowly open function without affecting scroll
+	let previousCall = request.stack.pop()
+	if(previousCall) {
+		let previousFunction = previousCall.split('.')[0].trim()
+		if(!ACE.libraryFunctions) {
+			ACE.libraryFunctions = {}
 		}
-	} else {
-		ACE.libraryFunctions[previousCall] = doLibraryLookup(previousCall)
-	}
-	if(request.stack
-		&& (!ACE.callStack 
-			|| ACE.callStack.length != request.stack.length)) {
-		ACE.callStack = request.stack
+		if(typeof ACE.libraryFunctions[previousFunction] != 'undefined') {
+		} else {
+			ACE.libraryFunctions[previousFunction] = doLibraryLookup(previousFunction)
+		}
+		if(ACE.libraryFunctions[previousFunction]) { // incase null means we already looked
+			// slowly open function without affecting scroll
+			if(ACE.libraryFunctions[previousFunction].name == '<eval>') {	
+				ACE.statusWidgets[prevLine] = Date.now()
+				ACE.previousNonLibrary = prevLine
+				if(ACE.statusLine.row != prevLine) {
+					// TODO: DUPLEX FOR EFFECT!
+					ace.getSession().widgetManager.removeLineWidget(ACE.statusLine)
+					ACE.statusLine.row = prevLine
+					ace.getSession().widgetManager.addLineWidget(ACE.statusLine)
+				}
+			} else {
+				ACE.previousLine = request.line
+				ACE.statusLine.el.children[0].innerText 
+						= ACE.libraryFunctions[previousFunction].library
+			}
+		}
+		if(request.stack
+			&& (!ACE.callStack 
+				|| ACE.callStack.length != request.stack.length)) {
+			ACE.callStack = request.stack
+			//ACE.filesmoved = true
+			updateFilelist('Call Stack')
+		}
 	}
 
-	if(request.line >= ACE.libraryLines) {
-		ACE.previousNonLibrary = prevLine
-	} else {
-		ACE.previousLine = request.line
-	}
-
-	statusWidgets[prevLine] = Date.now()
 }
 
 
@@ -107,11 +122,21 @@ function doLibraryLookup(functionName) {
 		let libraryCode = Array.from(FS.virtual[libraryFiles[i]].contents)
 			.map(function (c) { return String.fromCharCode(c) })
 			.join('')
+		// TODO: make these tokens instead of function for cross language support
 		if(libraryCode.includes('function ' + functionName)) {
 			return {
 				library: libraryCode,
 				name: libraryFiles[i],
 				// TODO: a hash value?
+			}
+		} else {
+			let currentSession = window.ace.getValue()
+			if (currentSession.includes('function ' + functionName)) {
+				return {
+					library: currentSession,
+					name: '<eval>',
+					// TODO: a hash value?
+				}
 			}
 		}
 	}
@@ -252,11 +277,11 @@ function collectForm(dialog) {
 				formResults[formField.children[i].id] = true
 		}
 	}
-	window['run-script'].value = JSON.stringify(formResults)
+	// in case of any other snoopy/loggy plugins
+	let encrypted = crypt(ACE.lastRunId, JSON.stringify(formResults))
+	window['run-script'].value = '"' + encrypted + '"'
 	clearTimeout(dialog.timeout)
 }
-
-
 
 function createDialog(request) {
 	newDialog = document.createElement('DIV')
@@ -276,6 +301,7 @@ function createDialog(request) {
 	//   child element for the window box.
 	if(request.form) {
 		newDialog.appendChild(document.createElement('FORM'))
+		newDialog.children[0].action = 'javascript: false;'
 	} else {
 		newDialog.appendChild(document.createElement('DIV'))
 	}
@@ -400,12 +426,11 @@ function doDialog(request, newDialog) {
 	INPUT.editorActive = true
 	newDialog.timeout = setTimeout(function () {
 		window['run-script'].value = ''
-		window['run-accessor'].click()
 		// circle back around so server can always control dialog
 		newDialog.timeout = setTimeout(function () {
 			newDialog.style.display = 'none'
-		}, 1000)
-	}, 2000)
+		}, 1200)
+	}, 2200)
 	// async skip click
 	return newDialog
 }
@@ -417,7 +442,7 @@ function doAssign(request) {
 	if(prevLine < 0) {
 		return // don't load status line while it's out of view
 	}
-	
+
 	if (!ace.session || !ace.session.lineWidgets) {
 		initLineWidgets()
 	}

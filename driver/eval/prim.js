@@ -30,6 +30,34 @@ async function runThisAndThat(_this, _that, runContext) {
 	return [left, right]
 }
 
+async function runUnary(AST, runContext) {
+	if(AST.operator == 'void') {
+		return void (await runStatement(0, [AST.argument], runContext))
+	} else
+	if(AST.operator == '!') {
+		return !(await runStatement(0, [AST.argument], runContext))
+	} else
+	if(AST.operator == 'typeof') {
+		if(AST.argument.type == 'Identifier') {
+			return typeof (runContext.localFunctions[AST.argument.name] 
+					|| runContext.localVariables[AST.argument.name])
+		} else if (AST.argument.type == 'MemberExpression') {
+			let parent = await runStatement(0, [AST.argument.object], runContext)
+			if(!isStillRunning(runContext)) {
+				return
+			}
+			if(AST.argument.property.type == 'Identifier') {
+				return typeof (parent[AST.argument.property.name])
+			} else {
+				let property = await runStatement(0, [AST.argument.property], runContext)
+				return typeof parent[property]
+			}
+		}
+	} else {
+		throw new Error(AST.type + ': Not implemented!')
+	}
+}
+
 
 async function runBinary(AST, runContext) {
 	// TODO: cannot modulo a float
@@ -77,6 +105,9 @@ async function runBinary(AST, runContext) {
 	} else
 	if(AST.operator == '||') {
 		return left || right
+	} else
+	if(AST.operator == '!=') {
+		return left != right
 	} else {
 		throw new Error(AST.operator + ': Not implemented!')
 	}

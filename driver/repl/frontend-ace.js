@@ -45,7 +45,7 @@ function initAce() {
 
 // MAYBE A FUCKING WARNING HERE LIKE CALL STACK EXCEEDED?
 //   HOW ABOUT "FOR LOOP LENGTH EXCEEDED"? FUCKING AMAZING HOW AWFUL 
-//   PROGRAMMING IS, NO WONDER THERE'S BUGS
+//   PROGRAMMING IS, NO WONDER THERE'S BUGS.
 // for(let i = 0; i < ace.session.lineWidgets.length; ++i) {
 //   modified ace.session.lineWidgets 
 // C# HAS THIS WARNING MAYBE MY PROBLEM IS LANGUAGE
@@ -54,6 +54,7 @@ function initAce() {
 
 
 // WHAT THE FUCK? HOW TO ACCESS ace.config.loadModule("./ext/error_marker") or line_widgets?
+// OH! OOPS, I GUESS .MIN.JS MEANS MINIMAL BUILD NOT MINIFIED IN THIS CASE. MY MISTAKE.
 function initLineWidgets() {
 	ace.env.editor.execCommand('goToNextError')
 	let widgetManager = ace.getSession().widgetManager
@@ -88,7 +89,7 @@ function processLineNumber(lineNumber) {
 
 
 		// TODO:  ?????????
-		statusWidgets = []
+		ACE.statusWidgets = []
 
 
 		// Add widgets back in to new line
@@ -239,8 +240,8 @@ function renderCursorLines() {
 		// always update line colors
 		if(i - start < textLayer.children.length) {
 			let referenceRow = textLayer.children[i - start]
-			if(statusWidgets[i] 
-				&& Date.now() - statusWidgets[i] < FADE_DURATION + FLASH_DURATION) {
+			if(ACE.statusWidgets[i] 
+				&& Date.now() - ACE.statusWidgets[i] < FADE_DURATION + FLASH_DURATION) {
 				if(referenceRow.classList.contains('morph_error')) {
 					debugger
 				}
