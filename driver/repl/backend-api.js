@@ -12,7 +12,7 @@ function _makeLibraryAccessor(callArgs, runContext) {
 }
 
 
-async function doAccessor(i, member, AST, ctx, callback) {
+async function _doAccessor(member, ctx, senderId) {
 	if(!member.object.name || !member.property.name
 	//	|| member.object.name != 'window' /* no safety? */
 	) {
@@ -20,9 +20,34 @@ async function doAccessor(i, member, AST, ctx, callback) {
 	}
 	// TODO: call tree? multiple level? 
 	let memberName = member.object.name + '.' + member.property.name
-	let response = await chrome.tabs.sendMessage(ctx.senderId, { accessor: memberName })
+	let expression
+	switch(memberName) {
+		case 'window.screenLeft':
+		case 'window.screenTop':
+		case 'window.outerHeight':
+		case 'window.outerWidth':
+			expression = memberName
+			break
+		case 'window.location':
+			expression = '(\'data:application/json;utf-8,\'+JSON.stringify(window.location))'
+			break
+		default:
+			
+	}
+	let response
+	if(expression) {
+		response = await chrome.debugger.sendCommand({
+			tabId: senderId
+		}, 'Runtime.evaluate', {
+			expression: expression
+		})
+	} else {
+		response = await chrome.tabs.sendMessage(senderId, {
+			accessor: memberName
+		})
+	}
 	if (typeof response.fail != 'undefined') {
-		throw new Error('Member access failed: ' + member)
+		throw new Error('Member access error: ' + memberName)
 	} else if (typeof response.result == 'undefined') {
 		throw new Error('Couldn\'t understand response.')
 	} else if (!response.result) {
@@ -66,6 +91,17 @@ async function doAccessor(i, member, AST, ctx, callback) {
 	if (typeof response.result.object != 'undefined') {
 		// TODO: add an _accessor to Objects?
 		debugger
+	} else 
+	if (typeof response.result.value != 'undefined') {
+		if(response.result.type == 'string'
+			&& response.result.value.startsWith('data:')) {
+			let isJSON = response.result.value.split(';')
+			if(isJSON.length > 1 && isJSON[0].endsWith('application/json')) {
+				let firstLine = isJSON[1].split(',').slice(1).join(',')
+				return JSON.parse(firstLine + isJSON.slice(2).join(';'))
+			}
+		}
+		return response.result.value
 	} else {
 		return response.result
 	}
@@ -79,26 +115,15 @@ function _makeWindowAccessor(result, runContext) {
 		return result
 	}
 	result._accessor = async function (i, member, AST, ctx, callback) {
-		if(member.property.name == 'location') {
-			let location = await chrome.debugger.sendCommand({
-				tabId: ctx.localVariables.tabId
-			}, 'Runtime.evaluate', {
-				expression: 'JSON.stringify(window.location)'
-			})
-			if(!location || !location.result
-				|| location.result.type != 'string') {
-				throw new Error('Member access error: ' + member)
-			} else {
-				return JSON.parse(location.result.value)
+		return await _doAccessor({
+			// polyfill to window name since we know it's a window type
+			object: {
+				name: 'window'
+			},
+			property: {
+				name: member.property.name
 			}
-
-		} else
-		if(result.hasOwnProperty(member)
-			|| result[member]) {
-			return result[member]
-		} else {
-			throw new Error('Member access error: ' + member)
-		}
+		}, ctx, ctx.localVariables.tabId)
 	}
 	return result
 }
@@ -179,7 +204,9 @@ async function createEnvironment(runContext) {
 	//    this they decided "IT'S TOO DANGEROUS"
 	// A nice design was never explored.
 	let thisWindow = {
-		_accessor: doAccessor
+		_accessor: async function (i, member, AST, ctx, callback) {
+			return await _doAccessor(member, ctx, ctx.senderId)
+		}
 	}
 	let env = {
 		thisWindow: thisWindow,
@@ -352,6 +379,9 @@ async function _networkSettled() {
 async function _sendMessage(message) {
 	// allow the library script to send messages 
 	//   back to frontend
+	if(Object.keys(message).length == 0) {
+		throw new Error('Message is empty.')
+	}
 	return await chrome.tabs.sendMessage(currentContext.senderId, message)
 }
 

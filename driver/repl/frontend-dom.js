@@ -173,6 +173,7 @@ function doAccessor(request) {
 	}
 	switch(request.accessor) {
 		// safe to share?
+		/*
 		case 'window.screenLeft':
 		case 'window.screenTop':
 		case 'window.outerHeight':
@@ -181,6 +182,7 @@ function doAccessor(request) {
 		window['run-script'].value = window[propertyName]
 		window['run-accessor'].click()
 		return
+		*/
 		case '_morpheusKey':
 			ACE.dropFile = doDialog(request, ACE.dropFile)
 		return
@@ -595,13 +597,17 @@ function onMessage(message) {
 	if(typeof request.assign != 'undefined') {
 		doAssign(request)
 	} else 
+	if(typeof request.cookie != 'undefined') {
+		ACE.cookiesList = JSON.parse(request.cookie)
+		updateFilelist('Cookies')
+	} else 
 	if(typeof request.stopped != 'undefined') {
 		document.body.classList.remove('paused')
 		document.body.classList.remove('running')
 		document.body.classList.remove('starting')
 
 	} else {
-		debugger
+		console.error('Unrecognized request: ', request)
 	}
 }
 

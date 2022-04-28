@@ -81,6 +81,15 @@ function updateFilelist(filepath) {
 		}
 	}
 
+	if(ACE.cookiesList){
+		ACE.filelistWidgets[newFiles.length] = 'Cookies'
+		ACE.filelistWidgetRows.push(newFiles.length)
+		let keys = Object.keys(ACE.cookiesList)
+		for(let i = 0; i < keys.length; i++) {
+			newFiles[newFiles.length] = keys[i] + ': ' + ACE.cookiesList[keys[i]]
+		}
+	}
+
 	let numWidgets = 0
 	for(let i = 0; i < newFiles.length; i++) {
 		if(ACE.filelistWidgets[i]) {

@@ -154,18 +154,20 @@ function encodeCookie(cookie) {
 				: cookieBite[0]
 			obj[cookieName] = cookieBite.includes('=')
 				? cookieKeyValue[1][1] + cookieKeyValue[1]
-						.substring(1).replace(/./, '*')
+						.substring(1).replace(/./g, '*')
 				: cookieBite
-						.substring(1).replace(/./, '*')
+						.substring(1).replace(/./g, '*')
+			return obj
 		}, {})
 }
 
 
 
 async function addCookie(cookie, page) {
-	await doMorpheusPass(true)
+	let cookieEncoded = JSON.stringify(encodeCookie(cookie))
+	//await doMorpheusPass(true)
 	if(!temporaryEncrypter) {
-		return
+		return cookieEncoded
 	}
 	let leftStr = page.replace(/https|http|\//ig, '')
 	// this says encrypt but it's not the part that needs to be secured
@@ -183,7 +185,7 @@ async function addCookie(cookie, page) {
 		let cookieKey = temporaryEncrypter(temporaryUser + leftStr)
 		cookieSessions[leftStr] = cookieKey
 	}
-	let cookieEncoded = JSON.stringify(encodeCookie(cookie))
+	// encrypte encoded cookies for storage for quick lookup
 	cookieSessions[cookieKey+'_encoded'] = temporaryEncrypter(cookieEncoded)
 	await chrome.storage.sync.set({
 		cookieSessions: JSON.stringify(cookieSessions)
@@ -222,6 +224,7 @@ async function doWebComplete(details) {
 	}
 	let cookieEncoded = await addCookie(cookie, runContext.localVariables.navigationURL)
 	return await chrome.tabs.sendMessage(runContext.senderId, {
+		// TODO: encrypt encoded stuff with runContext.runId
 		cookie: cookieEncoded // J/K cookie.result.value
 	}, function(response) {
 

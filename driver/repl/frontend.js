@@ -245,18 +245,6 @@ chrome.runtime.onMessage.addListener(function(request, sender, reply) {
       }
     })
     */
-  } else 
-  if(request.cookie) {
-    debugger
-    /*
-    await chrome.declarativeNetRequest.updateDynamicRules({
-      options: {
-        addRules: [
-    
-        ]
-      }
-    })
-    */
   } else {
   }
   // basic client status message

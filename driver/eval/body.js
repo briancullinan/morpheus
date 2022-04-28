@@ -155,7 +155,7 @@ async function runStatement(i, AST, runContext) {
 			chrome.tabs.sendMessage(runContext.senderId, { 
 				paused: '.', 
 				line: runContext.bubbleLine - 1
-			}, function () { console.log('debugging' )})
+			}, function () { console.log('debugging') })
 			return
 		} else
 		if(AST[i].type == 'DoWhileStatement') {
@@ -237,7 +237,9 @@ async function doPlay(runContext) {
 
 			});
 		} else {
-			chrome.tabs.sendMessage(runContext.senderId, { result: result + '' }, function(response) {
+			chrome.tabs.sendMessage(runContext.senderId, {
+				result: result + ''
+			}, function(response) {
 
 			});
 		}
