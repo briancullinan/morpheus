@@ -120,11 +120,8 @@ let ALLOW_REDIRECT = true
 let foundFrames = {}
 
 function findFrame(details) {
-	if(!details.frameId) {
-		return
-	}
 	let runContext
-	if(typeof foundFrames[details.frameId] != 'undefined') {
+	if(details.frameId && typeof foundFrames[details.frameId] != 'undefined') {
 		runContext = foundFrames[details.frameId]
 	}
 	// IF THE USER DECIDES TO START MESSING AROUND IN THAT WINDOW
@@ -136,7 +133,10 @@ function findFrame(details) {
 		let dbgTab = threads[runIds[i]] // tab being managed?
 		// check if the local tabId has been set
 		if(dbgTab && dbgTab.localVariables.tabId == details.tabId) {
-			runContext = foundFrames[details.frameId] = dbgTab
+			runContext = dbgTab
+			if(details.frameId != 0) {
+				foundFrames[details.frameId] = dbgTab
+			}
 			break
 		}
 	}
@@ -157,7 +157,10 @@ function findFrame(details) {
 		// WE KNOW THE REQUEST CAME FROM A SCRIPT AND NOT FROM THE USER
 		runContext.networkStarted = true
 		runContext.documentId = details.parentDocumentId || details.documentId
-		return foundFrames[details.frameId]
+		if(!runContext.queueRate) {
+			runContext.queueRate = []
+		}
+		runContext.queueRate.push(Date.now())
 	}
 }
 

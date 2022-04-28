@@ -234,8 +234,9 @@ function Sys_notify(ifile, path, fp) {
 	})
 	// TODO: ADD FILESYSTEM WATCHERS API INOTIFY 
 	//   THAT READS A LIST GENERATED HERE
-	if(typeof window.updateFilelist != 'undefined') {
-		updateFilelist(path)
+	if(typeof window.updateFilelist != 'undefined'
+		&& !ACE.filestimer) {
+		ACE.filestimer = setTimeout(updateFilelist, 100)
 	}
 }
 

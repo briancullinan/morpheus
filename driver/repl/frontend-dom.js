@@ -70,13 +70,13 @@ function doStatus(request) {
 
 	if(!ACE.statusLine) {
 	  ACE.statusLine = createLineWidget('.', 0, 'morph_status')
+		//ace.getSession().widgetManager.addLineWidget(ACE.statusLine)
 	}
 	if(!ACE.statusWidgets) {
 		ACE.statusWidgets = []
 	}
 	if(request.status) {
 		ACE.threadPool = JSON.parse(request.status)
-		updateFilelist('Threads')
 	}
 	// https://www.youtube.com/watch?v=tvguv-lvq3k - Bassnectar - The Matrix (ft. D.U.S.T.)
 	// TODO: put another instance of ACE in the status widget
@@ -101,9 +101,9 @@ function doStatus(request) {
 				ACE.previousNonLibrary = prevLine
 				if(ACE.statusLine.row != prevLine) {
 					// TODO: DUPLEX FOR EFFECT!
-					ace.getSession().widgetManager.removeLineWidget(ACE.statusLine)
+					//ace.getSession().widgetManager.removeLineWidget(ACE.statusLine)
 					ACE.statusLine.row = prevLine
-					ace.getSession().widgetManager.addLineWidget(ACE.statusLine)
+					//ace.getSession().widgetManager.addLineWidget(ACE.statusLine)
 				}
 			} else {
 				ACE.previousLine = request.line || 0
@@ -115,9 +115,11 @@ function doStatus(request) {
 			&& (!ACE.callStack 
 				|| ACE.callStack.length != request.stack.length)) {
 			ACE.callStack = request.stack
-			//ACE.filesmoved = true
-			updateFilelist('Call Stack')
 		}
+	}
+
+	if(!ACE.filestimer) {
+		ACE.filestimer = setTimeout(updateFilelist, 100)
 	}
 
 }

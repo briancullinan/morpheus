@@ -61,6 +61,7 @@ function updateFilelist(filepath) {
 	if(!ACE.fileList) {
 		ACE.fileList = document.getElementById('file-list')
 	}
+	ACE.filestimer = null
 	if(!ACE.fileList) {
 		return
 	}
@@ -117,7 +118,8 @@ function updateFilelist(filepath) {
 	if(ACE.threadPool) {
 		ACE.filelistWidgets[newFiles.length] = 'Threads'
 		ACE.filelistWidgetRows.push(newFiles.length)
-		for(let i = 0; i < ACE.threadPool.length; i++) {
+		let threadCount = ACE.threadPool.length
+		for(let i = 0; i < threadCount; i++) {
 			newFiles[newFiles.length] = simplifyMilliseconds(
 					Date.now() - ACE.threadPool[i][1])
 					 + ': ' + ACE.threadPool[i][0]

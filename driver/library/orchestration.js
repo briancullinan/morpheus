@@ -7,7 +7,6 @@ async function newWindow() {
     //alwaysOnTop: true,
     //type: 'panel',
   })
-  tabId = win.tabs[0].id
   sleep(1)
   let newWin = Object.assign(win, {
     moveTo: makeMoveTo(win.id, win.tabs),

@@ -311,7 +311,9 @@ async function _createWindow(options) {
 	//   UNLESS THERE WAS SOME SORT OF GLOBAL "DID YOU MEAN?"
 	currentContext.localVariables.navigationURL = options.url
 	let win = await chrome.windows.create(options)
+	currentContext.localVariables.tabId = win.tabs[0].id
 	//attachRequestHandlers(win.tabs[0].id, win.id)
+	await _networkSettled()
 	return win
 }
 
