@@ -339,6 +339,7 @@ function InputPushMouseEvent (evt) {
           evt.clientX, evt.clientY, 0, null );
       }
     } else {
+      INPUT.editorActive = false
       Sys_QueEvent( Sys_Milliseconds(), SE_KEY, 
         INPUT.keystrings['MOUSE1'] + evt.button, down, 0, null );
     }

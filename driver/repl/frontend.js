@@ -233,11 +233,23 @@ chrome.runtime.onMessage.addListener(function(request, sender, reply) {
         }
       })
     return true
+  } else 
+  if(request.session) {
+    debugger
+    /*
+    await chrome.declarativeNetRequest.updateDynamicRules({
+      options: {
+        addRules: [
+    
+        ]
+      }
+    })
+    */
   } else {
-    // basic client status message
-    processResponse(request)
-    return reply()
   }
+  // basic client status message
+  processResponse(request)
+  return reply()
 })
 
 
@@ -248,12 +260,3 @@ let restoreTimer = setTimeout(function () {
   restoreRunner()
 }, 1000)
 
-
-// TODO: inject scripts
-/*
-chrome.webNavigation.onBeforeNavigate.addListener(
-  callback: function,
-  filters?: object,
-)
-
-*/

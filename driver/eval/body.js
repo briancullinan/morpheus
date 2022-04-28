@@ -22,6 +22,7 @@ async function runStatement(i, AST, runContext) {
 		throw new Error('context ended!')
 	}
 	try {
+    currentContext = runContext
 		if(AST[i] && AST[i].loc) {
 			runContext.bubbleColumn = AST[i].loc.start.column
 			if(runContext.bubbleLine != AST[i].loc.start.line) {
@@ -51,9 +52,11 @@ async function runStatement(i, AST, runContext) {
 		if(AST[i].type == 'AssignmentExpression') {
 			return await runAssignment(AST[i].left, AST[i].right, runContext)
 		} else
-		if(AST[i].type == 'BinaryExpression'
-			|| AST[i].type == 'LogicalExpression') {
+		if(AST[i].type == 'BinaryExpression') {
 			return await runBinary(AST[i], runContext)
+		} else
+		if(AST[i].type == 'LogicalExpression') {
+			return await runLogical(AST[i], runContext)
 		} else
 		// WTF I KEEP MISSING RETURN AWAIT?!!! NEED TO WRITE AN AST IN PROLOG
 		//   THEN WRITE PROLOG PARSER IN JAVASCRIPT TO EVALUATE MATCHING AST

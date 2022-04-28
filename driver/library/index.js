@@ -4,5 +4,5 @@ module.exports = {
   newWindow,
   sleep,
   doKeyDialog,
-  doLoginDialog,
+  doSystemLogin,
 }

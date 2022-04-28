@@ -336,7 +336,7 @@ function createDialog(request) {
 				break
 			}
 			let newLine = document.createElement('SPAN')
-			newLine.innerText = request.text
+			newLine.innerText = lines[j]
 			newDialog.children[0].appendChild(newLine)
 			newDialog.children[0].appendChild(document.createElement('BR'))
 		}
@@ -353,19 +353,20 @@ function createDialog(request) {
 		let newLabel
 		if(field.startsWith('radio')) {
 			newLabel = document.createElement('LABEL')
-			newLabel.for = fields[i]
+			newLabel.setAttribute('for', fields[i])
 			newLabel.innerText = fields[i]
 			newField = document.createElement('INPUT')
 			newField.type = 'radio'
 			newField.name = field // TO MAKE GROUPS BY NAME
 			newField.id = fields[i]
 			newDialog.children[0].appendChild(newField)
+			newDialog.children[0].appendChild(newLabel)
 			newDialog.children[0].appendChild(
-				document.createElement('BR'))
+					document.createElement('BR'))
 		} else
 		if(field == 'text') {
 			newLabel = document.createElement('LABEL')
-			newLabel.for = fields[i]
+			newLabel.setAttribute('for', fields[i])
 			newLabel.innerText = fields[i] + ': '
 			newDialog.children[0].appendChild(newLabel)
 			newField = document.createElement('INPUT')
@@ -373,11 +374,11 @@ function createDialog(request) {
 			newField.id = fields[i]
 			newDialog.children[0].appendChild(newField)
 			newDialog.children[0].appendChild(
-				document.createElement('BR'))
+					document.createElement('BR'))
 		} else
 		if(field == 'pass') {
 			newLabel = document.createElement('LABEL')
-			newLabel.for = fields[i]
+			newLabel.setAttribute('for', fields[i])
 			newLabel.innerText = fields[i] + ': '
 			newDialog.children[0].appendChild(newLabel)
 			newField = document.createElement('INPUT')
@@ -385,7 +386,7 @@ function createDialog(request) {
 			newField.id = fields[i]
 			newDialog.children[0].appendChild(newField)
 			newDialog.children[0].appendChild(
-				document.createElement('BR'))
+					document.createElement('BR'))
 		} else
 		if(field == 'submit') {
 			newField = document.createElement('BUTTON')
@@ -428,6 +429,11 @@ function doDialog(request, newDialog) {
 		newDialog = createDialog(request)
 	} else {
 		skipCreate = true
+	}
+	// can change titles on a dialog for reusability
+	if(request.title
+		&& newDialog.children[0].children[0].nodeName == 'H2') {
+			newDialog.children[0].children[0].innerText = request.title
 	}
 
 	// create a drop surface since the game 

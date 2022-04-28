@@ -285,7 +285,9 @@ multigame: # q3asm.wasm q3lcc.wasm ui.qvm cgame.qvm qagame.qvm
 engine: morph.wasm morph.opt
 	@:
 
-PLUGIN_FILES   := driver/manifest.json  \
+PLUGIN_FILES   := \
+	driver/manifest.json \
+	driver/rules.json \
 	$(BUILD_DIR)/frontend.js \
 	$(BUILD_DIR)/backend.js \
 	$(HTTP_SOURCE)/index.html \
@@ -294,6 +296,7 @@ PLUGIN_FILES   := driver/manifest.json  \
 
 plugin: engine morph.zip
 	$(Q)cp driver/manifest.json $(BUILD_DIR)/plugin/manifest.json
+	$(Q)cp driver/rules.json $(BUILD_DIR)/plugin/rules.json
 	$(Q)cp $(HTTP_SOURCE)/index.html $(BUILD_DIR)/plugin/index.html
 	$(Q)cp $(HTTP_SOURCE)/redpill.png $(BUILD_DIR)/plugin/redpill.png
 	@:

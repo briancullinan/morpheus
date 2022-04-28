@@ -69,10 +69,93 @@ self.addEventListener('install', doInstall)
 
 // TODO: make optional with @attribute
 let ALLOW_REDIRECT = true
+let foundFrames = {}
 
-//chrome.webNavigation.onBeforeNavigate.addListener(function(request, event) {
+function findFrame(details) {
+	if(!details.frameId) {
+		return
+	}
+	let runContext
+	if(typeof foundFrames[details.frameId] != 'undefined') {
+		runContext = foundFrames[details.frameId]
+	}
+	// IF THE USER DECIDES TO START MESSING AROUND IN THAT WINDOW
+  //   PAUSE THE SCRIPT SO WE CAN DEBUG MISSING ELEMENTS!
+  // WHY DID NO ONE AT JETBRAINS THINK OF THIS? SWITCHING WINDOWS IS FUN!
+	// PAUSE THE SCRIPT!
+	let runIds = Object.keys(threads)
+	for(let i = 0; i < runIds.length; i++) {
+		let dbgTab = threads[runIds[i]] // tab being managed?
+		// check if the local tabId has been set
+		if(dbgTab && dbgTab.localVariables.tabId == details.tabId) {
+			runContext = foundFrames[details.frameId] = dbgTab
+			break
+		}
+	}
+	if(!runContext) {
+		return
+	}
 
-//})
+	// sometimes users type these in wrong and the browser fixes it automatically
+	// DON'T USE THIS AS A REASON TO PAUSE FROM INTERFERENCE
+	let leftStr = runContext.localVariables.navationURL.replace(/https|http|\//ig, '')
+	let rightStr = details.url.replace(/https|http|\//ig, '')
+	if(!leftStr.localeCompare(rightStr)
+		|| (ALLOW_REDIRECT 
+			&& !leftStr.localeCompare(rightStr.substring(0, leftStr.length)))
+			//&& details.transitionQualifiers
+			//&& details.transitionQualifiers.includes('server_redirect'))
+	) {
+		// WE KNOW THE REQUEST CAME FROM A SCRIPT AND NOT FROM THE USER
+		runContext.networkStarted = true
+		runContext.documentId = details.parentDocumentId || details.documentId
+		return foundFrames[details.frameId]
+	}
+}
+
+
+async function doWebNavigation(details) {
+	findFrame(details)
+	let runContext = foundFrames[details.frameId]
+	if(!runContext) {
+		return
+	}
+	// is there an API that does this?
+	//    someway to settle the navigateTo() command
+	if(!runContext.queueRate) {
+		runContext.queueRate = []
+	}
+	runContext.queueRate.push(Date.now())
+	chrome.tabs.sendMessage(details.tabId || runContext.localVariables.tabId, { 
+		inject: details.url,
+		headers: {
+
+		}
+	}, function(response) {
+
+	})
+	return await chrome.tabs.sendMessage(runContext.senderId, {
+		session: details.url
+	}, function(response) {
+
+	})
+}
+
+
+async function doWebComplete(details) {
+	findFrame(details)
+	if(!foundFrames[details.frameId]) {
+		return
+	}
+	if(!foundFrames[details.frameId].queueRate) {
+		foundFrames[details.frameId].queueRate = []
+	}
+	let nowish = foundFrames[details.frameId].queueRate.shift()
+	if(Date.now() - nowish < 1000) {
+		foundFrames[details.frameId].queueRate.unshift(nowish)
+	}
+}
+
 
 // GAH! THIS IS THE SAME PASSWORD CRAP THAT MOTIVATED ME TO DO THIS 
 //   THE FIRST TIME. I AM SO SICK OF THIS SECURITY, ADD MORE CRAP
@@ -95,45 +178,87 @@ let ALLOW_REDIRECT = true
 //   WHAT I LEAVE BEHIND, THEN I'LL CERTAINLY CEASE TO EXIST.
 
 
-function doWebRequest(details) {
-  // IF THE USER DECIDES TO START MESSING AROUND IN THAT WINDOW
-  //   PAUSE THE SCRIPT SO WE CAN DEBUG MISSING ELEMENTS!
-  // WHY DID NO ONE AT JETBRAINS THINK OF THIS? SWITCHING WINDOWS IS FUN!
-	// PAUSE THE SCRIPT!
-	let runIds = Object.keys(threads)
-	for(let i = 0; i < runIds.length; i++) {
-		let dbgTab = threads[runIds[i]] // tab being managed?
-		// check if the local tabId has been set
-		if(dbgTab && dbgTab.localVariables.tabId == details.tabId) {
-			// sometimes users type these in wrong and the browser fixes it automatically
-			// DON'T USE THIS AS A REASON TO PAUSE FROM INTERFERENCE
-			let leftStr = dbgTab.navationURL.replace(/https|http|\//ig, '')
-			let rightStr = details.url.replace(/https|http|\//ig, '')
-			if(!leftStr.localeCompare(rightStr)
-				|| (ALLOW_REDIRECT 
-					&& details.transitionQualifiers.includes('server_redirect'))
-			) {
-				// WE KNOW THE REQUEST CAME FROM A SCRIPT AND NOT FROM THE USER
-				dbgTab.documentId = details.parentDocumentId || details.documentId
-			} else if(details.documentId != dbgTab.documentId
-				&& details.parentDocumentId != dbgTab.documentId) {
-				debugger
-				dbgTab.paused = true
-				// ^ more important
-				// send a paused status back to the frontend
-				chrome.tabs.sendMessage(dbgTab.senderId, { 
-					paused: details.timeStamp
-				}, function(response) {
-
-				})
-			}
-			break
-		}
+async function doCommitted(details) {
+	findFrame(details)
+	if(!foundFrames[details.frameId]) {
+		return
 	}
+	let dbgTab = foundFrames[details.frameId]
+	if(!dbgTab.documentId) {
+		return
+	}
+	if(details.documentId != dbgTab.documentId
+		&& details.parentDocumentId != dbgTab.documentId
+	) {
+		debugger
+		dbgTab.paused = true
+		// ^ more important
+		// send a paused status back to the frontend
+		chrome.tabs.sendMessage(dbgTab.senderId, { 
+			paused: details.timeStamp
+		}, function(response) {
 
-	// TODO: store cookies and session changes, encrypted locally
+		})
+	}
 }
 
-chrome.webNavigation.onCommitted.addListener(doWebRequest)
+chrome.webNavigation.onBeforeNavigate.addListener(doWebNavigation)
+chrome.webNavigation.onCompleted.addListener(doWebComplete)
+chrome.webNavigation.onCommitted.addListener(doCommitted)
+
+
+// TODO: inject scripts
+/*
+chrome.webNavigation.onBeforeNavigate.addListener(
+  callback: function,
+  filters?: object,
+)
+
+*/
+
+
+/*
+// TODO: store cookies and session changes, encrypted locally
+
+async function injectRequest(details) {
+	debugger
+	// restore session from encrypted storage
+}
+
+async function saveResponse(details) {
+	debugger
+	// restore session from encrypted storage
+}
+
+
+function attachRequestHandlers(tabId, windowId) {
+	//onBeforeRequest
+	chrome.webRequest.onBeforeSendHeaders.addListener(
+		injectRequest, {
+			urls: ['<all_urls>'], 
+			tabId: tabId,
+			windowId: windowId
+		}, 
+		['blocking', 'requestHeaders'])
+
+	chrome.webRequest.onHeadersReceived.addListener(
+		saveResponse, 
+		{
+			urls: ['<all_urls>'], 
+			tabId: tabId,
+			windowId: windowId
+		}, 
+		['blocking', 'responseHeaders'])
+
+	chrome.webRequest.onAuthRequired.addListener(
+		doMorpheusAuth, {
+			urls: ['<all_urls>'], 
+			tabId: tabId,
+			windowId: windowId
+		}, 
+		['asyncBlocking'])
+
+}
+*/
 
 

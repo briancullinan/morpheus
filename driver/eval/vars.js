@@ -135,7 +135,14 @@ async function runMember(AST, runContext) {
     property = AST.property.value
   } else
   if(AST.property.type == 'Identifier') {
-    property = AST.property.name
+    if(AST.computed) {
+      property = await runStatement(0, [AST.property], runContext)
+			if(!isStillRunning(runContext)) {
+				return
+			}
+    } else {
+      property = AST.property.name
+    }
   } else {
     throw new Error('MemberExpression: Not implemented!')
   }
@@ -151,7 +158,8 @@ async function runMember(AST, runContext) {
     return await parent._accessor(0, AST, AST, runContext)
   }
 
-  if(!parent || (!parent.hasOwnProperty(property) && !parent[property])) {
+  if(!parent || (!parent.hasOwnProperty(property)
+    && !parent[property])) {
     throw new Error('Member access error: ' + property)
   } else {
     runContext.bubbleMember = parent

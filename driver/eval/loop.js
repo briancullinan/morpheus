@@ -16,12 +16,15 @@ async function runLoop(init, test, update, body, runContext) {
 	// TODO: turn off safety feature with an attribute @LongLoops
 	let safety = LONG_LOOPS
 	for(;testResults && safety > 0; safety--) {
-		let thisAndThat = await runThisAndThat(body, update, runContext)
-		result = thisAndThat[0]
+		let result = await runStatement(0, [body], runContext)
 		if(runContext.broken) {
 			runContext.broken = false
 			break
 		}
+		if(!isStillRunning(runContext)) {
+			return
+		}
+		await runStatement(0, [update], runContext)
 		if(!isStillRunning(runContext)) {
 			return
 		}

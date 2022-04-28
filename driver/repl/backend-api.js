@@ -25,6 +25,8 @@ async function doAccessor(i, member, AST, ctx, callback) {
 		throw new Error('Member access failed: ' + member)
 	} else if (typeof response.result == 'undefined') {
 		throw new Error('Couldn\'t understand response.')
+	} else if (!response.result) {
+		return response.result // in case of null or falsey?
 	}
 
 	if(typeof response.result.function != 'undefined') {
@@ -183,55 +185,56 @@ async function createEnvironment(runContext) {
 		thisWindow: thisWindow,
 		window: thisWindow,
 		tabId: runContext.senderId,
+		// TODO: micro-manage garbage collection?
+		Object: Object,
+		// snoop on timers so REPL can report async results
+		setTimeout: _setTimeout.bind(null, runContext),
+		setInterval: _setInterval.bind(null, runContext),
+		Promise: _Promise.bind(null, runContext), // TODO: bind promise to something like chromedriver does
+		setWindowBounds: setWindowBounds,
+		doMorpheusKey: doMorpheusKey,
+		clearTimeout: _clearTimeout.bind(null, runContext),
+		clearInterval: _clearInterval.bind(null, runContext),
+		_makeWindowAccessor: _makeWindowAccessor,
+		_makeLibraryAccessor: _makeLibraryAccessor,
+		networkSettled: _networkSettled,
+		navationURL: null,
+		module: WEBDRIVER_API,
+
+		// google extension-style API calls
 		chrome: {
 			tabs: {
 				get: chrome.tabs.get,
 				// GOOGLE COLLAB IS COOL AND ALL, BUT IT'S
 				//   NOT LIKE I CAN EDIT COLLAB SOURCE CODE
 				//   AND HACK MY OWN SHARED UI LIKE I CAN HERE \/
-				sendMessage: chrome.tabs.sendMessage
-						// allow the library script to send messages 
-						//   back to frontend
-						.bind(chrome.tabs, runContext.senderId)
+				sendMessage: _sendMessage,
+			},
+			debugger: {
+				getTargets: chrome.debugger.getTargets,
+				sendCommand: _sendCommand,
 			},
 			windows: {
 				get: chrome.windows.get,
-				create: createWindow,
+				create: _createWindow, // snoop on navigation url
 			},
 			profiles: {
 				list: function () { return morphKey }
 			},
 		},
-		module: WEBDRIVER_API,
 		console: {
 			log: doConsole.bind(console, runContext.senderId)
 		},
-		// TODO: micro-manage garbage collection?
-		Object: Object,
-		setTimeout: _setTimeout.bind(null, runContext),
-		setInterval: _setInterval.bind(null, runContext),
-		Promise: _Promise.bind(null, runContext), // TODO: bind promise to something like chromedriver does
-		setWindowBounds: setWindowBounds,
-		navigateTo: navigateTo,
-		doMorpheusKey: doMorpheusKey,
-		clearTimeout: _clearTimeout.bind(null, runContext),
-		clearInterval: _clearInterval.bind(null, runContext),
-		_makeWindowAccessor: _makeWindowAccessor,
-		_makeLibraryAccessor: _makeLibraryAccessor,
 
 	}
 	return env
 }
 
 
-// ERROR: Refused to evaluate a string as JavaScript because 'unsafe-eval'
-// ^- That's where most people give up, but I'll write an interpreter
-//let targets = await chrome.debugger.getTargets()
-//if(targets.filter(t => t.attached && t.tabId == sender.tab.id).length == 0) {
-
-
 async function attachDebugger(tabId, initial) {
-  try {
+	// ERROR: Refused to evaluate a string as JavaScript because 'unsafe-eval'
+	// ^- That's where most people give up, but I'll write an interpreter
+	try {
     await chrome.debugger.attach({tabId: tabId}, '1.3')
     // confirm it works
     let dom = await chrome.debugger.sendCommand({
@@ -264,9 +267,15 @@ async function attachDebugger(tabId, initial) {
 
   
 
-function createWindow(options) {
-	currentContext.navationURL = options.url
-	return chrome.windows.create(options)
+async function _createWindow(options) {
+	// snoop on navigation url
+	// FOR CODE REVIEWS, THIS LEAF TRIPPED ME UP BECAUSE I MOVED NAVIGATION URL TO THE API
+	//   NOT SURE THERE IS ENOUGH LINKING HERE THAT EVEN A SYNTAX CHECKER WOULD FIND THAT,
+	//   UNLESS THERE WAS SOME SORT OF GLOBAL "DID YOU MEAN?"
+	currentContext.localVariables.navationURL = options.url
+	let win = await chrome.windows.create(options)
+	//attachRequestHandlers(win.tabs[0].id, win.id)
+	return win
 }
 
 
@@ -308,27 +317,58 @@ async function setWindowBounds(windowId, tabs, x, y, w, h) {
 	}
 }
 
+const MAX_SETTLED = 10000
+const MAX_SIMULTANEOUS = 3
 
-async function navigateTo(url, wait) {
+async function _networkSettled() {
+	let start = Date.now()
+	let networkTimer
+	let url = currentContext.localVariables.navationURL
+	currentContext.networkStarted = false
+	let result = await new Promise(function (resolve, reject) {
+		networkTimer = setInterval(function () {
+			if(Date.now() - start > MAX_SETTLED) {
+				clearInterval(networkTimer)
+				reject(new Error('Navigation failed.'))
+			} else if (currentContext.queueRate 
+				&& currentContext.networkStarted
+				&& currentContext.queueRate.length <= MAX_SIMULTANEOUS) {
+				clearInterval(networkTimer)
+				resolve(url)
+			} else if (currentContext.queueRate) {
+				let nowish = currentContext.queueRate.shift()
+				if(Date.now() - nowish < 1000) {
+					currentContext.queueRate.unshift(nowish)
+				}			
+			}
+			// TODO: double check the original request even made it load?
+			//   CAS and ISP DNS changes will ruin this.
+			//   Will have to account for that at a higher level.
+		}, 100)
+	})
+	return result
+}
+
+async function _sendMessage(message) {
+	// allow the library script to send messages 
+	//   back to frontend
+	return await chrome.tabs.sendMessage(currentContext.senderId, message)
+}
+
+async function _sendCommand(command, options) {
 	if(!currentContext) {
 		throw new Error('Tab context not set.')
 	}
-	let targetId = currentContext.localVariables.tabId
-	let targets = (await chrome.debugger.getTargets())
-		.filter(t => t.tabId == targetId)
-	if(targets[0] && !targets[0].attached) {
-		await attachDebugger(targetId)
-	}
-	currentContext.navationURL = url
-	let dom = await chrome.debugger.sendCommand({
-		tabId: targetId
-	}, 'Runtime.evaluate', {
+	// allow the library script to send messages 
+	//   back to frontend
 //	}, 'Debugger.evaluateOnCallFrame', {
-		expression: 'window.location = "' + url + '";'
-	})
-	// TODO: wait for network to settle, or duck out
-	
+	let tabId = currentContext.localVariables.tabId
+	return await chrome.debugger.sendCommand({
+		tabId: tabId
+	}, command, options)
 }
+
+
 
 
 

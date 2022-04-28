@@ -1,7 +1,10 @@
 // emit self in a cloud-compatible way.
 // SELF EXTRACTOR LIKE BUSYBOX
+// quines have a life-expectancy, we should be up-front with 
+//   them about that so they don't come back to kill us like Roy.
 
-
+// convert makefile to jupyter notebook for storage in collab / download.
+//   does jupyter support encryption?
 
 async function emitDownload() {
 	if(!document.body.className.includes('starting')) {

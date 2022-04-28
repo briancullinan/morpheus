@@ -58,9 +58,47 @@ async function runUnary(AST, runContext) {
 	}
 }
 
+async function runLogical(AST, runContext) {
+	// MEANT TO DO THIS SOONER
+	if(AST.operator == '&&') {
+		let left = await runStatement(0, [AST.left], runContext)
+		if(!isStillRunning(runContext)) {
+			return
+		}
+		if(!left) {
+			return false
+		}
+		// left = true
+
+		let right = await runStatement(0, [AST.right], runContext)
+		if(!isStillRunning(runContext)) {
+			return
+		}
+		return right
+	} else
+	if(AST.operator == '||') {
+		let left = await runStatement(0, [AST.left], runContext)
+		if(!isStillRunning(runContext)) {
+			return
+		}
+		if(left) {
+			return true
+		}
+		// left = false
+		let right = await runStatement(0, [AST.right], runContext)
+		if(!isStillRunning(runContext)) {
+			return
+		}
+
+		return right
+	} else {
+		throw new Error(AST.type + ': Not implemented: ' + AST.operator)
+	}
+
+}
+
 
 async function runBinary(AST, runContext) {
-	// TODO: cannot modulo a float
 	let thisAndThat = await runThisAndThat(AST.left, AST.right, runContext)
 	if(!isStillRunning(runContext)) {
 		return
@@ -82,34 +120,37 @@ async function runBinary(AST, runContext) {
 		return left - right
 	} else
 	if(AST.operator == '%') {
+		// TODO: cannot modulo a float
 		return left % right
 	} else
 	if(AST.operator == '^') {
 		return left ^ right
-	} else
-	if(AST.operator == '<') {
-		return left < right
-	} else
-	if(AST.operator == '>') {
-		return left > right
-	} else
+	} else 
 	if(AST.operator == '<=') {
 		return left <= right
 	} else
 	if(AST.operator == '>=') {
 		return left >= right
 	} else
-	// MEANT TO DO THIS SOONER
-	if(AST.operator == '&&') {
-		return left && right
-	} else
-	if(AST.operator == '||') {
-		return left || right
-	} else
 	if(AST.operator == '!=') {
 		return left != right
+	} else
+	if(AST.operator == '==') {
+		return left == right
+	} else
+	if(AST.operator == '!==') {
+		return left !== right
+	} else
+	if(AST.operator == '===') {
+		return left === right
+	} else
+	if(AST.operator == '<') {
+		return left < right
+	} else
+	if(AST.operator == '>') {
+		return left > right
 	} else {
-		throw new Error(AST.operator + ': Not implemented!')
+		throw new Error(AST.type + ': Not implemented: ' + AST.operator)
 	}
 }
 

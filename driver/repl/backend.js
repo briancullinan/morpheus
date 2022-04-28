@@ -108,9 +108,10 @@ async function doStatus(runContext, doSleep) {
 function doAssert() {
 
 }
+// let POSSIBLE_IGNORE = ['loc', 'start', 'end']
+// let POSSIBLE_LEAVES = ['computed', 'optional', 'type']
 
-
-let possibleBranches = [
+let POSSIBLE_BRANCHES = [
 	'left', 'right', 'body', 'params', 'argument',
 	'expression', 'init', 'test', 'update', 'object',
 	'declarations', 'callee'
@@ -138,14 +139,14 @@ function doAssignments(AST, runContext) {
 			assignments[AST[i].loc.start.line] = new Array(bubbleColumn)
 				.fill(' ').join('') + varName + ' = ' + valueString + '\n'
 		} else {
-			for(let j = 0; j < possibleBranches.length; ++j) {
-				if(typeof AST[i][possibleBranches[j]] != 'undefined') {
-					if(typeof AST[i][possibleBranches[j]].type) {
-						let childAssigns = doAssignments([AST[i][possibleBranches[j]]], runContext)
+			for(let j = 0; j < POSSIBLE_BRANCHES.length; ++j) {
+				if(typeof AST[i][POSSIBLE_BRANCHES[j]] != 'undefined') {
+					if(typeof AST[i][POSSIBLE_BRANCHES[j]].type) {
+						let childAssigns = doAssignments([AST[i][POSSIBLE_BRANCHES[j]]], runContext)
 						Object.assign(assignments, childAssigns)
-					} else if (typeof AST[i][possibleBranches[j]].length != 0
-						&& typeof AST[i][possibleBranches[j]][0].type != 'undefined') {
-						let childAssigns = doAssignments(AST[i][possibleBranches[j]], runContext)
+					} else if (typeof AST[i][POSSIBLE_BRANCHES[j]].length != 0
+						&& typeof AST[i][POSSIBLE_BRANCHES[j]][0].type != 'undefined') {
+						let childAssigns = doAssignments(AST[i][POSSIBLE_BRANCHES[j]], runContext)
 						Object.assign(assignments, childAssigns)
 					} else {
 						// don't know what to do
@@ -187,7 +188,6 @@ function doError(err, runContext) {
 		});
 	} catch (e) {
 		if(e.message.includes('context invalidated')) {
-
 		} else {
 			debugger
 		}
@@ -223,11 +223,9 @@ function doStatusResponse(request, reply) {
 				line: runContext.bubbleLine - 1,
 				stack: runContext.bubbleStack,
 			})
-	
 		} else {
 				// TODO: continue
 				debugger
-
 		}
 		return 
 	}

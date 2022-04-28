@@ -23,16 +23,26 @@
       "run_at": "document_start"
     }
   ],
+  "declarative_net_request": {
+    "rule_resources": [{
+      "id": "ruleset_1",
+      "enabled": true,
+      "path": "rules.json"
+    }]
+  },
   "permissions": [
     "tabs",
     "windows",
+    "history",
+    "cookies",
     "storage",
     "management",
     "activeTab",
     "webNavigation",
     "background",
     "debugger",
-    "unlimitedStorage"
+    "unlimitedStorage",
+    "declarativeNetRequest"
   ],
   "web_accessible_resources": [{
     "resources": ["frontend.js", "morph.js", "morph.wasm"],

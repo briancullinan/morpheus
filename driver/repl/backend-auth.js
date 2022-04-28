@@ -11,12 +11,13 @@ async function doMorpheusPass(required) {
 	}
 
 	let result = await chrome.storage.sync.get('_morpheusKey')
+	// USED FOR CHROME.PROFILES.LIST() FAKE API CALL IN LIBRARY
 	if(!result._morpheusKey) {
 		morphKey = []
 	} else {
 		morphKey = JSON.parse(result._morpheusKey)
 	}
-	let response = await currentContext.localFunctions['doLoginDialog']()
+	let response = await currentContext.localFunctions['doSystemLogin']()
 	currentContext.returned = false // because fuck-arounds above, ^
 	if(!isStillRunning(currentContext)) {
 		return
@@ -31,23 +32,30 @@ async function doMorpheusPass(required) {
 	// NO WAY TO ACCESS morpheusPass FROM OUTSIDE THIS FUNCTION
 	//   RIIIIIIIIIGHT V8????????
 	morpheusPassTime = Date.now()
-	temporaryDecrypter = (function (morpheusPass) {
+	let user
+	temporaryDecrypter = (function (morpheusForm) {
+		user = morpheusForm.user // copy username for convenience
 		return async function (data) {
 			// ask for password again
 			if(Date.now() - morpheusPassTime > 30 * 1000) {
-				debugger
+				throw new Error('Key expired.')
 			}
-			return decrypt(morpheusPass, data)
+			return decrypt(morpheusForm.pass, data)
 		}
 	// decrypt with the current runId incase of extra snoopy/loggy plugins
-	})(JSON.parse(decrypt(currentContext.runId, response.pass)))
+	})(JSON.parse(decrypt(currentContext.runId, response.result)))
 
-	temporaryEncrypter = (function (morpheusPass) {
+	temporaryEncrypter = (function (morpheusForm) {
 		return async function (data) {
-			return crypt(morpheusPass, data)
+			// ask for password again
+			if(Date.now() - morpheusPassTime > 30 * 1000) {
+				// TODO: WARN IN UI, NOT TO DO THIS
+				console.log('Key expired.')
+			}
+			return crypt(morpheusForm.pass, data)
 		}
 	// decrypt with the current runId incase of extra snoopy/loggy plugins
-	})(JSON.parse(decrypt(currentContext.runId, response.pass)))
+	})(JSON.parse(decrypt(currentContext.runId, response.result)))
 
 	// STORE THE USERNAME, SO WE DON'T HAVE TO KEEP TYPING IT
 	//   THE HASH USERNAME b****n@g****m AND THE PASSWORD ARE
@@ -68,7 +76,25 @@ async function doMorpheusPass(required) {
 	//   WHICH WE ASSUME IS TAMPER PROOF, FOR DECRYPTION AND SENDING 
 	//   TO CORRECT PAGE. TODO: IMPORT/EXPORT LAWS ON SECURE TECHNOLOGY.
 
-	return response.user
+	return user
+}
+
+
+
+async function doMorpheusAuth(required) {
+	if(!required && temporaryEncrypter
+		&& Date.now() - morpheusPassTime < 30 * 1000) {
+		return
+	}
+	let response = await currentContext.localFunctions['doPageLogin']()
+	currentContext.returned = false // because fuck-arounds above, ^
+	if(!isStillRunning(currentContext)) {
+		return
+	}
+	if(!response || !response.result) {
+		throw new Error('Needs page authentication.')
+	}
+	return JSON.parse(decrypt(currentContext.runId, response.result))
 }
 
 
@@ -82,8 +108,9 @@ async function addUser(user) {
 	if(!morphKey.includes(user)) {
 		morphKey.push(user)
 	}
-	keySettings._morpheusKey = JSON.stringify(morphKey)
-	await chrome.storage.sync.set(keySettings)
+	await chrome.storage.sync.set({
+		_morpheusKey: JSON.stringify(morphKey)
+	})
 
 }
 

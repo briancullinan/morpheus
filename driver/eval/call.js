@@ -188,15 +188,16 @@ async function runCall(AST, runContext) {
     // TODO: incase libraries aren't sent, preprocessed libs are used here
     if (!calleeFunc) {
       functionName = AST.callee.name
-      calleeFunc = await runContext.localVariables.thisWindow._accessor(void 0, {
-        // WOOHOO my first polyfill
-        object: {
-          name: 'exports'
-        },
-        property: {
-          name: AST.callee.name
-        }
-      }, void 0, runContext, void 0)
+      calleeFunc = await runContext.localVariables.thisWindow
+        ._accessor(void 0, {
+          // WOOHOO my first polyfill
+          object: {
+            name: 'exports'
+          },
+          property: {
+            name: AST.callee.name
+          }
+        }, void 0, runContext, void 0)
     }
   } else
   if(AST.callee.type) {
@@ -228,7 +229,6 @@ async function runCall(AST, runContext) {
 
   try {
     let result;
-    currentContext = runContext
     if(AST.type == 'NewExpression') {
       if(calleeFunc == _Promise) {
         result = Promise.resolve().then(d => {
