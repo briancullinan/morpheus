@@ -14,7 +14,7 @@ async function runParameters(params, runContext) {
 	for(let i = 0; i < params.length; i++) {
 		let arg = params[i]
 		result.push(await runStatement(0, [arg], runContext))
-		if(!isStillRunning(runContext)) {
+		if(await shouldBubbleOut(runContext)) {
 			return result // bubble up
 		}
 	}
@@ -182,7 +182,7 @@ async function runCall(AST, runContext) {
   // collect variables
 			
   let params = await runParameters(AST.arguments, runContext)
-  if(!isStillRunning(runContext)) {
+  if(await shouldBubbleOut(runContext)) {
     return // bubble up
   }
 
@@ -210,7 +210,7 @@ async function runCall(AST, runContext) {
   } else
   if(AST.callee.type) {
     calleeFunc = await runStatement(0, [AST.callee], runContext)
-    if(!isStillRunning(runContext)) {
+    if(await shouldBubbleOut(runContext)) {
       return // bubble up
     }
     functionName = runContext.bubbleProperty
@@ -272,7 +272,7 @@ async function runCall(AST, runContext) {
     // must come after runContext.returned is adjusted 
     //   because this bubbles out of whatever block or 
     //   for-loop is in scope.
-    if(!isStillRunning(runContext)) {
+    if(await shouldBubbleOut(runContext)) {
       return // bubble up
     }
     // TODO: check for auto imports

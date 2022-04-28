@@ -1,7 +1,6 @@
 
 let ACE = {
 	consoleLines: 0,
-	lastRunId: null,
 	playCount: 0,
 	playButtons: [],
 	downloaded: false,

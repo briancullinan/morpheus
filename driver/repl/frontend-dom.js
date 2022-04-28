@@ -9,8 +9,6 @@ function runBlock(start) {
 	if(document.body.className.includes('running')
 		|| document.body.className.includes('starting')
 		|| document.body.className.includes('paused')) {
-		window['run-script'].value 
-				= '"' + (ACE.lastRunId || '') + '"'
 		ace.focus()
 		return
 	}
@@ -21,7 +19,9 @@ function runBlock(start) {
 		if(chrome && chrome.runtime) {
 			chrome.runtime.sendMessage(
 				EXTENSION_ID, EXTENSION_VERSION, 
-				function () { clearTimeout(cancelDownload) })
+			function () {
+				clearTimeout(cancelDownload)
+			})
 		}
 	}
 
@@ -144,7 +144,6 @@ function doLibraryLookup(functionName) {
 
 
 function onFrontend() {
-	window['run-script'].value = '"' + (ACE.lastRunId || '') + '"'
 	document.body.classList.add('starting')
 	window['run-accessor'].click()
 	ACE.downloaded = true
@@ -155,10 +154,6 @@ function onStarted(request) {
 	document.body.classList.remove('paused')
 	document.body.classList.remove('starting')
 	document.body.classList.add('running')
-	ACE.lastRunId = request.started
-	if(!ACE.lastRunId) {
-		throw new Error('goddamnit')
-	}
 	window['run-button'].classList.remove('running')
 }
 
@@ -295,7 +290,7 @@ function collectForm(dialog) {
 	}
 	clearTimeout(dialog.timeout)
 	setTimeout(function () {
-		let encrypted = crypt(ACE.lastRunId, JSON.stringify(formResults))
+		let encrypted = crypt(ACE.lastSessionId, JSON.stringify(formResults))
 		window['run-script'].value = '"' + encrypted + '"'
 		window['run-accessor'].click()
 	}, waitTime)

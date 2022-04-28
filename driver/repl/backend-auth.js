@@ -21,7 +21,7 @@ async function doMorpheusPass(required) {
 	let loginFunction = await getRemoteCall('doSystemLogin', currentContext)
 	let response = await loginFunction()
 	currentContext.returned = false // because fuck-arounds above, ^
-	if(!isStillRunning(currentContext)) {
+	if(await shouldBubbleOut(currentContext)) {
 		return
 	}
 	if(!response || !response.result) {
@@ -91,7 +91,7 @@ async function doMorpheusAuth(required) {
 	let loginFunction = await getRemoteCall('doPageLogin', currentContext)
 	let response = await loginFunction()
 	currentContext.returned = false // because fuck-arounds above, ^
-	if(!isStillRunning(currentContext)) {
+	if(await shouldBubbleOut(currentContext)) {
 		return
 	}
 	if(!response || !response.result) {
@@ -121,14 +121,14 @@ async function addUser(user) {
 
 async function doMorpheusKey() {
 	let user = await doMorpheusPass(true)
-	if(!isStillRunning(currentContext)) {
+	if(await shouldBubbleOut(currentContext)) {
 		return
 	}
 	// chrome.storage.sync.set({ mytext: txtValue });
 	let loginFunction = await getRemoteCall('doKeyDialog', currentContext)
 	let response = await loginFunction()
 	currentContext.returned = false // because fuck-arounds above, ^
-	if(!isStillRunning(currentContext)) {
+	if(await shouldBubbleOut(currentContext)) {
 		return
 	}
 	if(!response || !response.result) {

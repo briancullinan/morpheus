@@ -55,15 +55,27 @@ function runAccessor() {
 }
 
 
+function generateRunId(runId) {
+  return function addRunIdInjection(request) {
+    request.runId = runId
+    return request
+  }
+}
+
+
+
+let lastRunId
+
+
+
 function runScript() {
   let runScriptTextarea = document.getElementById("run-script")
 
   if(document.body.className.includes('running')
     || document.body.className.includes('paused')) {
-    chrome.runtime.sendMessage({ 
+    chrome.runtime.sendMessage(lastRunId({ 
       pause: !document.body.className.includes('paused'),
-      runId: JSON.parse(runScriptTextarea.value),
-    }, processResponse)
+    }), processResponse)
     return
   }
 
@@ -73,14 +85,13 @@ function runScript() {
   }
 
   try {
-    let runId = getRunId(20)
+    lastRunId = generateRunId(getRunId(20))
     if(!runScriptTextarea.value.length) {
       throw new Error('No script!')
     }
-    chrome.runtime.sendMessage({ 
+    chrome.runtime.sendMessage(lastRunId({ 
       script: runScriptTextarea.value,
-      runId: runId,
-    }, processResponse)
+    }), processResponse)
     runScriptTextarea.value = ''
   } catch (e) {
     // reload the page!
@@ -150,11 +161,10 @@ function getRunId(length) {
 }
 
 
-async function checkOnRunner(runId) {
+async function checkOnRunner() {
   try {
-    chrome.runtime.sendMessage({ 
-      runId: runId,
-    }, function (response) {
+    chrome.runtime.sendMessage(lastRunId({ 
+    }), function (response) {
       if(!response) {
         return
       }
@@ -193,7 +203,7 @@ function processResponse(request) {
     if(runnerTimer) {
       clearInterval(runnerTimer)
     }
-    runnerTimer = setInterval(checkOnRunner.bind(null, request.started), 1000)
+    runnerTimer = setInterval(checkOnRunner, 1000)
   }
 
   window.postMessage(request)

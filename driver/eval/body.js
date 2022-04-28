@@ -5,20 +5,40 @@ let currentContext
 
 const DEFAULT_DELAY = 1000
 const DEFAULT_SHORT_DELAY = 100
+const DEFAULT_PAUSED_INTERVAL = 100
 
 
 
 // INTERESTING FOR CODE REVEIWS, HABIT OF EXTRACTING DOUBLE NEGATIVES?
-function isStillRunning(runContext) {
-	if(!runContext.paused && !runContext.ended 
-		&& !runContext.broken && !runContext.returned) {
+async function shouldBubbleOut(runContext) {
+	if(runContext.paused) {
+		// add a paused handler for debug and continue
+		//   this will handle restorations for live programs
+		//   it will just sit here and wait for the play button.
+		// BUT IS THIS REALLY GOOD ENOUGH? SURE WE CAN ATTACH TO A LIVE
+		//   PROGRAM WITH A DEBUGGER, BUT SHOULDN'T WE BE ABLE TO TELL
+		//   THE PROGRAM WHAT STATE OF MIND IT'S IN?
+		// TODO: ENCODE RUNSTATEMENT() CALL STACK AND HASH CONTEXTS
+		//   SAVE AND RESTORE CONTEXTS FROM JSON ENTIRELY, SO IN 
+		//   THE FUTURE WE CAN PROGRAM OUR PROGRAMS, LIKE FIXING THE FLASHING CLOCK ON A VCR.
+		await new Promise(function (resolve) {
+			let pausedTimer
+			pausedTimer = setInterval(function () {
+				if(!runContext.paused) {
+					clearInterval(pausedTimer)
+					resolve()
+				}
+			}, DEFAULT_PAUSED_INTERVAL)
+		})
+	}
+	if(runContext.ended || runContext.broken || runContext.returned) {
 		return true
 	}
 	return false
 }
 
 async function runStatement(i, AST, runContext) {
-	if(!isStillRunning(runContext)) {
+	if(await shouldBubbleOut(runContext)) {
 		throw new Error('context ended!')
 	}
 	try {
@@ -98,7 +118,7 @@ async function runStatement(i, AST, runContext) {
 			// so context doesn't disappear
 			for(let j = 0; j < AST[i].declarations.length; j++) {
 				result = await runStatement(j, AST[i].declarations, runContext)
-				if(!isStillRunning(runContext)) { // bubble up
+				if(await shouldBubbleOut(runContext)) { // bubble up
 					return
 				}
 			}
@@ -129,7 +149,7 @@ async function runStatement(i, AST, runContext) {
 		} else 
 		if(AST[i].type == 'IfStatement') {
 			let result = await runStatement(0, [AST[i].test], runContext)
-			if(!isStillRunning(runContext)) {
+			if(await shouldBubbleOut(runContext)) {
 				return
 			}
 			if(result) {
@@ -176,7 +196,7 @@ async function runStatement(i, AST, runContext) {
 
 // find and run main
 async function runBody(AST, runContext) {
-	if(!isStillRunning(runContext)) {
+	if(await shouldBubbleOut(runContext)) {
 		throw new Error('context ended!')
 	}
 
@@ -203,7 +223,7 @@ async function runBody(AST, runContext) {
 		let startVars = Object.assign({}, runContext.localVariables)
 
 		let result = await runParameters(AST, runContext)
-		if(!isStillRunning(runContext)) {
+		if(await shouldBubbleOut(runContext)) {
 			return result.pop()
 		}
 		// remove anything created in the past context
@@ -224,11 +244,12 @@ async function doPlay(runContext) {
 		let env = await createEnvironment(runContext)
 		await createRunContext(runContext, env)
 		threads[runContext.runId] = runContext
+		runContext.bubbleTime = Date.now()
 		// attach debugger
 		await attachDebugger(runContext.senderId)
 		// run code from client
 		let result = await runBody(runContext.body[0].expression.callee.body.body, runContext)
-		if(!isStillRunning(runContext)) {
+		if(await shouldBubbleOut(runContext)) {
 			// TODO: send async status?
 		} else if (runContext.async) {
 			chrome.tabs.sendMessage(runContext.senderId, { 

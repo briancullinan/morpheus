@@ -8,7 +8,7 @@ async function runLoop(init, test, update, body, runContext) {
 		throw new Error('ForStatement: Not implemented!')
 	}
 	let initAndTest = await runThisAndThat(init, test, runContext)
-	if(!isStillRunning(runContext)) {
+	if(await shouldBubbleOut(runContext)) {
 		return
 	}
 
@@ -21,19 +21,19 @@ async function runLoop(init, test, update, body, runContext) {
 			runContext.broken = false
 			break
 		}
-		if(!isStillRunning(runContext)) {
+		if(await shouldBubbleOut(runContext)) {
 			return
 		}
 		await runStatement(0, [update], runContext)
-		if(!isStillRunning(runContext)) {
+		if(await shouldBubbleOut(runContext)) {
 			return
 		}
 		testResults = await runStatement(0, [test], runContext)
-		if(!isStillRunning(runContext)) {
+		if(await shouldBubbleOut(runContext)) {
 			return
 		}
 	}
-	if(!isStillRunning(runContext)) {
+	if(await shouldBubbleOut(runContext)) {
 		return
 	}
 // SO I'M NOT A HYPOCRITE LETS PUT SOME REASONABLE BOUNDS!
@@ -52,15 +52,15 @@ async function runWhile(AST, runContext) {
 			runContext.broken = false
 			break
 		}
-    if(!isStillRunning(runContext)) {
+    if(await shouldBubbleOut(runContext)) {
       return
     }
     testResults = await runStatement(0, [AST.test], runContext)
-    if(!isStillRunning(runContext)) {
+    if(await shouldBubbleOut(runContext)) {
       return
     }
   } while (testResults && --safety > 0)
-	if(!isStillRunning(runContext)) {
+	if(await shouldBubbleOut(runContext)) {
 		return
 	}
 	return result

@@ -24,7 +24,7 @@ async function runVariable(AST, runContext) {
     result = await runStatement(0, [AST.init], runContext)
     // TODO: ^^ intentionally leak here for reporting, global error handling overriding?
     runContext.localVariables[AST.id.name] = result
-    if(!isStillRunning(runContext)) { // bubble up
+    if(await shouldBubbleOut(runContext)) { // bubble up
       return
     }
   }
@@ -42,7 +42,7 @@ async function runObject(AST, runContext) {
     }
     // TODO: add late binding
     newObject[prop.key.name] = await runStatement(0, [prop.value], runContext)
-    if(!isStillRunning(runContext)) {
+    if(await shouldBubbleOut(runContext)) {
       return
     }
   }
@@ -63,7 +63,7 @@ async function runAssignment(left, right, runContext) {
 
 	if (left.type == 'MemberExpression') {
 		let parent = await runStatement(0, [left.object], runContext)
-		if(!isStillRunning(runContext)) {
+		if(await shouldBubbleOut(runContext)) {
 			return
 		}
 
@@ -75,7 +75,7 @@ async function runAssignment(left, right, runContext) {
 			property = left.property.value
 		} else {
 			property = await runStatement(0, [left.property], runContext)
-			if(!isStillRunning(runContext)) {
+			if(await shouldBubbleOut(runContext)) {
 				return
 			}
 		}
@@ -84,7 +84,7 @@ async function runAssignment(left, right, runContext) {
 		doAssign(left.object.name + '.' + property, beforeLine, bubbleColumn, runContext)
 		let result = await runStatement(0, [right], runContext)
 		// LEAK ASSIGNMENT FOR GLOBAL DEBUGGING?
-		if(!isStillRunning(runContext)) {
+		if(await shouldBubbleOut(runContext)) {
 			return
 		}
 
@@ -114,7 +114,7 @@ async function runAssignment(left, right, runContext) {
 			doAssign(left.name, beforeLine, bubbleColumn, runContext)
 			let result = await runStatement(0, [right], runContext)
 			// LEAK ASSIGNMENT FOR GLOBAL DEBUGGING?
-			if(!isStillRunning(runContext)) {
+			if(await shouldBubbleOut(runContext)) {
 				return
 			}
 			runContext.localVariables[left.name] = result
@@ -137,7 +137,7 @@ async function runMember(AST, runContext) {
   if(AST.property.type == 'Identifier') {
     if(AST.computed) {
       property = await runStatement(0, [AST.property], runContext)
-			if(!isStillRunning(runContext)) {
+			if(await shouldBubbleOut(runContext)) {
 				return
 			}
     } else {
@@ -149,7 +149,7 @@ async function runMember(AST, runContext) {
 
 
   let parent = await runStatement(0, [AST.object], runContext)
-  if(!isStillRunning(runContext)) {
+  if(await shouldBubbleOut(runContext)) {
     return // bubble up
   }
 

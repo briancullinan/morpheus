@@ -244,7 +244,7 @@ LIBRARY_FILES  := $(wildcard driver/library/*.js)
 
 # these will be included in the page
 FRONTEND_JS    := \
-	$(wildcard driver/repl/frontend-*.js) \
+	$(filter-out %-plugin.js,$(wildcard driver/repl/frontend-*.js)) \
 	driver/utils/jsencrypt.js \
 	driver/utils/crypt.js \
 	driver/utils/quine.js \
@@ -309,7 +309,7 @@ BACKEND_FILES  := \
 	$(wildcard driver/repl/backend*.js) \
 	driver/utils/acorn.js driver/utils/acorn-loose.js \
 	driver/utils/crypt.js driver/utils/jsencrypt.js
-FRONTEND_FILES := driver/repl/frontend.js \
+FRONTEND_FILES := driver/repl/frontend-plugin.js \
 	driver/utils/jsencrypt.js driver/utils/crypt.js \
 	driver/utils/iso.js
 

@@ -1,4 +1,5 @@
 let window = self;
+let oldRunTimer
 
 // TODO: WAS GOING TO USE THIS AS A TEMPLATE FOR 
 //   BOOKMARKS2PDF. NO SCRIPTING, NO ACE, JUST BACKEND
@@ -45,8 +46,41 @@ function doMessage(request, sender, reply) {
 		senderId: sender.tab.id,
 	}), 300)
 
-	reply({ started: request.runId })
+	// send a list of recent runs so we can reattach to other browser sessions
+	//   this is one thing that always annoyed me about jupyter is needing a
+	//   separate session for every file of code, those two things have nothing
+	//   to do with each other, it's a bad design.
+	if(!oldRunTimer) {
+		oldRunTimer = setInterval(pruneOldRuns, 100)
+	}
+	let runsEncoded = Object.keys(threads)
+		.map(function (runId) {
+			return [
+				runId[0] + '******' + runId[runId.length-1],
+				threads[runId].bubbleTime
+			]
+		})
+	reply({ 
+		started: runsEncoded,
+	})
 }
+
+
+const THREAD_SAVE_TIME = 3 * 60 * 1000
+
+
+function pruneOldRuns() {
+	// i just thought maybe a transpiler converted code to var which changes scope and
+	//   could make it vulnerable?
+	let runIds = Object.keys(threads)
+	for(let i = 0; i < runIds.length; i++) {
+		if(threads[runIds[i]].ended
+			&& Date.now() - threads[runIds[i]].bubbleTime > THREAD_SAVE_TIME) {
+			delete threads[runIds[i]]
+		}
+	}
+}
+
 
 chrome.runtime.onMessage.addListener(doMessage)
 
@@ -187,13 +221,13 @@ async function addCookie(cookie, page) {
 	}
 	// encrypte encoded cookies for storage for quick lookup
 	cookieSessions[cookieKey+'_encoded'] = temporaryEncrypter(cookieEncoded)
-	await chrome.storage.sync.set({
+	chrome.storage.sync.set({
 		cookieSessions: JSON.stringify(cookieSessions)
 	})
 	let cookieStorage = {}
 	// THIS IS THE PART THAT ACTUALLY NEEDS TO BE ENCRYPTED
 	cookieStorage[cookieKey] = temporaryEncrypter(cookie)
-	await chrome.storage.sync.set(cookieStorage)
+	chrome.storage.sync.set(cookieStorage)
 	return cookieEncoded
 }
 
@@ -223,11 +257,11 @@ async function doWebComplete(details) {
 		return
 	}
 	let cookieEncoded = await addCookie(cookie, runContext.localVariables.navigationURL)
-	return await chrome.tabs.sendMessage(runContext.senderId, {
+	// AWAIT LOCK, LIKE A RACE-CONDITION WITH WAITING FOR 
+	//   MULTIPLE PROMISES, INTERESTING IT CAN CAUSE PAGE TO STALL.
+	chrome.tabs.sendMessage(runContext.senderId, {
 		// TODO: encrypt encoded stuff with runContext.runId
 		cookie: cookieEncoded // J/K cookie.result.value
-	}, function(response) {
-
 	})
 }
 

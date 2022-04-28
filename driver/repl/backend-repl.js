@@ -181,15 +181,14 @@ function doError(err, runContext) {
 			//                                         (HUNGRY? FIX THE TRACTOR YOURSELF)
 			//   THEY DON'T OWE YOU ANYTHING, NOT EVEN LIFE SUPPORT. FUCK OFF FOSS, FOSS OWES ME
 			//   EVERYTHING BECAUSE I'LL BE THE ONE STUCK CLEANING THIS SHIT CODE UP.
-			//   TECHNICAL DEBT APPLIES TO PUBLISHING INCORRECT CODE DO. CODE IS LIKE LITTER.
+			//   TECHNICAL DEBT APPLIES TO PUBLISHING INCORRECT CODE ALSO. CODE IS LIKE LITTER.
 			locals: runContext.bubbleAST ? doAssignments(runContext.bubbleAST) : [],
 		}, function(response) {
 	
 		});
 	} catch (e) {
-		if(e.message.includes('context invalidated')) {
-		} else {
-			debugger
+		if(!e.message.includes('context invalidated')) {
+			throw e
 		}
 	}
 }
@@ -223,11 +222,12 @@ function doStatusResponse(request, reply) {
 				line: runContext.bubbleLine - 1,
 				stack: runContext.bubbleStack,
 			})
+			return 
 		} else {
-				// TODO: continue
-				debugger
+			// continues automatically from shouldBubbleOut() calls
+			// TODO: set timeout and test another statement executed
+			//   reply( stopped: or playing: )
 		}
-		return 
 	}
 
 	// now every status check will report on current line number also

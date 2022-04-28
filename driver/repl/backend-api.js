@@ -144,6 +144,9 @@ function _setTimeout(runContext, callback, msec) {
 	runContext.timers[timerId] = false // reoccuring
 	return timerId
 }
+
+
+
 function _setInterval(runContext, callback, msec) {
 	runContext.async = true
 	runContext.asyncRunners++
@@ -153,6 +156,9 @@ function _setInterval(runContext, callback, msec) {
 	runContext.timers[timerId] = true // reoccuring
 	return timerId
 }
+
+
+
 function _clearTimeout(runContext, id) {
 	// keep track if timer triggers before it's counted
 	if(typeof runContext.timers[id] != 'undefined') {
@@ -161,6 +167,9 @@ function _clearTimeout(runContext, id) {
 	}
 	return clearInterval(id)
 }
+
+
+
 function _clearInterval(runContext, id) {
 	runContext.asyncRunners-- // always subtracts because it was reoccurring
 	return clearInterval(id)
@@ -194,6 +203,7 @@ async function createRunContext(runContext, env) {
 		// I think by pushing runStatement(AST[i]) <- i onto a stack and restoring for()?
 		// TODO: continuations, check for anonymous functions, variable/function declarations
 		// TODO: allow moving cursor to any symbol using address of symbol in AST
+		// OR: WAIT IN STILLRUNNING() FOR UNPAUSE
 	})
 	return runContext
 }

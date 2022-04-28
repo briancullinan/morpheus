@@ -18,7 +18,7 @@ async function doDialog(dialog) {
 	do {
     //try {
       response = await chrome.tabs.sendMessage(dialog)
-      
+
     //} catch (e) {
     //  if(e.message.includes(''))
     //}
@@ -28,7 +28,7 @@ async function doDialog(dialog) {
 	} while(--tryTimes > 0)
   chrome.tabs.sendMessage({
     accessor: false // hide all dialogs
-  })
+  }, function () {})
   return response
 }
 
