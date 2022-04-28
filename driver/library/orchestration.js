@@ -39,13 +39,12 @@ async function navigateTo(url, wait) {
     }
   }
   // hint to the content filter where we are going
-	navationURL = url
+	navigationURL = url
 	let dom = await chrome.debugger.sendCommand('Runtime.evaluate', {
 		expression: 'window.location = "' + url + '";'
 	})
 	// wait for network to settle, or duck out
-  if(typeof wait == 'undefined' 
-      || wait !== false) {
+  if(typeof wait == 'undefined' || wait !== false) {
     await networkSettled()
   }
 }

@@ -98,7 +98,7 @@ function findFrame(details) {
 
 	// sometimes users type these in wrong and the browser fixes it automatically
 	// DON'T USE THIS AS A REASON TO PAUSE FROM INTERFERENCE
-	let leftStr = runContext.localVariables.navationURL.replace(/https|http|\//ig, '')
+	let leftStr = runContext.localVariables.navigationURL.replace(/https|http|\//ig, '')
 	let rightStr = details.url.replace(/https|http|\//ig, '')
 	if(!leftStr.localeCompare(rightStr)
 		|| (ALLOW_REDIRECT 
@@ -126,8 +126,8 @@ async function doWebNavigation(details) {
 		runContext.queueRate = []
 	}
 	runContext.queueRate.push(Date.now())
+	/*
 	chrome.tabs.sendMessage(details.tabId || runContext.localVariables.tabId, { 
-		inject: details.url,
 		headers: {
 
 		}
@@ -135,25 +135,97 @@ async function doWebNavigation(details) {
 
 	})
 	return await chrome.tabs.sendMessage(runContext.senderId, {
-		session: details.url
+		headers: {
+			
+		}
 	}, function(response) {
 
 	})
+	*/
 }
+
+
+function encodeCookie(cookie) {
+	return cookie.result.value.split(';')
+		.reduce(function (obj, cookieBite) {
+			let cookieKeyValue = cookieBite.split('=')
+			let cookieName = cookieKeyValue.length > 1
+				? cookieKeyValue[0]
+				: cookieBite[0]
+			obj[cookieName] = cookieBite.includes('=')
+				? cookieKeyValue[1][1] + cookieKeyValue[1]
+						.substring(1).replace(/./, '*')
+				: cookieBite
+						.substring(1).replace(/./, '*')
+		}, {})
+}
+
+
+
+async function addCookie(cookie, page) {
+	await doMorpheusPass(true)
+	if(!temporaryEncrypter) {
+		return
+	}
+	let leftStr = page.replace(/https|http|\//ig, '')
+	// this says encrypt but it's not the part that needs to be secured
+	//   this is just to differentiate profiles in the index
+	let cookieKey = temporaryEncrypter(temporaryUser + 'Cookies')
+	let result = await chrome.storage.sync.get(cookieKey)
+	let cookieSessions
+	if(!result[cookieKey]) {
+		cookieSessions = {}
+	} else {
+		cookieSessions = JSON.parse(result[cookieKey])
+	}
+	if(typeof cookieSessions[leftStr] == 'undefined') {
+		// again this is just to add a bit of randomness for each page key
+		let cookieKey = temporaryEncrypter(temporaryUser + leftStr)
+		cookieSessions[leftStr] = cookieKey
+	}
+	let cookieEncoded = JSON.stringify(encodeCookie(cookie))
+	cookieSessions[cookieKey+'_encoded'] = temporaryEncrypter(cookieEncoded)
+	await chrome.storage.sync.set({
+		cookieSessions: JSON.stringify(cookieSessions)
+	})
+	let cookieStorage = {}
+	// THIS IS THE PART THAT ACTUALLY NEEDS TO BE ENCRYPTED
+	cookieStorage[cookieKey] = temporaryEncrypter(cookie)
+	await chrome.storage.sync.set(cookieStorage)
+	return cookieEncoded
+}
+
+
 
 
 async function doWebComplete(details) {
 	findFrame(details)
-	if(!foundFrames[details.frameId]) {
+	let runContext = foundFrames[details.frameId]
+	if(!runContext) {
 		return
 	}
-	if(!foundFrames[details.frameId].queueRate) {
-		foundFrames[details.frameId].queueRate = []
+	if(!runContext.queueRate) {
+		runContext.queueRate = []
 	}
-	let nowish = foundFrames[details.frameId].queueRate.shift()
+	let nowish = runContext.queueRate.shift()
 	if(Date.now() - nowish < 1000) {
-		foundFrames[details.frameId].queueRate.unshift(nowish)
+		runContext.queueRate.unshift(nowish)
 	}
+	let cookie = await chrome.debugger.sendCommand({
+		tabId: details.tabId || runContext.localVariables.tabId
+	}, 'Runtime.evaluate', {
+		// TODO: attach encrypter to every page for forms transmissions
+		expression: 'document.cookie'
+	})
+	if(!cookie.result || !cookie.result.value) {
+		return
+	}
+	let cookieEncoded = await addCookie(cookie, runContext.localVariables.navigationURL)
+	return await chrome.tabs.sendMessage(runContext.senderId, {
+		cookie: cookieEncoded // J/K cookie.result.value
+	}, function(response) {
+
+	})
 }
 
 

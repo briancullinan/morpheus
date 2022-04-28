@@ -161,6 +161,23 @@ async function runFunction(AST, runContext) {
   return result
 }
 
+
+async function getRemoteCall(calleeName, runContext) {
+  let calleeFunc = await runContext.localVariables.thisWindow
+  // WEBDRIVER_API
+  ._accessor(void 0, {
+    // WOOHOO my first polyfill
+    object: {
+      name: 'exports'
+    },
+    property: {
+      name: calleeName
+    }
+  }, void 0, runContext, void 0)
+  return calleeFunc
+}
+
+
 async function runCall(AST, runContext) {
   // collect variables
 			
@@ -188,16 +205,7 @@ async function runCall(AST, runContext) {
     // TODO: incase libraries aren't sent, preprocessed libs are used here
     if (!calleeFunc) {
       functionName = AST.callee.name
-      calleeFunc = await runContext.localVariables.thisWindow
-        ._accessor(void 0, {
-          // WOOHOO my first polyfill
-          object: {
-            name: 'exports'
-          },
-          property: {
-            name: AST.callee.name
-          }
-        }, void 0, runContext, void 0)
+      calleeFunc = await getRemoteCall(AST.callee.name, runContext)
     }
   } else
   if(AST.callee.type) {
@@ -212,7 +220,6 @@ async function runCall(AST, runContext) {
   }
 
   if(!calleeFunc) {
-    debugger
     throw new Error('Function not defined: ' + AST.callee.name)
   }
 

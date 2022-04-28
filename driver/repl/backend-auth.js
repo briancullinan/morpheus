@@ -3,11 +3,12 @@
 let morpheusPassTime
 let temporaryDecrypter
 let temporaryEncrypter
+let temporaryUser
 
 async function doMorpheusPass(required) {
 	if(!required && temporaryEncrypter
 		&& Date.now() - morpheusPassTime < 30 * 1000) {
-		return
+		return temporaryUser
 	}
 
 	let result = await chrome.storage.sync.get('_morpheusKey')
@@ -17,7 +18,8 @@ async function doMorpheusPass(required) {
 	} else {
 		morphKey = JSON.parse(result._morpheusKey)
 	}
-	let response = await currentContext.localFunctions['doSystemLogin']()
+	let loginFunction = await getRemoteCall('doSystemLogin', currentContext)
+	let response = await loginFunction()
 	currentContext.returned = false // because fuck-arounds above, ^
 	if(!isStillRunning(currentContext)) {
 		return
@@ -70,7 +72,7 @@ async function doMorpheusPass(required) {
 	//   SESSION PASSWORDS. HOW DOES RSA RECOMMEND KEEPING PRIVATE
 	//   SAFE? 
 	await addUser(user)
-
+	temporaryUser = user
 	// WE ARE NOW READY TO TRANSFER PRE-ENCRYPTED PASSWORDS FROM
 	//   THE FRONT-END UI, WHERE THEY "MIGHT" BE SAFE, TO THE BACKEND
 	//   WHICH WE ASSUME IS TAMPER PROOF, FOR DECRYPTION AND SENDING 
@@ -86,7 +88,8 @@ async function doMorpheusAuth(required) {
 		&& Date.now() - morpheusPassTime < 30 * 1000) {
 		return
 	}
-	let response = await currentContext.localFunctions['doPageLogin']()
+	let loginFunction = await getRemoteCall('doPageLogin', currentContext)
+	let response = await loginFunction()
 	currentContext.returned = false // because fuck-arounds above, ^
 	if(!isStillRunning(currentContext)) {
 		return
@@ -99,7 +102,7 @@ async function doMorpheusAuth(required) {
 
 
 async function addUser(user) {
-	let result = await chrome.storage.sync.get('_morpheusKey')
+	let result = await chrome.storage.sync.get('_morpheusKey') // honey-pot
 	if(!result._morpheusKey) {
 		morphKey = []
 	} else {
@@ -122,7 +125,8 @@ async function doMorpheusKey() {
 		return
 	}
 	// chrome.storage.sync.set({ mytext: txtValue });
-	let response = await currentContext.localFunctions['doKeyDialog']()
+	let loginFunction = await getRemoteCall('doKeyDialog', currentContext)
+	let response = await loginFunction()
 	currentContext.returned = false // because fuck-arounds above, ^
 	if(!isStillRunning(currentContext)) {
 		return

@@ -198,7 +198,7 @@ async function createEnvironment(runContext) {
 		_makeWindowAccessor: _makeWindowAccessor,
 		_makeLibraryAccessor: _makeLibraryAccessor,
 		networkSettled: _networkSettled,
-		navationURL: null,
+		navigationURL: null,
 		module: WEBDRIVER_API,
 
 		// google extension-style API calls
@@ -272,7 +272,7 @@ async function _createWindow(options) {
 	// FOR CODE REVIEWS, THIS LEAF TRIPPED ME UP BECAUSE I MOVED NAVIGATION URL TO THE API
 	//   NOT SURE THERE IS ENOUGH LINKING HERE THAT EVEN A SYNTAX CHECKER WOULD FIND THAT,
 	//   UNLESS THERE WAS SOME SORT OF GLOBAL "DID YOU MEAN?"
-	currentContext.localVariables.navationURL = options.url
+	currentContext.localVariables.navigationURL = options.url
 	let win = await chrome.windows.create(options)
 	//attachRequestHandlers(win.tabs[0].id, win.id)
 	return win
@@ -323,7 +323,7 @@ const MAX_SIMULTANEOUS = 3
 async function _networkSettled() {
 	let start = Date.now()
 	let networkTimer
-	let url = currentContext.localVariables.navationURL
+	let url = currentContext.localVariables.navigationURL
 	currentContext.networkStarted = false
 	let result = await new Promise(function (resolve, reject) {
 		networkTimer = setInterval(function () {

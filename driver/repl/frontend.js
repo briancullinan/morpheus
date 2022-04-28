@@ -234,7 +234,19 @@ chrome.runtime.onMessage.addListener(function(request, sender, reply) {
       })
     return true
   } else 
-  if(request.session) {
+  if(request.headers) {
+    debugger
+    /*
+    await chrome.declarativeNetRequest.updateDynamicRules({
+      options: {
+        addRules: [
+    
+        ]
+      }
+    })
+    */
+  } else 
+  if(request.cookie) {
     debugger
     /*
     await chrome.declarativeNetRequest.updateDynamicRules({
