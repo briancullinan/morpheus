@@ -66,7 +66,7 @@ function getLimitedLine(prevLine) {
 
 
 function doStatus(request) {
-	let prevLine = getLimitedLine(request.line)
+	let prevLine = getLimitedLine(request.line || 0)
 
 	if(!ACE.statusLine) {
 	  ACE.statusLine = createLineWidget('.', 0, 'morph_status')
@@ -74,10 +74,15 @@ function doStatus(request) {
 	if(!ACE.statusWidgets) {
 		ACE.statusWidgets = []
 	}
+	if(request.status) {
+		ACE.threadPool = JSON.parse(request.status)
+		updateFilelist('Threads')
+	}
 	// https://www.youtube.com/watch?v=tvguv-lvq3k - Bassnectar - The Matrix (ft. D.U.S.T.)
 	// TODO: put another instance of ACE in the status widget
-	let previousCall = request.stack.pop()
-	if(previousCall) {
+	let previousCall
+	if(request.stack
+		&& (previousCall = request.stack.pop())) {
 		let previousFunction = previousCall.split('.')[0].trim()
 		if(!ACE.libraryFunctions) {
 			ACE.libraryFunctions = {}
@@ -86,7 +91,10 @@ function doStatus(request) {
 		} else {
 			ACE.libraryFunctions[previousFunction] = doLibraryLookup(previousFunction)
 		}
-		if(ACE.libraryFunctions[previousFunction]) { // incase null means we already looked
+		// incase null means we already searched doLibraryLookup
+		// FOR CODE REVIEWS, HOW TO MEASURE PERFORMANCE GAINS BY NOT
+		//   REPEATING TASKS JUST FROM LOOKING AT CODE WITH LITTLE UNDERSTANDING?
+		if(ACE.libraryFunctions[previousFunction]) {
 			// slowly open function without affecting scroll
 			if(ACE.libraryFunctions[previousFunction].name == '<eval>') {	
 				ACE.statusWidgets[prevLine] = Date.now()
@@ -98,7 +106,7 @@ function doStatus(request) {
 					ace.getSession().widgetManager.addLineWidget(ACE.statusLine)
 				}
 			} else {
-				ACE.previousLine = request.line
+				ACE.previousLine = request.line || 0
 				ACE.statusLine.el.children[0].innerText 
 						= ACE.libraryFunctions[previousFunction].library
 			}
@@ -155,6 +163,10 @@ function onStarted(request) {
 	document.body.classList.remove('starting')
 	document.body.classList.add('running')
 	window['run-button'].classList.remove('running')
+	if(request.started) {
+		ACE.threadPool = JSON.parse(request.started)
+		updateFilelist('Threads')
+	}
 }
 
 

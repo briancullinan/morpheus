@@ -11,7 +11,10 @@ const DEFAULT_PAUSED_INTERVAL = 100
 
 // INTERESTING FOR CODE REVEIWS, HABIT OF EXTRACTING DOUBLE NEGATIVES?
 async function shouldBubbleOut(runContext) {
-	if(runContext.paused) {
+	if(runContext.paused
+		&& (runContext.bubbleFile == '<eval>'
+			|| runContext.bubbleAST.type == 'DebuggerStatement')
+		) {
 		// add a paused handler for debug and continue
 		//   this will handle restorations for live programs
 		//   it will just sit here and wait for the play button.
@@ -31,6 +34,7 @@ async function shouldBubbleOut(runContext) {
 			}, DEFAULT_PAUSED_INTERVAL)
 		})
 	}
+	// THESE ARE TOGGLED AT DIFFERENT TIMES TO CONTROL EVALUATOR FLOW.
 	if(runContext.ended || runContext.broken || runContext.returned) {
 		return true
 	}
@@ -38,14 +42,12 @@ async function shouldBubbleOut(runContext) {
 }
 
 async function runStatement(i, AST, runContext) {
-	if(await shouldBubbleOut(runContext)) {
-		throw new Error('context ended!')
-	}
 	try {
     currentContext = runContext
 		if(AST[i] && AST[i].loc) {
 			runContext.bubbleColumn = AST[i].loc.start.column
 			if(runContext.bubbleLine != AST[i].loc.start.line) {
+				runContext.bubbleTime = Date.now()
 				runContext.bubbleLine = AST[i].loc.start.line
 				runContext.bubbleAST = AST
 				// normally we'd skip and let it run async
@@ -54,6 +56,12 @@ async function runStatement(i, AST, runContext) {
 			}
 		}
 
+		// moved this here so we get the line number of the latest statement
+		//   ONLY PAUSE ON <EVAL> CALLS
+		if(await shouldBubbleOut(runContext)) {
+			throw new Error('context ended!')
+		}
+	
 		// HOW THE HELL DO I TEST IF A LANGUAGE IMPLEMENTATION 
 		//    IS FEATURE COMPLETE?
 		//////////////////////////  PASS-THRU
@@ -171,6 +179,7 @@ async function runStatement(i, AST, runContext) {
 			//   THE DON'T OWN.
 			// I WONDER IF THIS EVALUATOR IS FAST ENOUGH TO RENDER
 			//   SKYBOXES ON A CLOUD GPU FROM OTHER WORLDS/GAMES?
+			runContext.bubbleAST = AST[i]
 			runContext.paused = true
 			chrome.tabs.sendMessage(runContext.senderId, { 
 				paused: '.', 
@@ -253,7 +262,7 @@ async function doPlay(runContext) {
 			// TODO: send async status?
 		} else if (runContext.async) {
 			chrome.tabs.sendMessage(runContext.senderId, { 
-				async: runContext.runId 
+				async: _encodeRuns()
 			}, function(response) {
 
 			});

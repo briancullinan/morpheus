@@ -359,10 +359,10 @@ const MAX_SIMULTANEOUS = 3
 
 async function _networkSettled() {
 	let start = Date.now()
-	let networkTimer
 	let url = currentContext.localVariables.navigationURL
 	currentContext.networkStarted = false
 	let result = await new Promise(function (resolve, reject) {
+		let networkTimer
 		networkTimer = setInterval(function () {
 			if(Date.now() - start > MAX_SETTLED) {
 				clearInterval(networkTimer)

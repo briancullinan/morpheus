@@ -13,7 +13,9 @@ function doMessage(request, sender, reply) {
 		return
 	}
 	if(!request.script && typeof request.frontend != 'undefined') {
-		reply({ stopped: '.' })
+		reply({
+			stopped: _encodeRuns()
+		})
 		return
 	}
 	if(!request.script || !request.script.length) {
@@ -51,22 +53,26 @@ function doMessage(request, sender, reply) {
 	//   separate session for every file of code, those two things have nothing
 	//   to do with each other, it's a bad design.
 	if(!oldRunTimer) {
-		oldRunTimer = setInterval(pruneOldRuns, 100)
+		oldRunTimer = setInterval(pruneOldRuns, 1000)
 	}
-	let runsEncoded = Object.keys(threads)
+	reply({ 
+		started: _encodeRuns(),
+	})
+}
+
+
+function _encodeRuns() {
+	return JSON.stringify(Object.keys(threads)
 		.map(function (runId) {
 			return [
 				runId[0] + '******' + runId[runId.length-1],
 				threads[runId].bubbleTime
 			]
-		})
-	reply({ 
-		started: runsEncoded,
-	})
+		}))
 }
 
 
-const THREAD_SAVE_TIME = 3 * 60 * 1000
+const THREAD_SAVE_TIME = 3 * 1000 // * 60
 
 
 function pruneOldRuns() {
@@ -74,10 +80,18 @@ function pruneOldRuns() {
 	//   could make it vulnerable?
 	let runIds = Object.keys(threads)
 	for(let i = 0; i < runIds.length; i++) {
+		let senderId = threads[runIds[i]].senderId
 		if(threads[runIds[i]].ended
 			&& Date.now() - threads[runIds[i]].bubbleTime > THREAD_SAVE_TIME) {
 			delete threads[runIds[i]]
+			doStatus({
+				senderId: senderId
+			}, false)
 		}
+	}
+	if(Object.keys(threads).length == 0) {
+		clearInterval(oldRunTimer)
+		oldRunTimer = null
 	}
 }
 
@@ -148,7 +162,7 @@ function findFrame(details) {
 }
 
 
-async function doWebNavigation(details) {
+function doWebNavigation(details) {
 	findFrame(details)
 	let runContext = foundFrames[details.frameId]
 	if(!runContext) {
@@ -180,7 +194,7 @@ async function doWebNavigation(details) {
 
 
 function encodeCookie(cookie) {
-	return cookie.result.value.split(';')
+	return cookie.split(';')
 		.reduce(function (obj, cookieBite) {
 			let cookieKeyValue = cookieBite.split('=')
 			let cookieName = cookieKeyValue.length > 1
@@ -197,44 +211,45 @@ function encodeCookie(cookie) {
 
 
 
-async function addCookie(cookie, page) {
+function addCookie(cookie, page) {
 	let cookieEncoded = JSON.stringify(encodeCookie(cookie))
 	//await doMorpheusPass(true)
 	if(!temporaryEncrypter) {
-		return cookieEncoded
+		return Promise.resolve(cookieEncoded)
 	}
 	let leftStr = page.replace(/https|http|\//ig, '')
 	// this says encrypt but it's not the part that needs to be secured
 	//   this is just to differentiate profiles in the index
 	let cookieKey = temporaryEncrypter(temporaryUser + 'Cookies')
-	let result = await chrome.storage.sync.get(cookieKey)
-	let cookieSessions
-	if(!result[cookieKey]) {
-		cookieSessions = {}
-	} else {
-		cookieSessions = JSON.parse(result[cookieKey])
-	}
-	if(typeof cookieSessions[leftStr] == 'undefined') {
-		// again this is just to add a bit of randomness for each page key
-		let cookieKey = temporaryEncrypter(temporaryUser + leftStr)
-		cookieSessions[leftStr] = cookieKey
-	}
-	// encrypte encoded cookies for storage for quick lookup
-	cookieSessions[cookieKey+'_encoded'] = temporaryEncrypter(cookieEncoded)
-	chrome.storage.sync.set({
-		cookieSessions: JSON.stringify(cookieSessions)
+	return chrome.storage.sync.get(cookieKey, function (result) {
+		let cookieSessions
+		if(!result[cookieKey]) {
+			cookieSessions = {}
+		} else {
+			cookieSessions = JSON.parse(result[cookieKey])
+		}
+		if(typeof cookieSessions[leftStr] == 'undefined') {
+			// again this is just to add a bit of randomness for each page key
+			let cookieKey = temporaryEncrypter(temporaryUser + leftStr)
+			cookieSessions[leftStr] = cookieKey
+		}
+		// encrypte encoded cookies for storage for quick lookup
+		cookieSessions[cookieKey+'_encoded'] = temporaryEncrypter(cookieEncoded)
+		chrome.storage.sync.set({
+			cookieSessions: JSON.stringify(cookieSessions)
+		})
+		let cookieStorage = {}
+		// THIS IS THE PART THAT ACTUALLY NEEDS TO BE ENCRYPTED
+		cookieStorage[cookieKey] = temporaryEncrypter(cookie)
+		chrome.storage.sync.set(cookieStorage)
+		return cookieEncoded
 	})
-	let cookieStorage = {}
-	// THIS IS THE PART THAT ACTUALLY NEEDS TO BE ENCRYPTED
-	cookieStorage[cookieKey] = temporaryEncrypter(cookie)
-	chrome.storage.sync.set(cookieStorage)
-	return cookieEncoded
 }
 
 
 
 
-async function doWebComplete(details) {
+function doWebComplete(details) {
 	findFrame(details)
 	let runContext = foundFrames[details.frameId]
 	if(!runContext) {
@@ -247,21 +262,25 @@ async function doWebComplete(details) {
 	if(Date.now() - nowish < 1000) {
 		runContext.queueRate.unshift(nowish)
 	}
-	let cookie = await chrome.debugger.sendCommand({
+	// don't actually care if this completes, just that it happens in the right order
+	chrome.debugger.sendCommand({
 		tabId: details.tabId || runContext.localVariables.tabId
 	}, 'Runtime.evaluate', {
 		// TODO: attach encrypter to every page for forms transmissions
 		expression: 'document.cookie'
-	})
-	if(!cookie.result || !cookie.result.value) {
-		return
-	}
-	let cookieEncoded = await addCookie(cookie, runContext.localVariables.navigationURL)
-	// AWAIT LOCK, LIKE A RACE-CONDITION WITH WAITING FOR 
-	//   MULTIPLE PROMISES, INTERESTING IT CAN CAUSE PAGE TO STALL.
-	chrome.tabs.sendMessage(runContext.senderId, {
-		// TODO: encrypt encoded stuff with runContext.runId
-		cookie: cookieEncoded // J/K cookie.result.value
+	}, function (cookie) {
+		if(!cookie.result || !cookie.result.value) {
+			return
+		}
+		return addCookie(cookie.result.value, runContext.localVariables.navigationURL)
+			.then(function (cookieEncoded) {
+				// AWAIT LOCK, LIKE A RACE-CONDITION WITH WAITING FOR 
+				//   MULTIPLE PROMISES, INTERESTING IT CAN CAUSE PAGE TO STALL.
+				chrome.tabs.sendMessage(runContext.senderId, {
+					// TODO: encrypt encoded stuff with runContext.runId
+					cookie: cookieEncoded
+				})
+			})
 	})
 }
 
@@ -287,7 +306,7 @@ async function doWebComplete(details) {
 //   WHAT I LEAVE BEHIND, THEN I'LL CERTAINLY CEASE TO EXIST.
 
 
-async function doCommitted(details) {
+function doCommitted(details) {
 	findFrame(details)
 	if(!foundFrames[details.frameId]) {
 		return
@@ -325,49 +344,5 @@ chrome.webNavigation.onBeforeNavigate.addListener(
 
 */
 
-
-/*
-// TODO: store cookies and session changes, encrypted locally
-
-async function injectRequest(details) {
-	debugger
-	// restore session from encrypted storage
-}
-
-async function saveResponse(details) {
-	debugger
-	// restore session from encrypted storage
-}
-
-
-function attachRequestHandlers(tabId, windowId) {
-	//onBeforeRequest
-	chrome.webRequest.onBeforeSendHeaders.addListener(
-		injectRequest, {
-			urls: ['<all_urls>'], 
-			tabId: tabId,
-			windowId: windowId
-		}, 
-		['blocking', 'requestHeaders'])
-
-	chrome.webRequest.onHeadersReceived.addListener(
-		saveResponse, 
-		{
-			urls: ['<all_urls>'], 
-			tabId: tabId,
-			windowId: windowId
-		}, 
-		['blocking', 'responseHeaders'])
-
-	chrome.webRequest.onAuthRequired.addListener(
-		doMorpheusAuth, {
-			urls: ['<all_urls>'], 
-			tabId: tabId,
-			windowId: windowId
-		}, 
-		['asyncBlocking'])
-
-}
-*/
 
 

@@ -33,6 +33,30 @@ function anyParentsCollapsed(segments) {
 }
 
 
+function simplifyMilliseconds(milli) {
+	let secs = milli / 1000.0
+	let mins = secs / 60.0
+	let hours = mins / 60.0
+	let days = hours / 24.0
+	if(days > 1) {
+		return Math.round(days, 1) + 'd'
+	} else
+	if(hours > 1) {
+		return Math.round(hours, 1) + 'h'
+	}
+	else
+	if(mins > 1) {
+		return Math.round(hours, 1) + 'm'
+	}
+	else
+	if(secs > 1) {
+		return Math.round(hours, 1) + 's'
+	} else {
+		return milli + 'ms'
+	}
+}
+
+
 function updateFilelist(filepath) {
 	if(!ACE.fileList) {
 		ACE.fileList = document.getElementById('file-list')
@@ -73,7 +97,7 @@ function updateFilelist(filepath) {
 		return f && arr.indexOf(f) == i
 	})
 
-	if(ACE.callStack){
+	if(ACE.callStack) {
 		ACE.filelistWidgets[newFiles.length] = 'Call Stack'
 		ACE.filelistWidgetRows.push(newFiles.length)
 		for(let i = 0; i < ACE.callStack.length; i++) {
@@ -81,12 +105,22 @@ function updateFilelist(filepath) {
 		}
 	}
 
-	if(ACE.cookiesList){
+	if(ACE.cookiesList) {
 		ACE.filelistWidgets[newFiles.length] = 'Cookies'
 		ACE.filelistWidgetRows.push(newFiles.length)
 		let keys = Object.keys(ACE.cookiesList)
 		for(let i = 0; i < keys.length; i++) {
 			newFiles[newFiles.length] = keys[i] + ': ' + ACE.cookiesList[keys[i]]
+		}
+	}
+
+	if(ACE.threadPool) {
+		ACE.filelistWidgets[newFiles.length] = 'Threads'
+		ACE.filelistWidgetRows.push(newFiles.length)
+		for(let i = 0; i < ACE.threadPool.length; i++) {
+			newFiles[newFiles.length] = simplifyMilliseconds(
+					Date.now() - ACE.threadPool[i][1])
+					 + ': ' + ACE.threadPool[i][0]
 		}
 	}
 

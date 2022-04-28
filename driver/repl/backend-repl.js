@@ -81,7 +81,7 @@ function doAssign(varName, lineNumber, bubbleColumn, runContext) {
 async function doStatus(runContext, doSleep) {
 	try {
 		chrome.tabs.sendMessage(runContext.senderId, { 
-			status: '.',
+			status: _encodeRuns(),
 			// always subtract 1 because code is wrapping in a 1-line function above
 			line: runContext.bubbleLine - 1,
 			stack: runContext.bubbleStack,
@@ -198,27 +198,19 @@ function doError(err, runContext) {
 // check on runner
 function doStatusResponse(request, reply) {
 	let runContext = threads[request.runId]
-	if(typeof runContext == 'undefined') {
+	if(typeof runContext == 'undefined' || runContext.ended) {
 		reply({ 
-			stopped: '.', 
-			line: 0
-		})
-		return
-	}
-	
-	if(runContext.ended) {
-		reply({ 
-			stopped: '.', 
+			stopped: _encodeRuns(), 
 			line: runContext.bubbleLine - 1
 		})
 		return
-	} else
+	}
 
 	if(typeof request.pause != 'undefined') {
 		runContext.paused = request.pause
 		if(request.pause) {
 			reply({ 
-				paused: '.', 
+				paused: _encodeRuns(), 
 				line: runContext.bubbleLine - 1,
 				stack: runContext.bubbleStack,
 			})
@@ -232,7 +224,7 @@ function doStatusResponse(request, reply) {
 
 	// now every status check will report on current line number also
 	reply({ 
-		status: '.', 
+		status: _encodeRuns(), 
 		line: runContext.bubbleLine - 1,
 		stack: runContext.bubbleStack,
 	})
