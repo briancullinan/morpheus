@@ -392,6 +392,7 @@ async function _sendMessage(message) {
 	if(Object.keys(message).length == 0) {
 		throw new Error('Message is empty.')
 	}
+	addSessionIdFunction(message)
 	return await chrome.tabs.sendMessage(currentContext.senderId, message)
 }
 

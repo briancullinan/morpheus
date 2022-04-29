@@ -200,9 +200,6 @@ function runUpdate(AST, runContext) {
 	} else {
 		throw new Error(AST.type + ': Not implemented!')
 	}
-	let beforeLine = runContext.bubbleLine - 1
-	let bubbleColumn = runContext.bubbleColumn
-	doAssign(AST.argument.name, beforeLine, bubbleColumn, runContext)
 	return argVal
 
 }

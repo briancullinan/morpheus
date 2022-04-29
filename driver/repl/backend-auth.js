@@ -5,12 +5,16 @@ let temporaryDecrypter
 let temporaryEncrypter
 let temporaryUser
 
+
+
+// THIS IS THE KITCHEN SINK. AND ANYWHERE THAT USES "CRYPT("
+
 async function doMorpheusPass(required) {
 	if(!required && temporaryEncrypter
 		&& Date.now() - morpheusPassTime < 30 * 1000) {
 		return temporaryUser
 	}
-
+	let sessionId = generateSessionId()
 	let result = await chrome.storage.sync.get('_morpheusKey')
 	// USED FOR CHROME.PROFILES.LIST() FAKE API CALL IN LIBRARY
 	if(!result._morpheusKey) {
@@ -45,7 +49,7 @@ async function doMorpheusPass(required) {
 			return decrypt(morpheusForm.pass, data)
 		}
 	// decrypt with the current runId incase of extra snoopy/loggy plugins
-	})(JSON.parse(decrypt(currentContext.runId, response.result)))
+	})(JSON.parse(decrypt(sessionId, response.result)))
 
 	temporaryEncrypter = (function (morpheusForm) {
 		return async function (data) {
@@ -57,7 +61,7 @@ async function doMorpheusPass(required) {
 			return crypt(morpheusForm.pass, data)
 		}
 	// decrypt with the current runId incase of extra snoopy/loggy plugins
-	})(JSON.parse(decrypt(currentContext.runId, response.result)))
+	})(JSON.parse(decrypt(sessionId, response.result)))
 
 	// STORE THE USERNAME, SO WE DON'T HAVE TO KEEP TYPING IT
 	//   THE HASH USERNAME b****n@g****m AND THE PASSWORD ARE
@@ -82,6 +86,24 @@ async function doMorpheusPass(required) {
 }
 
 
+let addSessionIdFunction
+
+
+function generateSessionId() {
+  let output = []
+  let uint8array = crypto.getRandomValues(new Uint8Array(20))
+  for (var i = 0; i < uint8array.length; i++) {
+    output.push(String.fromCharCode(uint8array[i]));
+  }
+	let sessionId = btoa(output.join(''));
+  addSessionIdFunction = function (request) {
+		if(typeof request == 'object' && request) {
+			request['sessionId'] = sessionId
+		}
+	}
+	return sessionId
+}
+
 
 async function doMorpheusAuth(required) {
 	if(!required && temporaryEncrypter
@@ -97,7 +119,8 @@ async function doMorpheusAuth(required) {
 	if(!response || !response.result) {
 		throw new Error('Needs page authentication.')
 	}
-	return JSON.parse(decrypt(currentContext.runId, response.result))
+	//return JSON.parse()
+	//TODO: send to page encrypted with session ID
 }
 
 
@@ -189,6 +212,13 @@ async function doMorpheusKey() {
 	//   *********a, LAST CHARACTER ONLY, TODO: CAN BE TURNED OFF
 	// ENCODED DATA IS ENCRYPTYED WITH MORPHEUS KEY
 }
+
+
+// BASICALLY SAYING THE SAME THING, SECURITY IS IN THE IMPLEMENTATION
+//   NOT IN THE ALGORITHM. USING A FUNCTIONAL CONTEXT TO KEEP VARIABLES
+//   SAFE AWAY FROM OTHER SCRIPTS BEING RUN SHOULD BE OKAY.
+// https://stackoverflow.com/a/10215056
+
 
 
 let morphKey = false

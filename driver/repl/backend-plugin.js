@@ -61,6 +61,7 @@ function doMessage(request, sender, reply) {
 }
 
 
+// SINK
 function _encodeRuns() {
 	return JSON.stringify(Object.keys(threads)
 		.map(function (runId) {

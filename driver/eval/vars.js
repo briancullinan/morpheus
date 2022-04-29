@@ -15,7 +15,6 @@ async function runVariable(AST, runContext) {
   //   late binding can trace the type back through the tree to where it was assigned.
 
   // WOW! IMAGINE THAT! SHOW VARIABLES BEFORE AND AFTER ASSIGNMENT! GOOGLE CHROME DEBUGGER!
-  doAssign(AST.id.name, beforeLine, bubbleColumn, runContext)
   let result 
   if(!AST.init) {
     // TODO: error variable used because initialized
@@ -28,7 +27,6 @@ async function runVariable(AST, runContext) {
       return
     }
   }
-  doAssign(AST.id.name, beforeLine, bubbleColumn, runContext)
   return result
 }
 
@@ -53,10 +51,8 @@ async function runObject(AST, runContext) {
 
 // DO VARIABLE REASSIGNMENTS
 async function runAssignment(left, right, runContext) {
-	let beforeLine = runContext.bubbleLine - 1
-	let bubbleColumn = runContext.bubbleColumn
 
-	if(left.type == 'Literal') {
+  if(left.type == 'Literal') {
 	// cannot assign value to primitive type
 	throw new Error('Cannot override primitive.')
 	}
@@ -80,8 +76,6 @@ async function runAssignment(left, right, runContext) {
 			}
 		}
 
-		// WOW! IMAGINE THAT! SHOW VARIABLES BEFORE AND AFTER ASSIGNMENT! GOOGLE CHROME DEBUGGER!
-		doAssign(left.object.name + '.' + property, beforeLine, bubbleColumn, runContext)
 		let result = await runStatement(0, [right], runContext)
 		// LEAK ASSIGNMENT FOR GLOBAL DEBUGGING?
 		if(await shouldBubbleOut(runContext)) {
@@ -90,7 +84,6 @@ async function runAssignment(left, right, runContext) {
 
 		parent[property] = result
 		// notify clients
-		doAssign(left.object.name + '.' + property, beforeLine, bubbleColumn, runContext)
 		return result
 	} else 
 	// TODO: does expression evaluate even if there assignment error?
@@ -104,14 +97,12 @@ async function runAssignment(left, right, runContext) {
 			throw new Error('Variable not defined: ' + left.name)
 		} else {
 			// WOW! IMAGINE THAT! SHOW VARIABLES BEFORE AND AFTER ASSIGNMENT! GOOGLE CHROME DEBUGGER!
-			doAssign(left.name, beforeLine, bubbleColumn, runContext)
 			let result = await runStatement(0, [right], runContext)
 			// LEAK ASSIGNMENT FOR GLOBAL DEBUGGING?
 			if(await shouldBubbleOut(runContext)) {
 				return
 			}
 			runContext.localVariables[left.name] = result
-			doAssign(left.name, beforeLine, bubbleColumn, runContext)
 			return result
 		}
 	} else {

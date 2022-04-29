@@ -144,6 +144,16 @@ function doAccessor(request) {
 	) {
 		debugger
 	}
+	// SINK, encrypt form data directly to remote page, or directly to backend
+	//   in case of system password collection, this gurantees the data gets to 
+	//   the right page, hopefully without being logged or stolen.
+	if(request.sessionId) {
+		(function (sess) {
+			temporarySessionEncryptor = function (data) {
+				return crypt(sess, data)
+			}
+		})(request.sessionId)
+	}
 	switch(request.accessor) {
 		// safe to share?
 		/*
@@ -257,6 +267,23 @@ function collectForm(dialog) {
 }
 
 
+// this is potentially replaced with every page change with an encryption
+//   key that is not known to the backend, for collecting a system password
+//   the backend generates a temporary key and stores it in a functional
+//   context like this one
+// while none of this prevents plugins from snooping on passwords, 
+//   i'm hoping it prevents logging systems from snooping, or other plugins
+//   from snooping on all page messages
+// ENCRYPT WITH THE SESSIONID! BECAUSE WE HAVE PREVENTED RUNIDS/SESSIONIDS FROM BEING
+//   SENT BACK TO THE CLIENT, 1-WAY FROM FRONTEND-PLUGIN.JS TO BACKEND-PLUGIN.JS
+// SESSIONID IS CREATED IN THE CONTEXT OF A SECONDARY/REMOTE BROWSER WINDOW.
+//   NEVER STORED IN FRONTEND-PLUGIN.JS, FOR TRANSFERRING FROM PAGE TO PAGE
+//   WITHOUT THE BACKEND/SERVER EVER KNOWING THE TRUTH.
+let temporarySessionEncryptor
+
+
+
+
 function doSendForm(dialog, event) {
 	if(event.currentTarget === dialog) {
 		hideAllDialogs()
@@ -264,7 +291,8 @@ function doSendForm(dialog, event) {
 	} else {
 		let formResults = collectForm(dialog)
 		if(formResults) {
-			let encrypted = crypt(ACE.lastSessionId, JSON.stringify(formResults))
+			// SINK!
+			let encrypted = temporarySessionEncryptor(JSON.stringify(formResults))
 			window['run-script'].value = '"' + encrypted + '"'
 		} else {
 			window['run-script'].value = ''
@@ -453,50 +481,12 @@ function doDialog(request, newDialog) {
 }
 
 
-function doAssign(request) {
-	if (!ace.session || !ace.session.lineWidgets) {
-		initLineWidgets()
-	}
-	
-	let prevLineWidgets = ace.getSession().widgetManager.getWidgetsAtRow(request.line)
-	// look for existing assign widget
-	let found = false
-	let i = 0
-	for(; i < prevLineWidgets.length; i++) {
-		if(prevLineWidgets[i].el.className.includes('morph_assign')) {
-			found = true
-			break
-		}
-	}
-	if(!found) {
-		let newWidget = createLineWidget((request.assign || '')
-				.replace(/\s*$/, ''), request.line, 'morph_assign')
-		ace.getSession().widgetManager.addLineWidget(newWidget)
-		newWidget.flashTime = Date.now()
-	} else {
-		// update existing assignment line
-		prevLineWidgets[i].el.children[0].innerText 
-				= (request.assign || '').replace(/\s*$/, '')
-		prevLineWidgets[i].flashTime = Date.now()
-	}
-	// sometimes assignments can update a lot
-	// TODO: make a way to turn this off
-}
-
 
 function doLocals(request) {
 	if(typeof request.locals == 'undefined') {
 		return
 	}
-	if(typeof request.locals != 'undefined') {
-		let lines = Object.keys(request.locals)
-		for(let j = 0; j < lines.length; j++) {
-			doAssign({
-				assign: request.locals[lines[j]],
-				line: lines[j],
-			})
-		}
-	}
+	
 }
 
 

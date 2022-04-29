@@ -80,6 +80,8 @@ async function runStatement(i, AST, runContext) {
 		} else
 		// TODO: WHAT IS THIS? func(varName = default?)
 		if(AST[i].type == 'AssignmentExpression') {
+			// WOW! IMAGINE THAT! SHOW VARIABLES BEFORE AND AFTER ASSIGNMENT! GOOGLE CHROME DEBUGGER!
+			// doAssign
 			return await runAssignment(AST[i].left, AST[i].right, runContext)
 		} else
 		if(AST[i].type == 'BinaryExpression') {
@@ -100,6 +102,7 @@ async function runStatement(i, AST, runContext) {
 				runContext)
 		} else
 		if(AST[i].type == 'UpdateExpression') {
+			// doAssign
 			return runUpdate(AST[i], runContext)
 		} else 
 
@@ -135,6 +138,7 @@ async function runStatement(i, AST, runContext) {
 			return result
 		} else
 		if(AST[i].type == 'VariableDeclarator') {
+			// doAssign
 			return await runVariable(AST[i], runContext)
 		} else 
 
@@ -217,21 +221,15 @@ async function runBody(AST, runContext) {
 	//   THE SAME NAME AS THE SCOPE IT'S PAUSED ON, IT SHOWS
 	//   ME THE WRONG SCOPE WHEN I USE THE STACK!
 
-	// restore outer scope when context was created
-	//Object.assign(callStack, runContext.localFunctions)
-	//Object.assign(callStack, outerContext.localVariables)
+	// TODO: restore outer scope when context was created
+	// doesn't need to be fast, because async DevTools calls, are not fast
 	// replace with current context
-	//Object.assign(callStack, runContext.localVariables)
 
 
 	// any time a setTimer is use the callStack will be reset
 	//   which means error messaging must intercept here not to
 	//   ruin out worker process
 	try {
-			// doesn't need to be fast, because async DevTools calls, are not fast
-		let startFuncs = Object.assign({}, runContext.localFunctions)
-		//runContext.localFunctions = 
-		let startVars = Object.assign({}, runContext.localVariables)
 
 		let result = await runParameters(AST, runContext)
 		if(await shouldBubbleOut(runContext)) {

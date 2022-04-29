@@ -53,32 +53,6 @@ function doConsole(tabId, ...args) {
 
 
 
-function doAssign(varName, lineNumber, bubbleColumn, runContext) {
-	try {
-		let valueString
-		if(varName.includes('.')) {
-			valueString = doProperty(runContext.localVariables[varName.split('.')[0]][varName.split('.')[1]])
-		} else {
-			valueString = doProperty(runContext.localVariables[varName])
-		}
-		chrome.tabs.sendMessage(runContext.senderId, {
-			locals: runContext.bubbleAST ? doAssignments(runContext.bubbleAST, runContext) : [],
-			//assign: new Array(bubbleColumn).fill(' ').join('') + varName + ' = ' + valueString + '\n',
-			// always subtract 1 because code is wrapping in a 1-line function above
-			line: lineNumber,
-		}, function(response) {
-	
-		});
-	} catch (e) {
-		if(e.message.includes('context invalidated')) {
-
-		} else {
-			debugger
-		}
-	}
-}
-
-
 async function doStatus(runContext, doSleep) {
 	try {
 		chrome.tabs.sendMessage(runContext.senderId, { 
@@ -110,7 +84,7 @@ function doAssert() {
 
 }
 // let POSSIBLE_IGNORE = ['loc', 'start', 'end']
-// let POSSIBLE_LEAVES = ['computed', 'optional', 'type']
+// let POSSIBLE_LEAVES = ['computed', 'optional', 'type', 'id', 'name']
 
 let POSSIBLE_BRANCHES = [
 	'left', 'right', 'body', 'params', 'argument',
@@ -194,7 +168,6 @@ function doError(err, runContext) {
 			//   THEY DON'T OWE YOU ANYTHING, NOT EVEN LIFE SUPPORT. FUCK OFF FOSS, FOSS OWES ME
 			//   EVERYTHING BECAUSE I'LL BE THE ONE STUCK CLEANING THIS SHIT CODE UP.
 			//   TECHNICAL DEBT APPLIES TO PUBLISHING INCORRECT CODE ALSO. CODE IS LIKE LITTER.
-			locals: runContext.bubbleAST ? doAssignments(runContext.bubbleAST, runContext) : [],
 		}, function(response) {
 	
 		});

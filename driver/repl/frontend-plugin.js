@@ -55,7 +55,8 @@ function runAccessor() {
 }
 
 
-function generateRunId(runId) {
+function generateRunId() {
+  let runId = getRunId(20)
   return function addRunIdInjection(request) {
     request.runId = runId
     return request
@@ -85,7 +86,7 @@ function runScript() {
   }
 
   try {
-    lastRunId = generateRunId(getRunId(20))
+    lastRunId = generateRunId()
     if(!runScriptTextarea.value.length) {
       throw new Error('No script!')
     }
