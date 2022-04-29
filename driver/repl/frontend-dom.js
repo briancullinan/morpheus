@@ -25,18 +25,14 @@ function runBlock(start) {
 		}
 	}
 
-	if(!ACE.libraryCode) {
-		initLibraries()
-	}
-
 	if(start == -1) {
 		let value = window.ace.getValue()
 		window['run-script'].value 
 				= value.replace(/\s*$/, '') + '\nreturn main();'
-		ACE.lastLine = ACE.libraryLines + ace.session.getLength()
+		ACE.lastLine = ace.session.getLength()
 	} else {
 		let funcName = NAMED_FUNCTION.exec(ace.env.document.getLine(start))[1]
-		ACE.lastLine = ACE.libraryLines + ace.session.getFoldWidgetRange(start).end.row
+		ACE.lastLine = ace.session.getFoldWidgetRange(start).end.row
 		window['run-script'].value 
 				= ace.session.getLines(start, ACE.lastLine)
 				.join('\n').replace(/\s*$/, '') 
@@ -47,29 +43,7 @@ function runBlock(start) {
 
 
 
-function getLimitedLine(prevLine) {
-	if(!ACE.libraryLoaded) {
-		prevLine -= ACE.libraryLines
-	} else {
-		prevLine--;
-	}
-	ACE.cursorLine = prevLine
-	if(prevLine >= 0) {
-		ACE.currentLine = prevLine
-	}
-
-	return prevLine
-}
-
-
-
 function doStatus(request) {
-	let prevLine = getLimitedLine(request.line || 0)
-
-	if(!ACE.statusLine) {
-	  ACE.statusLine = createLineWidget('.', 0, 'morph_status')
-		//ace.getSession().widgetManager.addLineWidget(ACE.statusLine)
-	}
 	if(!ACE.statusWidgets) {
 		ACE.statusWidgets = []
 	}
@@ -89,24 +63,16 @@ function doStatus(request) {
 		} else {
 			ACE.libraryFunctions[previousFunction] = doLibraryLookup(previousFunction)
 		}
-		// incase null means we already searched doLibraryLookup
+		// in-case null means we already searched doLibraryLookup
 		// FOR CODE REVIEWS, HOW TO MEASURE PERFORMANCE GAINS BY NOT
 		//   REPEATING TASKS JUST FROM LOOKING AT CODE WITH LITTLE UNDERSTANDING?
 		if(ACE.libraryFunctions[previousFunction]) {
 			// slowly open function without affecting scroll
 			if(ACE.libraryFunctions[previousFunction].name == '<eval>') {	
-				ACE.statusWidgets[prevLine] = Date.now()
-				ACE.previousNonLibrary = prevLine
-				if(ACE.statusLine.row != prevLine) {
-					// TODO: DUPLEX FOR EFFECT!
-					//ace.getSession().widgetManager.removeLineWidget(ACE.statusLine)
-					ACE.statusLine.row = prevLine
-					//ace.getSession().widgetManager.addLineWidget(ACE.statusLine)
-				}
+				ACE.statusWidgets[request.line] = Date.now()
+				ACE.previousNonLibrary = request.line
 			} else {
 				ACE.previousLine = request.line || 0
-				ACE.statusLine.el.children[0].innerText 
-						= ACE.libraryFunctions[previousFunction].library
 			}
 		}
 		if(request.stack
@@ -254,14 +220,13 @@ function doError(request) {
 		initLineWidgets()
 	}
 	let newLines = request.error.replace(/\s*$/, '')
-	// if error has a line number, insert message below that line
-	let prevLine = getLimitedLine(request.line)
 	// scroll to the line when an error occurs
 	if(ace.gotoLine) {
-		setTimeout(ace.gotoLine.bind(ace, prevLine), 100)
+		setTimeout(ace.gotoLine.bind(ace, request.line), 100)
 	}
+	// if error has a line number, insert message below that line
 	if(!ACE.errorWidget) {
-		ACE.errorWidget = createLineWidget(newLines, prevLine, 'morph_error')
+		ACE.errorWidget = createLineWidget(newLines, request.line, 'morph_error')
 		ace.getSession().widgetManager.addLineWidget(ACE.errorWidget)
 	} else {
 		ACE.errorWidget.el.children[0].innerText = newLines
@@ -489,17 +454,11 @@ function doDialog(request, newDialog) {
 
 
 function doAssign(request) {
-	let prevLine = getLimitedLine(request.line)
-	// TODO: status line always out of view because sleep is in library.js
-	if(prevLine < 0) {
-		return // don't load status line while it's out of view
-	}
-
 	if (!ace.session || !ace.session.lineWidgets) {
 		initLineWidgets()
 	}
 	
-	let prevLineWidgets = ace.getSession().widgetManager.getWidgetsAtRow(prevLine)
+	let prevLineWidgets = ace.getSession().widgetManager.getWidgetsAtRow(request.line)
 	// look for existing assign widget
 	let found = false
 	let i = 0
@@ -511,7 +470,7 @@ function doAssign(request) {
 	}
 	if(!found) {
 		let newWidget = createLineWidget((request.assign || '')
-				.replace(/\s*$/, ''), prevLine, 'morph_assign')
+				.replace(/\s*$/, ''), request.line, 'morph_assign')
 		ace.getSession().widgetManager.addLineWidget(newWidget)
 		newWidget.flashTime = Date.now()
 	} else {
@@ -547,9 +506,8 @@ function doConsole(request) {
 	}
 	let newLines = request.console.replace(/\s*$/, '') // only truncating end line Chrome
 																								// see, I do have some nice things to say
-	let prevLine = ACE.lastLine - ACE.libraryLines
 	if(!ACE.consoleWidget) {
-		ACE.consoleWidget = createLineWidget(newLines + '\n', prevLine)
+		ACE.consoleWidget = createLineWidget(newLines + '\n', ACE.lastLine)
 		ace.getSession().widgetManager.addLineWidget(ACE.consoleWidget)
 	} else {
 		ACE.consoleWidget.el.children[0].innerText += newLines + '\n'
@@ -560,10 +518,6 @@ function doConsole(request) {
 
 
 function onPaused(request) {
-	//let prevLine = getLimitedLine(request.line)
-	//if(prevLine < 0) {
-	//	return // don't load status line while it's out of view
-	//}
 	document.body.classList.remove('starting')
 	document.body.classList.add('paused')
 	if(!ACE.pausedWidget) {

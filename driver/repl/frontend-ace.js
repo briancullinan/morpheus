@@ -6,10 +6,8 @@ let ACE = {
 	downloaded: false,
 	filename: false,
 
-	// THIS GIVES US THAT FEATURE LIKE VISUAL STUDIO WITH THE HIDDEN IMPORTS IN
+	// TODO: FEATURE LIKE VISUAL STUDIO WITH THE HIDDEN IMPORTS IN
 	//   PROJECT SETTINGS, I THINK ECLIPSE/JAVA DOES THIS TOO.
-	libraryCode: '',
-	libraryLines: 0,
 }
 
 const NAMED_FUNCTION = /function\s+([a-z]+[ -~]*)\s*\(/
@@ -143,25 +141,9 @@ function updatePlay() {
 	}
 }
 
+// TODO: HIDDEN IMPORTS SECTION
+// THIS SHOULD REALLY BE SOMETHING LINE 'IMPORT...' from settings.json: auto-imports: []
 
-function initLibraries() {
-	// automatically load libraries
-//	let buf = stringToAddress('DEADBEEF') // pointer to pointer
-//	let length
-//	if ((length = FS_ReadFile(stringToAddress('driver/library.js'), buf)) 
-//			> 0 && HEAPU32[buf >> 2] > 0
-//	) {
-//		let imageView = Array.from(HEAPU8.slice(HEAPU32[buf >> 2], HEAPU32[buf >> 2] + length))
-//		let utfEncoded = imageView.map(function (c) { return String.fromCharCode(c) }).join('')
-//		FS_FreeFile(HEAPU32[buf >> 2])
-	// THIS SHOULD REALLY BE SOMETHING LINE 'IMPORT...' from settings.json: auto-imports: []
-	// default.json ?? allow Q3 to read settings from json/yml
-	//   then I can modularize cvar system.
-	ACE.libraryCode = '\n\n'
-	ACE.libraryLines = 3 // utfEncoded.split('\n').length
-//	}
-
-}
 
 
 // this actually started to look pretty decent after I got

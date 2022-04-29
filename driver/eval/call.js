@@ -269,16 +269,13 @@ async function runCall(AST, runContext) {
       result = runContext.bubbleReturn
       delete runContext.bubbleReturn
     }
+
     // must come after runContext.returned is adjusted 
     //   because this bubbles out of whatever block or 
     //   for-loop is in scope.
     if(await shouldBubbleOut(runContext)) {
       return // bubble up
     }
-    // TODO: check for auto imports
-    //if(runContext.libraryLines == 0) {
-    //  throw new Error('Library not loaded!')
-    //}
 
     // automatically pause for a second on user functions
     //   to allow users to observe the result of the API

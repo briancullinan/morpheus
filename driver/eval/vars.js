@@ -88,13 +88,6 @@ async function runAssignment(left, right, runContext) {
 			return
 		}
 
-		// SNOOP ON MODULE EXPORTS
-		if(parent === WEBDRIVER_API) {
-			runContext.libraryLoaded = true
-			runContext.libraryLines = runContext.bubbleLine
-			Object.assign(WEBDRIVER_API, result)
-		}
-
 		parent[property] = result
 		// notify clients
 		doAssign(left.object.name + '.' + property, beforeLine, bubbleColumn, runContext)
