@@ -1,13 +1,17 @@
 
 async function enterPassword(url) {
-  await doMorpheusKey() // init for client
-
+  let user = await doMorpheusPass() // init for client
+	if(!user) {
+		throw new Error('Needs Morpheus password.')
+	}
 }
 
 
 async function enterLogin(url) {
-  await doMorpheusKey() // init for client
-
+  let user = await doMorpheusPass() // init for client
+	if(!user) {
+		throw new Error('Needs Morpheus password.')
+	}
 }
 
 

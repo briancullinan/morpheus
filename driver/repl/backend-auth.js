@@ -14,7 +14,8 @@ async function doMorpheusPass(required) {
 		&& Date.now() - morpheusPassTime < 30 * 1000) {
 		return temporaryUser
 	}
-	currentContext.paused = true // pause execution while collecting system pass
+	let previousContext = currentContext
+	previousContext.paused = true // pause execution while collecting system pass
 	let sessionId = generateSessionId()
 	let result = await chrome.storage.sync.get('_morpheusKey')
 	// USED FOR CHROME.PROFILES.LIST() FAKE API CALL IN LIBRARY
@@ -30,20 +31,18 @@ async function doMorpheusPass(required) {
 	// WHAT IF I COULD DO ^ THAT WHOLE PROCESSES IN THE CLOUD REMOTELY, AND GET
 	//   DEBUG BREAKPOINTS AND VISUALIZE IT IN THE ENGINE NEXT TO THE CODE.
 	let newContext = {
-		senderId: currentContext.senderId
+		senderId: previousContext.senderId
 	}
 	let passwordContext = await createRunContext(newContext, await createEnvironment(newContext))
-	passwordContext.localVariables.thisWindow = currentContext.localVariables.thisWindow
+	passwordContext.localVariables.thisWindow = previousContext.localVariables.thisWindow
 	let loginFunction = await getRemoteCall('doSystemLogin', passwordContext)
 	let response = await loginFunction()
-	currentContext.returned = false // because fuck-arounds above, ^
+	previousContext.returned = false // because fuck-arounds above, ^
 	// should never happen if lib is working \/
-	if(await shouldBubbleOut(currentContext)) {
-		currentContext.paused = false
-		return
-	}
-	if(!response || !response.result) {
+	if(await shouldBubbleOut(passwordContext) 
+		|| !response || !response.result) {
 		// silently fail, until we get back to library script
+		previousContext.paused = false
 		return
 	}
 
@@ -97,7 +96,7 @@ async function doMorpheusPass(required) {
 	//   WHICH WE ASSUME IS TAMPER PROOF, FOR DECRYPTION AND SENDING 
 	//   TO CORRECT PAGE. TODO: IMPORT/EXPORT LAWS ON SECURE TECHNOLOGY.
 
-	currentContext.paused = false
+	previousContext.paused = false
 	return user
 }
 
@@ -162,9 +161,6 @@ async function doMorpheusKey() {
 	let user = await doMorpheusPass(true)
 	if(await shouldBubbleOut(currentContext)) {
 		return
-	}
-	if(!user) {
-		throw new Error('Needs Morpheus password.')
 	}
 	// chrome.storage.sync.set({ mytext: txtValue });
 	let loginFunction = await getRemoteCall('doKeyDialog', currentContext)

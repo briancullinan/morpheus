@@ -223,11 +223,13 @@ async function createEnvironment(runContext) {
 		// TODO: micro-manage garbage collection?
 		Object: Object,
 		// snoop on timers so REPL can report async results
+		Error: Error,
 		setTimeout: _setTimeout.bind(null, runContext),
 		setInterval: _setInterval.bind(null, runContext),
 		Promise: _Promise.bind(null, runContext), // TODO: bind promise to something like chromedriver does
 		setWindowBounds: setWindowBounds,
 		doMorpheusKey: doMorpheusKey,
+		doMorpheusPass: doMorpheusPass,
 		clearTimeout: _clearTimeout.bind(null, runContext),
 		clearInterval: _clearInterval.bind(null, runContext),
 		_makeWindowAccessor: _makeWindowAccessor,

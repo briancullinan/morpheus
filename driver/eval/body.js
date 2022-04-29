@@ -193,9 +193,15 @@ async function runStatement(i, AST, runContext) {
 			}, function () { console.log('debugging') })
 			return
 		} else
+
 		if(AST[i].type == 'DoWhileStatement') {
 			await runWhile(AST[i], runContext)
 		} else
+
+		if(AST[i].type == 'ThrowStatement') {
+			throw (await runStatement(0, [AST[i].argument], runContext))
+		} else
+
 
 
 		{
