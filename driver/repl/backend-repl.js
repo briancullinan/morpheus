@@ -61,8 +61,9 @@ function doAssign(varName, lineNumber, bubbleColumn, runContext) {
 		} else {
 			valueString = doProperty(runContext.localVariables[varName])
 		}
-		chrome.tabs.sendMessage(runContext.senderId, { 
-			assign: new Array(bubbleColumn).fill(' ').join('') + varName + ' = ' + valueString + '\n',
+		chrome.tabs.sendMessage(runContext.senderId, {
+			locals: runContext.bubbleAST ? doAssignments(runContext.bubbleAST) : [],
+			//assign: new Array(bubbleColumn).fill(' ').join('') + varName + ' = ' + valueString + '\n',
 			// always subtract 1 because code is wrapping in a 1-line function above
 			line: lineNumber,
 		}, function(response) {

@@ -10,7 +10,6 @@ let ACE = {
 	//   PROJECT SETTINGS, I THINK ECLIPSE/JAVA DOES THIS TOO.
 	libraryCode: '',
 	libraryLines: 0,
-	libraryLoaded: false,
 }
 
 const NAMED_FUNCTION = /function\s+([a-z]+[ -~]*)\s*\(/
@@ -62,60 +61,6 @@ function initLineWidgets() {
 	errorWidgets.forEach(function (w) { widgetManager.removeLineWidget(w) })
 }
 
-
-function processLineNumber(lineNumber) {
-	let prevLine = lineNumber
-	if(!lineNumber) { // startup error message?
-		return lineNumber
-	}
-	// if the error occurs on a line inside the library
-	let widgetManager = ace.getSession().widgetManager
-	if(prevLine < ACE.libraryLines && !ACE.libraryLoaded) {
-		ACE.libraryLoaded = true
-		let previousLength = ace.session.getLength()
-		let previousWidgets = []
-		for(let i = 0; i < previousLength; ++i) {
-			let oldWidgets = widgetManager.getWidgetsAtRow(i)
-			oldWidgets.forEach(function (w) { 
-				previousWidgets[i] = w
-				widgetManager.removeLineWidget(w) 
-			})
-		}
-
-		let libraryCombinedCode = ACE.libraryCode 
-				+ ace.getValue()
-		ace.setValue(libraryCombinedCode)
-
-
-		// TODO:  ?????????
-		ACE.statusWidgets = []
-
-
-		// Add widgets back in to new line
-		for(let i = 0; i < previousLength; ++i) {
-			if(!previousWidgets[i]) {
-				continue
-			}
-			let newLine = previousWidgets[i].row 
-					+ ACE.libraryLines - 1
-			previousWidgets[i].row = newLine
-			widgetManager.addLineWidget(previousWidgets[i]) 
-		}
-
-		prevLine--;
-	} else if (!ACE.libraryLoaded) {
-		// if library code is not loaded, subtract
-		prevLine -= ACE.libraryLines
-	} else {
-		prevLine--;
-	}
-
-	// scroll to the line when an error occurs
-	if(ace.gotoLine) {
-		setTimeout(ace.gotoLine.bind(ace, prevLine), 100)
-	}
-	return prevLine
-}
 
 
 function processResponse(updateText, lineNumber, error) {

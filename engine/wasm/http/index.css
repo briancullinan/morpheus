@@ -105,6 +105,7 @@ body > img {
 
 
 #command-bar label[for="liveReload"] span,
+#command-bar label[for="snap"] span,
 #command-bar label[for="sync"] span,
 #command-bar label[for="lineWrap"] span,
 #command-bar label[for="codeFold"] span {
@@ -124,6 +125,7 @@ body > img {
 /* TODO: convert to SCSS when entire build stack is in browser */
 
 #command-bar label[for="liveReload"],
+#command-bar label[for="snap"],
 #command-bar label[for="sync"],
 #command-bar label[for="lineWrap"],
 #command-bar label[for="codeFold"] {
@@ -131,6 +133,7 @@ body > img {
 }
 
 #command-bar label[for="liveReload"] span:before,
+#command-bar label[for="snap"] span:before,
 #command-bar label[for="sync"] span:before,
 #command-bar label[for="lineWrap"] span:before,
 #command-bar label[for="codeFold"] span:before {
@@ -147,6 +150,7 @@ body > img {
 }
 
 #command-bar label[for="liveReload"]:hover span,
+#command-bar label[for="snap"]:hover span,
 #command-bar label[for="sync"]:hover span,
 #command-bar label[for="lineWrap"]:hover span,
 #command-bar label[for="codeFold"]:hover span {

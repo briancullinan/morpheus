@@ -22,6 +22,10 @@ LOCATIONAL INFORMATION, SINCE CRAIGSLIST ISN'T INTERESTED
 IN COOPERATING WITH THEIR DATA, I'LL HAVE TO FIND OUT MYSELF.
 
 
+WEIRD, SIMILAR TO MEDICINE I GUESS, WHERE CUSTOMERS HAVE TO BEG FOR SUPPLY. TOO MUCH DEMAND?
+
+https://phoenix.craigslist.org/evl/sha/d/room-for-30-o-italian-female-needed-asap/7477138910.html
+
 
 https://phoenix.craigslist.org/wvl/sha/d/reformed-ratified-humble-hungry/7475279483.html
 

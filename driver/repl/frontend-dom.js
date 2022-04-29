@@ -31,18 +31,16 @@ function runBlock(start) {
 
 	if(start == -1) {
 		let value = window.ace.getValue()
-		window['run-script'].value = 
-			// because library inserted into page on error
-			(!ACE.libraryLoaded ? ACE.libraryCode : '')
-			+ value.replace(/\s*$/, '') + '\nreturn main();'
+		window['run-script'].value 
+				= value.replace(/\s*$/, '') + '\nreturn main();'
 		ACE.lastLine = ACE.libraryLines + ace.session.getLength()
 	} else {
 		let funcName = NAMED_FUNCTION.exec(ace.env.document.getLine(start))[1]
 		ACE.lastLine = ACE.libraryLines + ace.session.getFoldWidgetRange(start).end.row
-		window['run-script'].value = 
-			(!ACE.libraryLoaded ? ACE.libraryCode : '')
-			+ ace.session.getLines(start, ACE.lastLine).join('\n').replace(/\s*$/, '')
-			+ '\nreturn ' + funcName + '();\n'
+		window['run-script'].value 
+				= ace.session.getLines(start, ACE.lastLine)
+				.join('\n').replace(/\s*$/, '') 
+				+ '\nreturn ' + funcName + '();\n'
 	}
 	ace.focus()
 }
@@ -202,6 +200,7 @@ function doAccessor(request) {
 		default:
 			if(request.accessor === false) {
 				hideAllDialogs()
+				return
 			} else
 			if(request.accessor.startsWith('exports.')) {
 				// TODO: this is where we ask the Language-Server which file 
@@ -256,21 +255,16 @@ function doError(request) {
 	}
 	let newLines = request.error.replace(/\s*$/, '')
 	// if error has a line number, insert message below that line
-	let prevLine = processLineNumber(request.line < 0 ? 0 : request.line)
+	let prevLine = getLimitedLine(request.line)
+	// scroll to the line when an error occurs
+	if(ace.gotoLine) {
+		setTimeout(ace.gotoLine.bind(ace, prevLine), 100)
+	}
 	if(!ACE.errorWidget) {
 		ACE.errorWidget = createLineWidget(newLines, prevLine, 'morph_error')
 		ace.getSession().widgetManager.addLineWidget(ACE.errorWidget)
 	} else {
 		ACE.errorWidget.el.children[0].innerText = newLines
-	}
-	if(typeof request.locals != 'undefined') {
-		let lines = Object.keys(request.locals)
-		for(let j = 0; j < lines.length; j++) {
-			doAssign({
-				assign: request.locals[lines[j]],
-				line: lines[j],
-			})
-		}
 	}
 	ACE.errorWidget.stack = request.stack
 }
@@ -280,8 +274,6 @@ function collectForm(dialog) {
 	let formResults = {}
 	let formField = dialog.getElementsByTagName('form')[0]
 	if(!formField) {
-		window['run-script'].value = ''
-		clearTimeout(dialog.timeout)
 		return
 	}
 	for(let i = 0; i < formField.children.length; i++) {
@@ -296,6 +288,25 @@ function collectForm(dialog) {
 				formResults[formField.children[i].id] = true
 		}
 	}
+	return formResults
+}
+
+
+function doSendForm(dialog, event) {
+	if(event.currentTarget === dialog) {
+		hideAllDialogs()
+		window['run-script'].value = ''
+	} else {
+		let formResults = collectForm(dialog)
+		if(formResults) {
+			let encrypted = crypt(ACE.lastSessionId, JSON.stringify(formResults))
+			window['run-script'].value = '"' + encrypted + '"'
+		} else {
+			window['run-script'].value = ''
+			clearTimeout(dialog.timeout)
+		}
+	}
+
 	// in case of any other snoopy/loggy plugins
 	let waitTime = 100
 	if(!document.body.classList.contains('accessor')) {
@@ -304,15 +315,15 @@ function collectForm(dialog) {
 	}
 	clearTimeout(dialog.timeout)
 	setTimeout(function () {
-		let encrypted = crypt(ACE.lastSessionId, JSON.stringify(formResults))
-		window['run-script'].value = '"' + encrypted + '"'
 		window['run-accessor'].click()
 	}, waitTime)
 }
 
+
 function createDialog(request) {
 	newDialog = document.createElement('DIV')
 	newDialog.className = 'dialog'
+	newDialog.onclick = doSendForm.bind(newDialog, newDialog)
 	document.body.appendChild(newDialog)
 
 	// INTERESTING, THIS NEIGHBOR WAS TALKING ABOUT CHANGING
@@ -402,7 +413,7 @@ function createDialog(request) {
 		if(field == 'submit') {
 			newField = document.createElement('BUTTON')
 			newField.type = 'submit'
-			newField.onclick = collectForm.bind(newField, newDialog)
+			newField.onclick = doSendForm.bind(newField, newDialog)
 			newField.id = fields[i]
 			newField.innerText = fields[i]
 			newDialog.children[0].appendChild(newField)
@@ -432,21 +443,17 @@ function createDialog(request) {
 //   WITH THE SAME AGREEMENT AS ON DESKTOP. I THOUGHT THERE WAS
 //   AND IN GAME Y/N KEY FOR ACCEPTING EULA? CHECK FOR EULA.TXT
 // TODO: call this code for engine system errors Sys_Dialog()
-// TODO: NOT REALLY SURE HOW CHROME PROTECTS PASSWORDS AGAINST
+// TODO: NOT REALLY SURE HOW CHROME PROTECTS PASSWORD FIELDS AGAINST
 //   MEMORY ATTACKS
 function doDialog(request, newDialog) {
-	let skipCreate = false
 	if(!newDialog) {
 		newDialog = createDialog(request)
-	} else {
-		skipCreate = true
 	}
 	// can change titles on a dialog for reusability
 	if(request.title
 		&& newDialog.children[0].children[0].nodeName == 'H2') {
-			newDialog.children[0].children[0].innerText = request.title
+		newDialog.children[0].children[0].innerText = request.title
 	}
-
 	// create a drop surface since the game 
 	//    and editor might interfere
 	newDialog.style.display = 'block'
@@ -454,8 +461,17 @@ function doDialog(request, newDialog) {
 	if(newDialog.timeout) {
 		clearTimeout(newDialog.timeout)
 	}
+
 	// IMPORTANT: prevents inputs from display in game
 	INPUT.editorActive = true
+	let input = newDialog.getElementsByTagName('input')[0]
+	if(!input) {
+		input = newDialog.getElementsByTagName('button')[0]
+	}
+	if(input) {
+		input.focus()
+	}
+
 	newDialog.timeout = setTimeout(function () {
 		// debounce the dialog a little so scripts can
 		//   run and get an answer, or continue without an answer
@@ -494,16 +510,34 @@ function doAssign(request) {
 		}
 	}
 	if(!found) {
-		let newWidget = createLineWidget((request.assign || '').replace(/\s*$/, ''), prevLine, 'morph_assign')
+		let newWidget = createLineWidget((request.assign || '')
+				.replace(/\s*$/, ''), prevLine, 'morph_assign')
 		ace.getSession().widgetManager.addLineWidget(newWidget)
 		newWidget.flashTime = Date.now()
 	} else {
 		// update existing assignment line
-		prevLineWidgets[i].el.children[0].innerText = (request.assign || '').replace(/\s*$/, '')
+		prevLineWidgets[i].el.children[0].innerText 
+				= (request.assign || '').replace(/\s*$/, '')
 		prevLineWidgets[i].flashTime = Date.now()
 	}
 	// sometimes assignments can update a lot
 	// TODO: make a way to turn this off
+}
+
+
+function doLocals(request) {
+	if(typeof request.locals == 'undefined') {
+		return
+	}
+	if(typeof request.locals != 'undefined') {
+		let lines = Object.keys(request.locals)
+		for(let j = 0; j < lines.length; j++) {
+			doAssign({
+				assign: request.locals[lines[j]],
+				line: lines[j],
+			})
+		}
+	}
 }
 
 
@@ -513,7 +547,7 @@ function doConsole(request) {
 	}
 	let newLines = request.console.replace(/\s*$/, '') // only truncating end line Chrome
 																								// see, I do have some nice things to say
-	let prevLine = ACE.lastLine - (ACE.libraryLoaded ? 1 : ACE.libraryLines)
+	let prevLine = ACE.lastLine - ACE.libraryLines
 	if(!ACE.consoleWidget) {
 		ACE.consoleWidget = createLineWidget(newLines + '\n', prevLine)
 		ace.getSession().widgetManager.addLineWidget(ACE.consoleWidget)
@@ -533,18 +567,10 @@ function onPaused(request) {
 	document.body.classList.remove('starting')
 	document.body.classList.add('paused')
 	if(!ACE.pausedWidget) {
-		if(!ACE.libraryLoaded) {
-			ACE.pausedWidget = createLineWidget('PAUSED', ACE.previousNonLibrary, 'morph_pause')
-		} else {
-			ACE.pausedWidget = createLineWidget('PAUSED', ACE.previousLine, 'morph_pause')
-		}
+		ACE.pausedWidget = createLineWidget('PAUSED', ACE.previousNonLibrary, 'morph_pause')
 		ace.getSession().widgetManager.addLineWidget(ACE.pausedWidget)
 	} else {
-		if(!ACE.libraryLoaded) {
-			ACE.pausedWidget.row = ACE.previousNonLibrary
-		} else {
-			ACE.pausedWidget.row = ACE.previousLine
-		}
+		ACE.pausedWidget.row = ACE.previousNonLibrary
 		//ace.getSession().widgetManager.addLineWidget(ACE.pausedWidget)
 	}
 	// debounce
@@ -589,6 +615,7 @@ function onMessage(message) {
 	} else 
 	if(typeof request.error != 'undefined') {
 		doError(request)
+		doLocals(request)
 	} else 
 	if(typeof request.result != 'undefined') {
 		document.body.classList.remove('running')
@@ -603,8 +630,8 @@ function onMessage(message) {
 	if(typeof request.status != 'undefined') {
 		doStatus(request)
 	} else 
-	if(typeof request.assign != 'undefined') {
-		doAssign(request)
+	if(typeof request.locals != 'undefined') {
+		doLocals(request)
 	} else 
 	if(typeof request.cookie != 'undefined') {
 		ACE.cookiesList = JSON.parse(request.cookie)

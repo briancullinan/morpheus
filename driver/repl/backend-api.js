@@ -192,7 +192,6 @@ async function createRunContext(runContext, env) {
 		bubbleFile: '<eval>',
 		bubbleColumn: 0,
 		libraryLines: 0,
-		libraryLoaded: false,
 		localVariables: env,
 		localFunctions: {},
 		asyncRunners: 0,

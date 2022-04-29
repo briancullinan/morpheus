@@ -28,6 +28,10 @@ With a little Devil icon. A play on the demo, demon, and daemon.
 1) DONE: Componentize engine, combine with Ace9
 2) Give Morpheus form, animations and world geometry, 
     tc_vis for tracemap grid snapping, Morpheus offers you a quine.
+    use Q3 materials and vertexes as gravitational points for the code
+    syntax tree to "fit" the code to the 3D model to make it look like
+    I'm programming a Jesus face, or like how Neo reached into repair
+    the bad code. Or like a https://en.wikipedia.org/wiki/Method_of_loci
 3) Modularize goals, separate QVMs
 4) POC DONE: Stream browser automation through plugin
 5) Automate LinkedIn lobby, find gamers
