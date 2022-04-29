@@ -29,9 +29,10 @@ async function doMorpheusPass(required) {
 	//   RECOMPILE AND RELOAD THE PLUGIN AND THE BROWSER PAGE.
 	// WHAT IF I COULD DO ^ THAT WHOLE PROCESSES IN THE CLOUD REMOTELY, AND GET
 	//   DEBUG BREAKPOINTS AND VISUALIZE IT IN THE ENGINE NEXT TO THE CODE.
-	let passwordContext = await createRunContext({
+	let newContext = {
 		senderId: currentContext.senderId
-	}, {})
+	}
+	let passwordContext = await createRunContext(newContext, await createEnvironment(newContext))
 	passwordContext.localVariables.thisWindow = currentContext.localVariables.thisWindow
 	let loginFunction = await getRemoteCall('doSystemLogin', passwordContext)
 	let response = await loginFunction()
@@ -42,7 +43,8 @@ async function doMorpheusPass(required) {
 		return
 	}
 	if(!response || !response.result) {
-		throw new Error('Needs Morpheus password.')
+		// silently fail, until we get back to library script
+		return
 	}
 
 	// THIS SHIT IS IMPORTANT. CREATE A FUNCTIONAL CONTEXT
@@ -160,6 +162,9 @@ async function doMorpheusKey() {
 	let user = await doMorpheusPass(true)
 	if(await shouldBubbleOut(currentContext)) {
 		return
+	}
+	if(!user) {
+		throw new Error('Needs Morpheus password.')
 	}
 	// chrome.storage.sync.set({ mytext: txtValue });
 	let loginFunction = await getRemoteCall('doKeyDialog', currentContext)

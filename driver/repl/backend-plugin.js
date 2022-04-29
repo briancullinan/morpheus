@@ -222,6 +222,7 @@ async function addCookie(cookie, page) {
 	let cookieEncoded = JSON.stringify(encodeCookie(cookie))
 	await doMorpheusPass(false)
 	if(!temporaryEncrypter) {
+		// silently fail
 		return cookieEncoded
 	}
 
