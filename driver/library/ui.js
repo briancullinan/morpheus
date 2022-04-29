@@ -26,9 +26,9 @@ async function doDialog(dialog) {
 			break
 		}
 	} while(--tryTimes > 0)
-  chrome.tabs.sendMessage({
-    accessor: false // hide all dialogs
-  }, function () {})
+  //chrome.tabs.sendMessage({
+  //  accessor: false // hide all dialogs
+  //}, function () {})
   return response
 }
 

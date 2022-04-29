@@ -84,9 +84,7 @@ function pruneOldRuns() {
 		if(threads[runIds[i]].ended
 			&& Date.now() - threads[runIds[i]].bubbleTime > THREAD_SAVE_TIME) {
 			delete threads[runIds[i]]
-			doStatus({
-				senderId: senderId
-			}, false)
+			doStatus({ senderId: senderId }, false)
 		}
 	}
 	if(Object.keys(threads).length == 0) {

@@ -62,7 +62,7 @@ function doAssign(varName, lineNumber, bubbleColumn, runContext) {
 			valueString = doProperty(runContext.localVariables[varName])
 		}
 		chrome.tabs.sendMessage(runContext.senderId, {
-			locals: runContext.bubbleAST ? doAssignments(runContext.bubbleAST) : [],
+			locals: runContext.bubbleAST ? doAssignments(runContext.bubbleAST, runContext) : [],
 			//assign: new Array(bubbleColumn).fill(' ').join('') + varName + ' = ' + valueString + '\n',
 			// always subtract 1 because code is wrapping in a 1-line function above
 			line: lineNumber,
@@ -125,7 +125,7 @@ function doAssignments(AST, runContext) {
 			continue
 		}
 		let bubbleColumn = AST[i].loc.start.column
-		if(AST[i] == 'AssignmentExpression') {
+		if(AST[i].type == 'AssignmentExpression') {
 			let varName
 			let valueString
 			if(AST[i].left.type == 'Identifier') {
@@ -139,19 +139,30 @@ function doAssignments(AST, runContext) {
 			}
 			assignments[AST[i].loc.start.line] = new Array(bubbleColumn)
 				.fill(' ').join('') + varName + ' = ' + valueString + '\n'
-		} else {
-			for(let j = 0; j < POSSIBLE_BRANCHES.length; ++j) {
-				if(typeof AST[i][POSSIBLE_BRANCHES[j]] != 'undefined') {
-					if(typeof AST[i][POSSIBLE_BRANCHES[j]].type) {
-						let childAssigns = doAssignments([AST[i][POSSIBLE_BRANCHES[j]]], runContext)
-						Object.assign(assignments, childAssigns)
-					} else if (typeof AST[i][POSSIBLE_BRANCHES[j]].length != 0
-						&& typeof AST[i][POSSIBLE_BRANCHES[j]][0].type != 'undefined') {
-						let childAssigns = doAssignments(AST[i][POSSIBLE_BRANCHES[j]], runContext)
-						Object.assign(assignments, childAssigns)
-					} else {
-						// don't know what to do
-					}
+			continue
+		} else if (AST[i].type == 'VariableDeclarator') {
+			let varName
+			let valueString
+			if(AST[i].id.type == 'Identifier') {
+				varName = AST[i].id.name
+				valueString = doProperty(runContext.localVariables[varName])
+			}
+			assignments[AST[i].loc.start.line] = new Array(bubbleColumn)
+				.fill(' ').join('') + varName + ' = ' + valueString + '\n'
+			continue
+		}
+
+		for(let j = 0; j < POSSIBLE_BRANCHES.length; ++j) {
+			if(typeof AST[i][POSSIBLE_BRANCHES[j]] != 'undefined') {
+				if(typeof AST[i][POSSIBLE_BRANCHES[j]].type) {
+					let childAssigns = doAssignments([AST[i][POSSIBLE_BRANCHES[j]]], runContext)
+					Object.assign(assignments, childAssigns)
+				} else if (typeof AST[i][POSSIBLE_BRANCHES[j]].length != 0
+					&& typeof AST[i][POSSIBLE_BRANCHES[j]][0].type != 'undefined') {
+					let childAssigns = doAssignments(AST[i][POSSIBLE_BRANCHES[j]], runContext)
+					Object.assign(assignments, childAssigns)
+				} else {
+					// don't know what to do
 				}
 			}
 		}
@@ -183,7 +194,7 @@ function doError(err, runContext) {
 			//   THEY DON'T OWE YOU ANYTHING, NOT EVEN LIFE SUPPORT. FUCK OFF FOSS, FOSS OWES ME
 			//   EVERYTHING BECAUSE I'LL BE THE ONE STUCK CLEANING THIS SHIT CODE UP.
 			//   TECHNICAL DEBT APPLIES TO PUBLISHING INCORRECT CODE ALSO. CODE IS LIKE LITTER.
-			locals: runContext.bubbleAST ? doAssignments(runContext.bubbleAST) : [],
+			locals: runContext.bubbleAST ? doAssignments(runContext.bubbleAST, runContext) : [],
 		}, function(response) {
 	
 		});

@@ -52,7 +52,9 @@ async function runStatement(i, AST, runContext) {
 				runContext.bubbleAST = AST
 				// normally we'd skip and let it run async
 				//   but doStatus() also does @Delay()
-				await doStatus(runContext, (!AST[i].callee || AST[i].callee.name != 'sleep'))
+				let doSleep = runContext.bubbleFile == '<eval>'
+						&& (!AST[i].callee || AST[i].callee.name != 'sleep')
+				await doStatus(runContext, doSleep)
 			}
 		}
 
