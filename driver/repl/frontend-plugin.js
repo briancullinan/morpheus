@@ -10,49 +10,6 @@ function socketMessage(evt) {
 function socketError(evt) {
 }
 
-let runnerTimer
-let accessorResult = null
-
-
-async function restoreRunner(sender) {
-  try {
-    if(awaitingAccessor) {
-      return
-    }
-    // try to restore runner status
-    window.postMessage({
-      frontend: 'Worker service started\n'
-    })
-    awaitingAccessor = true
-    accessorResult = null
-    await setDelay(function () { return !awaitingAccessor }, 1000)
-    if(awaitingAccessor) {
-      awaitingAccessor = false
-    } else {
-      chrome.runtime.sendMessage({ 
-        frontend: accessorResult,
-      }, processResponse)
-    }
-  } catch (e) {
-    
-  }
-}
-
-function runAccessor() {
-  let runScriptTextarea = document.getElementById("run-script")
-  if(awaitingAccessor) {
-    awaitingAccessor = false
-    if(runScriptTextarea.value) {
-      accessorResult = JSON.parse(runScriptTextarea.value)
-    } else {
-      accessorResult = null
-    }
-    return
-  } else {
-    throw new Error('Accessor isn\'t waiting!')
-  }
-
-}
 
 
 function generateRunId() {
@@ -68,7 +25,6 @@ function generateRunId() {
 let lastRunId
 
 
-
 function runScript() {
   let runScriptTextarea = document.getElementById("run-script")
 
@@ -76,7 +32,7 @@ function runScript() {
     || document.body.className.includes('paused')) {
     chrome.runtime.sendMessage(lastRunId({ 
       pause: !document.body.className.includes('paused'),
-    }), processResponse)
+    }), window.postMessage)
     return
   }
 
@@ -92,7 +48,7 @@ function runScript() {
     }
     chrome.runtime.sendMessage(lastRunId({ 
       script: runScriptTextarea.value,
-    }), processResponse)
+    }), window.postMessage)
     runScriptTextarea.value = ''
   } catch (e) {
     // reload the page!
@@ -117,11 +73,6 @@ document.addEventListener('DOMContentLoaded', (sender) => {
   if(!document.getElementById("run-script")) {
     return
   }
-
-  if(restoreTimer) {
-    clearInterval(restoreTimer)
-  }
-  restoreRunner()
 
   document.addEventListener('click', function (evt) {
     if(!evt.target) {
@@ -162,89 +113,34 @@ function getRunId(length) {
 }
 
 
-async function checkOnRunner() {
-  try {
-    chrome.runtime.sendMessage(lastRunId({ 
-    }), function (response) {
-      if(!response) {
-        return
-      }
-      processResponse(response)
-    })
-  } catch (e) {
-    if(runnerTimer) {
-      clearInterval(runnerTimer)
-    }
-    // reload the page!
-    if(e.message.includes('context invalidated')) {
-      document.location = document.location 
-      return
-    }
-    window.postMessage({
-      error: e.message + '\n'
-    }, function () {
-      debugger
-    })
-  }
-
-}
-
 let awaitingAccessor = false
+let awaitingResponse = {}
 
-function processResponse(request) {
-  // clear status timer if an end result is received
-  if(typeof request.error != 'undefined'
-    || typeof request.result != 'undefined') {
-    if(runnerTimer) {
-      clearInterval(runnerTimer)
+
+
+function runAccessor() {
+  let runScriptTextarea = document.getElementById("run-script")
+  if(runScriptTextarea.length < 1) {
+    return
+  }
+  let responseData = JSON.parse(runScriptTextarea.value)
+  if(responseData && responseData.responseId) {
+    if(awaitingResponse.hasOwnProperty(responseData.responseId)) {
+      awaitingResponse[responseData.responseId](responseData)
+    } else {
+      //throw new Error('Accessor isn\'t waiting!')
     }
   }
-
-  if(typeof request.started != 'undefined') {
-    if(runnerTimer) {
-      clearInterval(runnerTimer)
-    }
-    runnerTimer = setInterval(checkOnRunner, 1000)
-  }
-
-  window.postMessage(request)
 }
 
 
-async function setDelay(callback, msecs) {
-  await new Promise(resolve => {
-    let newTimer
-    let safety = 0
-    newTimer = setInterval(function () {
-      if(callback()) {
-        clearInterval(newTimer)
-        resolve()
-      } else if(safety >= msecs / 100) {
-        resolve()
-      } else {
-        safety++
-      }
-    }, 100)
-  })
-}
+// HAVING SOME TROUBLE ALIGNING RESPONSES WITH PLACES IN THE SCRIPT
+//   THIS WILL BECOME EVEN MORE CONFUSING IN THE FUTURE IF I ADD
+//   MULTIPLE PROCESSES AT ONCE.
+chrome.runtime.onMessage.addListener(processResponse)
 
-chrome.runtime.onMessage.addListener(function(request, sender, reply) {
-  // access a client variable they've shared from code
-  if(typeof request.accessor != 'undefined') {
-    awaitingAccessor = true
-    accessorResult = null
-    window.postMessage(request)
-    setDelay(function () { return !awaitingAccessor }, 3000)
-      .then(function () {
-        if(awaitingAccessor) {
-          awaitingAccessor = false
-          return reply({fail: true})
-        } else {
-          return reply({result: accessorResult})
-        }
-      })
-    return true
-  } else 
+
+function processResponse(request, sender, reply) {
   if(request.headers) {
     debugger
     /*
@@ -256,18 +152,26 @@ chrome.runtime.onMessage.addListener(function(request, sender, reply) {
       }
     })
     */
-  } else {
+   return
   }
+
+  // access a client variable they've shared from code
   // basic client status message
-  processResponse(request)
-  return reply()
-})
+  let responseEventId = getRunId(20)
+  awaitingResponse[responseEventId] = (function (responseTimer) {
+    if(typeof request == 'object' && request) {
+      request.responseId = responseEventId
+    }
+    window.postMessage(request)
+    return function (response) {
+      clearTimeout(responseTimer)
+      reply(response)
+      delete awaitingResponse[responseEventId]
+    }
+  })(setTimeout(function () {
+    awaitingResponse[responseEventId]()
+    delete awaitingResponse[responseEventId]
+  }, 3000))
+  return true
 
-
-let restoreTimer = setTimeout(function () {
-  if(!document.getElementById("run-script")) {
-    return
-  }
-  restoreRunner()
-}, 1000)
-
+}
