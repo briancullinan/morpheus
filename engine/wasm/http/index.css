@@ -94,21 +94,17 @@ body > img {
   padding: 100%;
 }
 
-#command-bar input[type*="checkbox"]:checked ~ span {
+#command-bar input[type*="checkbox"]:checked + label span {
   left: 20px;
+  background-color: #C0A030;
 }
 
 
-#command-bar input[type*="checkbox"]:checked ~ span:before {
+#command-bar input[type*="checkbox"]:checked + label span:before {
   left:-20px;
 }
 
-
-#command-bar label[for="liveReload"] span,
-#command-bar label[for="snap"] span,
-#command-bar label[for="sync"] span,
-#command-bar label[for="lineWrap"] span,
-#command-bar label[for="codeFold"] span {
+#command-bar input[type="checkbox"] + label span {
   position: absolute;
   display: block;
   content: " ";
@@ -123,20 +119,11 @@ body > img {
 }
 
 /* TODO: convert to SCSS when entire build stack is in browser */
-
-#command-bar label[for="liveReload"],
-#command-bar label[for="snap"],
-#command-bar label[for="sync"],
-#command-bar label[for="lineWrap"],
-#command-bar label[for="codeFold"] {
+#command-bar input[type="checkbox"] + label {
   padding-left: 40px;
 }
 
-#command-bar label[for="liveReload"] span:before,
-#command-bar label[for="snap"] span:before,
-#command-bar label[for="sync"] span:before,
-#command-bar label[for="lineWrap"] span:before,
-#command-bar label[for="codeFold"] span:before {
+#command-bar input[type="checkbox"] + label span:before {
   display:block;
   content: " ";
   position:absolute;
@@ -149,11 +136,7 @@ body > img {
   box-sizing: border-box;
 }
 
-#command-bar label[for="liveReload"]:hover span,
-#command-bar label[for="snap"]:hover span,
-#command-bar label[for="sync"]:hover span,
-#command-bar label[for="lineWrap"]:hover span,
-#command-bar label[for="codeFold"]:hover span {
+#command-bar input[type="checkbox"] + label:hover span {
   background-color: #C0A030;
 }
 

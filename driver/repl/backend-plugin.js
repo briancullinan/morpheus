@@ -213,42 +213,50 @@ function encodeCookie(cookie) {
 
 
 
-function addCookie(cookie, page) {
+// INTERESTING, WE USE TO FOCUS ON MAN-IN-THE-MIDDLE 
+//   ON SOMEONE ELSE'S, BUT NOW I'M DOING IT TO MY OWN 
+//   CLOUD CONTROLLED WEB-BROWSER. CLOUD + MITM?
+//   GHOST-MAN-IN-THE-MIDDLE? https://en.wikipedia.org/wiki/Ghost_(1990_film)
+// SINK!!
+async function addCookie(cookie, page) {
 	let cookieEncoded = JSON.stringify(encodeCookie(cookie))
-	//await doMorpheusPass(true)
+	await doMorpheusPass(false)
 	if(!temporaryEncrypter) {
-		return Promise.resolve(cookieEncoded)
+		return cookieEncoded
 	}
-	let leftStr = page.replace(/https|http|\//ig, '')
+
+	let result = chrome.storage.sync.get(cookieKey)
 	// this says encrypt but it's not the part that needs to be secured
 	//   this is just to differentiate profiles in the index
+	// it needs to stay the same between runs, but different for each environment login
 	let cookieKey = temporaryEncrypter(temporaryUser + 'Cookies')
-	return chrome.storage.sync.get(cookieKey, function (result) {
-		let cookieSessions
-		if(!result[cookieKey]) {
-			cookieSessions = {}
-		} else {
-			cookieSessions = JSON.parse(result[cookieKey])
-		}
-		if(typeof cookieSessions[leftStr] == 'undefined') {
-			// again this is just to add a bit of randomness for each page key
-			let cookieKey = temporaryEncrypter(temporaryUser + leftStr)
-			cookieSessions[leftStr] = cookieKey
-		}
-		// encrypte encoded cookies for storage for quick lookup
-		cookieSessions[cookieKey+'_encoded'] = temporaryEncrypter(cookieEncoded)
-		chrome.storage.sync.set({
-			cookieSessions: JSON.stringify(cookieSessions)
-		})
-		let cookieStorage = {}
-		// THIS IS THE PART THAT ACTUALLY NEEDS TO BE ENCRYPTED
-		cookieStorage[cookieKey] = temporaryEncrypter(cookie)
-		chrome.storage.sync.set(cookieStorage)
-		return cookieEncoded
+	let cookieSessions
+	if(!result[cookieKey]) {
+		cookieSessions = {}
+	} else {
+		cookieSessions = JSON.parse(result[cookieKey])
+	}
+
+	let leftStr = page.replace(/https|http|\//ig, '')
+	if(typeof cookieSessions[leftStr] == 'undefined') {
+		// again this is just to add a bit of randomness for each page key
+		let cookieKey = temporaryEncrypter(temporaryUser + leftStr)
+		cookieSessions[leftStr] = cookieKey
+	}
+	// encrypte encoded cookies for storage for quick lookup
+	cookieSessions[cookieKey+'_encoded'] = temporaryEncrypter(cookieEncoded)
+	chrome.storage.sync.set({
+		cookieSessions: JSON.stringify(cookieSessions)
 	})
+	let cookieStorage = {}
+	// THIS IS THE PART THAT ACTUALLY NEEDS TO BE ENCRYPTED
+	cookieStorage[cookieKey] = temporaryEncrypter(cookie)
+	chrome.storage.sync.set(cookieStorage)
+	return cookieEncoded
 }
 
 
+let saveCookies = {}
 
 
 function doWebComplete(details) {
@@ -265,25 +273,31 @@ function doWebComplete(details) {
 		runContext.queueRate.unshift(nowish)
 	}
 	// don't actually care if this completes, just that it happens in the right order
-	chrome.debugger.sendCommand({
-		tabId: details.tabId || runContext.localVariables.tabId
-	}, 'Runtime.evaluate', {
-		// TODO: attach encrypter to every page for forms transmissions
-		expression: 'document.cookie'
-	}, function (cookie) {
-		if(!cookie.result || !cookie.result.value) {
-			return
-		}
-		return addCookie(cookie.result.value, runContext.localVariables.navigationURL)
-			.then(function (cookieEncoded) {
-				// AWAIT LOCK, LIKE A RACE-CONDITION WITH WAITING FOR 
-				//   MULTIPLE PROMISES, INTERESTING IT CAN CAUSE PAGE TO STALL.
+	// AWAIT LOCK, LIKE A RACE-CONDITION WITH WAITING FOR 
+	//   MULTIPLE PROMISES, INTERESTING IT CAN CAUSE PAGE TO STALL.
+	// no return
+	saveCookies[details.frameId] = (function (url) {
+		return setTimeout(function () {
+			chrome.debugger.sendCommand({
+				tabId: details.tabId || runContext.localVariables.tabId
+			}, 'Runtime.evaluate', {
+				// TODO: attach encrypter to every page for forms transmissions
+				expression: 'document.cookie'
+			}, function (cookie) {
+				if(!cookie || !cookie.result || cookie.result.fail 
+						|| !cookie.result.value) {
+					return
+				}
+				let cookieEncoded = JSON.stringify(encodeCookie(cookie.result.value))
 				chrome.tabs.sendMessage(runContext.senderId, {
 					// TODO: encrypt encoded stuff with runContext.runId
 					cookie: cookieEncoded
-				})
+				}, function () {})
+				Promise.resolve(addCookie(cookie.result.value, url))
 			})
-	})
+		}, 100)
+	})()
+
 }
 
 

@@ -2,6 +2,12 @@
 
 /*
 
+THOUGHT OF ANOTHER TASK FOR CEREBRO (PORTUGESE FOR BRAIN)
+CLEAN UP THESE IDIOT YOUTUBE VIDEOS OF ADULTS IN COSPLAY
+ACTING LIKE ASSHOLE KIDS. PREVENT OWN KID FROM WATCHING TRASH.
+HAVE TO FIND THE TRASH FIRST IN ORDER TO STOP SOMEONE FROM SEEING IT.
+
+
 JUST RECORDING HERE. CONSIDERING REPORTING SOME OF THE MORE
 VOLITILE CASES TO THE AUTHORITIES, LIKE THE ONES INVOLVING
 WOMEN AND CHILDREN. I USED TO BE ABLE TO MAKE IT A WHOLE
@@ -63,3 +69,6 @@ If you haven't read the whole ad, you probably won't read this - I'll need your 
 Again - please include your direct contact information and the nearest cross-streets (if not the actual address). Also, I'm looking for weekly, and you should address how you want to handle that in your response as well. I've been looking for a room to rent since a month before the move-out in mention. The lack of legit responses has further complicated my problems. In fact, all I've had are bogus responses... So, if you don't provide the information I've asked for, you won't get a reply.
 
 Thank you for reading!
+
+*/
+

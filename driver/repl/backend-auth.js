@@ -7,13 +7,14 @@ let temporaryUser
 
 
 
-// THIS IS THE KITCHEN SINK. AND ANYWHERE THAT USES "CRYPT("
+// THIS IS THE KITCHEN SINK. AND ANYWHERE THAT USES "CRYPT(" AND "TEMPORARYENCRYPTOR("
 
 async function doMorpheusPass(required) {
 	if(!required && temporaryEncrypter
 		&& Date.now() - morpheusPassTime < 30 * 1000) {
 		return temporaryUser
 	}
+	currentContext.paused = true // pause execution while collecting system pass
 	let sessionId = generateSessionId()
 	let result = await chrome.storage.sync.get('_morpheusKey')
 	// USED FOR CHROME.PROFILES.LIST() FAKE API CALL IN LIBRARY
@@ -22,10 +23,22 @@ async function doMorpheusPass(required) {
 	} else {
 		morphKey = JSON.parse(result._morpheusKey)
 	}
-	let loginFunction = await getRemoteCall('doSystemLogin', currentContext)
+	// GAH! I HATE THIS. KEEP FORGETTING TO REFRESH THE PLUGIN. THERE'S ANOTHER
+	//   PLUGIN THAT REFRESHES PLUGINS DURING DEVELOPMENT. THIS IS SO ANTI-CI!!!
+	// NEED TO MAKE A CHANGE IN MY BROWSER CODE EDITOR, THEN AUTOMATICALLY
+	//   RECOMPILE AND RELOAD THE PLUGIN AND THE BROWSER PAGE.
+	// WHAT IF I COULD DO ^ THAT WHOLE PROCESSES IN THE CLOUD REMOTELY, AND GET
+	//   DEBUG BREAKPOINTS AND VISUALIZE IT IN THE ENGINE NEXT TO THE CODE.
+	let passwordContext = await createRunContext({
+		senderId: currentContext.senderId
+	}, {})
+	passwordContext.localVariables.thisWindow = currentContext.localVariables.thisWindow
+	let loginFunction = await getRemoteCall('doSystemLogin', passwordContext)
 	let response = await loginFunction()
 	currentContext.returned = false // because fuck-arounds above, ^
+	// should never happen if lib is working \/
 	if(await shouldBubbleOut(currentContext)) {
+		currentContext.paused = false
 		return
 	}
 	if(!response || !response.result) {
@@ -82,6 +95,7 @@ async function doMorpheusPass(required) {
 	//   WHICH WE ASSUME IS TAMPER PROOF, FOR DECRYPTION AND SENDING 
 	//   TO CORRECT PAGE. TODO: IMPORT/EXPORT LAWS ON SECURE TECHNOLOGY.
 
+	currentContext.paused = false
 	return user
 }
 

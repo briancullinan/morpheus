@@ -482,10 +482,48 @@ function doDialog(request, newDialog) {
 
 
 
+// I NEED AN EASY WIN, LIKE A WARMUP TASK.
+function toggleOption(option) {
+	switch(option.id) {
+		case 'syncLocal':
+			
+			break
+		case 'snapWindows':
+			break
+			// GOOGLE HIDES THEIR CONSOLE BEHIND TINY LITTLE ICONS.
+			//   FUNNY, I WONDER IF THE USER-EXPERIENCE SURVEYS I TOOK
+			//   THINK THAT I PREFER TO CLICK ON THEIR STUFF INSTEAD 
+			//   OF WRITE CODE? WILL WRITING THIS TOOL GIVE ME THE POWER
+			//   TO REWRITE THEIR DESIGN FROM GITHUB SOURCES?
+		case 'lineWrap':
+			if(option.checked) {
+				ace.setOption('wrap', 50)
+			} else {
+				ace.setOption('wrap', false)
+			}
+			break
+		case 'codeFold':
+			// SURE, THE CODE EDITOR ON AWS IS FREE TO USE,
+			//   AFTER A 12-STEP SIGN-UP PROCCESS, ENTERING 
+			//   CREDIT CARD INFORMATION, AND PAYING FOR 
+			//   OTHER CLOUD SERVICES TO CONNECT IT TO YOUR
+			//   WORKFLOW. GET REAL AMAZON.
+			if(option.checked) {
+				ace.setOption('foldStyle', 'markbeginend')
+			} else {
+				ace.setOption('foldStyle', 'manual')
+			}
+			break
+		default:
+	}
+}
+
+
 function doLocals(request) {
 	if(typeof request.locals == 'undefined') {
 		return
 	}
+	debugger
 	
 }
 
