@@ -40,7 +40,7 @@ async function doMorpheusPass(required) {
 	previousContext.returned = false // because fuck-arounds above, ^
 	// should never happen if lib is working \/
 	if(await shouldBubbleOut(passwordContext) 
-		|| !response || !response.result || !response.result.formData) {
+		|| !response || !response.result.formData) {
 		// silently fail, until we get back to library script
 		previousContext.paused = false
 		return

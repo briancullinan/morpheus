@@ -78,6 +78,10 @@ function onContent() {
 			runScript()
 		} else if(evt.target.className.includes('run-accessor')) {
 			runAccessor()
+		} else if (evt.target.id == 'snapWindows') {
+			chrome.runtime.sendMessage({ 
+				snapWindows: evt.target.checked,
+			}, window.postMessage)
 		}
 	})
 

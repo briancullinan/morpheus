@@ -107,7 +107,9 @@ async function runCallStatements(runContext, functionName, parameterDefinition, 
 	return result
 }
 
-async function runFunction(AST, runContext) {
+
+
+function runFunction(AST, runContext) {
   let before
   let after
   let namePrefix = ''
@@ -160,6 +162,7 @@ async function runFunction(AST, runContext) {
     = runCallStatements.bind(null, runContext, funcName, AST.params, before, after, AST.body))
   return result
 }
+
 
 
 async function getRemoteCall(calleeName, runContext) {

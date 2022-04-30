@@ -274,8 +274,9 @@ let temporarySessionEncryptor
 
 
 
-function doSendForm(responseId, dialog, event) {
+function doSendForm(dialog, event) {
 	let formResults
+	let responseId = dialog.getAttribute('aria-id')
 	if(event.currentTarget === dialog
 		|| !(formResults = collectForm(dialog))) {
 		hideAllDialogs()
@@ -287,7 +288,7 @@ function doSendForm(responseId, dialog, event) {
 		let encrypted = temporarySessionEncryptor(JSON.stringify(formResults))
 		window['run-script'].value = JSON.stringify({
 			responseId: responseId,
-			formData: encrypted,
+			result: { type: 'string', value: encrypted }
 		})
 	}
 
@@ -306,7 +307,7 @@ function doSendForm(responseId, dialog, event) {
 function createDialog(request) {
 	newDialog = document.createElement('DIV')
 	newDialog.className = 'dialog'
-	newDialog.onclick = doSendForm.bind(newDialog, responseId, newDialog)
+	newDialog.onclick = doSendForm.bind(newDialog, newDialog)
 	document.body.appendChild(newDialog)
 	// INTERESTING, THIS NEIGHBOR WAS TALKING ABOUT CHANGING
 	//   NAMES AND PASSING VAIRABLES AROUND AND MAKING MESS,
@@ -436,6 +437,7 @@ function doDialog(request, newDialog) {
 		&& newDialog.children[0].children[0].nodeName == 'H2') {
 		newDialog.children[0].children[0].innerText = request.title
 	}
+	newDialog.setAttribute('aria-id', request.responseId)
 	// create a drop surface since the game 
 	//   and editor might interfere
 	newDialog.style.display = 'block'
@@ -492,6 +494,11 @@ function toggleOption(option) {
 			} else {
 				ace.setOption('foldStyle', 'manual')
 			}
+			break
+		case 'snapWindows':
+			// automatically recovered by frontend-plugin.js
+			break
+		case 'darkMode':
 			break
 		default:
 	}

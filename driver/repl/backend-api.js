@@ -12,7 +12,41 @@ function _makeLibraryAccessor(callArgs, runContext) {
 }
 
 
-async function _doAccessor(member, ctx, senderId) {
+
+function createLibrary(response, member, runContext) {
+	// TODO: extract static functionality and convert to C# style static initializer
+	//   that way, in the future, I can do the same thing to game code for static-build.
+	let libraryAST = acorn.parse(
+		'(function () {\n' + response.library + '\n})()\n'
+		, {ecmaVersion: 2020, locations: true, onComment: function () {
+			// TODO: this would be better for keeping track of @Attributes
+		}})
+	let newLibrary = libraryAST.body[0].expression.callee.body.body
+	let previousScript = runContext.script // SO IT CAN PARSE ATTRIBUTES, 
+	//   TODO: MAKE WORK ON INTERNAL FUNCTIONS, ASSIGN TO CONEXT??
+	runContext.script = response.library
+	try {
+		for(let i = 0; i < newLibrary.length; i++) {
+			if(newLibrary[i].type == 'FunctionDeclaration'
+				&& newLibrary[i].id) {
+					let newFunction = runFunction(newLibrary[i], runContext)
+					newFunction.filename = response.name
+					WEBDRIVER_API[newLibrary[i].id.name] = newFunction
+			}
+		}
+	} catch (e) {
+		console.log('WARNING: ' + e.message)
+	} finally {
+		runContext.script = previousScript
+	}
+	if(WEBDRIVER_API.hasOwnProperty(member.property.name)) {
+		return WEBDRIVER_API[member.property.name]
+	}
+}
+
+
+
+async function _doAccessor(member, runContext, senderId) {
 	if(!member.object.name || !member.property.name
 	//	|| member.object.name != 'window' /* no safety? */
 	) {
@@ -49,45 +83,10 @@ async function _doAccessor(member, ctx, senderId) {
 	}
 	if (typeof response.fail != 'undefined') {
 		throw new Error('Member access error: ' + memberName)
-	} else if (typeof response.result == 'undefined') {
-		throw new Error('Couldn\'t understand response.')
-	} else if (!response.result) {
-		return response.result // in case of null or falsey?
 	}
 
-	if(typeof response.result.function != 'undefined') {
-		debugger
-		return function () {
-			debugger
-		}
-	} else 
-	if (typeof response.result.library != 'undefined') {
-		// TODO: extract static functionality and convert to C# style static initializer
-		//   that way, in the future, I can do the same thing to game code for static-build.
-		let libraryAST = acorn.parse(
-			'(function () {\n' + response.result.library + '\n})()\n'
-			, {ecmaVersion: 2020, locations: true, onComment: []})
-		let newLibrary = libraryAST.body[0].expression.callee.body.body
-		let previousScript = ctx.script // SO IT CAN PARSE ATTRIBUTES, 
-		//   TODO: MAKE WORK ON INTERNAL FUNCTIONS, ASSIGN TO CONEXT??
-		ctx.script = response.result.library
-		try {
-			for(let i = 0; i < newLibrary.length; i++) {
-				if(newLibrary[i].type == 'FunctionDeclaration'
-					&& newLibrary[i].id) {
-						let newFunction = await runFunction(newLibrary[i], ctx)
-						newFunction.filename = response.result.name
-						WEBDRIVER_API[newLibrary[i].id.name] = newFunction
-				}
-			}
-		} catch (e) {
-			console.log('WARNING: ' + e.message)
-		} finally {
-			ctx.script = previousScript
-		}
-		if(WEBDRIVER_API.hasOwnProperty(member.property.name)) {
-			return WEBDRIVER_API[member.property.name]
-		}
+	if (typeof response.library != 'undefined') {
+		return createLibrary(response, member, runContext)
 	} else 
 	if (typeof response.result.object != 'undefined') {
 		// TODO: add an _accessor to Objects?
