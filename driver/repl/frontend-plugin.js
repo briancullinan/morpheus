@@ -81,11 +81,13 @@ function onContent() {
 		}
 	})
 
+	// THIS IS THE NEW STARTUP SEQUENCE, DO A FULL ROUND TRIP AND
+	//   GRAB A LIST OF RUNNING SESSIONS
 	let responseEventId = getRunId(20)
 	awaitingResponse[responseEventId] = function (result) {
 		chrome.runtime.sendMessage({ 
 			frontend: result,
-		}, function () { })
+		}, window.postMessage)
 	}
 	window.postMessage({
 		// make a round trip with the front-end, in case this is the tool page
