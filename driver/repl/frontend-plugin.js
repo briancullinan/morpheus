@@ -137,10 +137,10 @@ function runAccessor() {
 // HAVING SOME TROUBLE ALIGNING RESPONSES WITH PLACES IN THE SCRIPT
 //   THIS WILL BECOME EVEN MORE CONFUSING IN THE FUTURE IF I ADD
 //   MULTIPLE PROCESSES AT ONCE.
-chrome.runtime.onMessage.addListener(processResponse)
+chrome.runtime.onMessage.addListener(doMessage)
 
 
-function processResponse(request, sender, reply) {
+function doMessage(request, sender, reply) {
   if(request.headers) {
     debugger
     /*
@@ -157,6 +157,8 @@ function processResponse(request, sender, reply) {
 
   // access a client variable they've shared from code
   // basic client status message
+  // THIS IS PURELY FOR TECHNICALLY MATCHING CLICKS ON THE PAGE
+  //   BACK UP WITH THE RIGHT PROCESS, THIS IS NOT A SECURITY THING.
   let responseEventId = getRunId(20)
   awaitingResponse[responseEventId] = (function (responseTimer) {
     if(typeof request == 'object' && request) {

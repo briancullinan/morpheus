@@ -61,16 +61,6 @@ function initLineWidgets() {
 
 
 
-function processResponse(updateText, lineNumber, error) {
-	if (!ace.session || !ace.session.lineWidgets) {
-		return
-	}
-
-	// TODO: display some fancy report?
-	
-}
-
-
 function newPlay() {
 	let newButton = document.createElement('BUTTON')
 	newButton.className += ' run-button small '

@@ -562,6 +562,18 @@ function onPaused(request) {
 }
 
 
+function doResult(request) {
+	if (!ace.session || !ace.session.lineWidgets) {
+		return
+	}
+
+	// TODO: display some fancy report?
+	document.body.classList.remove('running')
+	document.body.classList.add('stopped')
+
+}
+
+
 function onMessage(message) {
   let request = message.data
 	// never download if we get a response from extension
@@ -590,7 +602,7 @@ function onMessage(message) {
 
 	// the rest of these are console messages
 	if(typeof request.warning != 'undefined') {
-		processResponse(request.warning, request.line, false)
+		debugger
 	} else
 	if(typeof request.console != 'undefined') {
 		doConsole(request)
@@ -600,9 +612,7 @@ function onMessage(message) {
 		doLocals(request)
 	} else 
 	if(typeof request.result != 'undefined') {
-		document.body.classList.remove('running')
-		document.body.classList.add('stopped')
-		processResponse(request.result, request.line, false)
+		doResult(request)
 	} else 
 	if(typeof request.async != 'undefined') {
 		// async notifications are like halfway between result and started

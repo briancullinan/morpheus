@@ -57,27 +57,7 @@ function simplifyMilliseconds(milli) {
 }
 
 
-function updateFilelist(filepath) {
-	if(!ACE.fileList) {
-		ACE.fileList = document.getElementById('file-list')
-	}
-	ACE.filestimer = null
-	if(!ACE.fileList) {
-		return
-	}
-	if(!ACE.filetypes) {
-		ACE.filetypes = {}
-	}
-	//if(!ACE.filelistWidgets) {
-		ACE.filelistWidgets = [
-			'Local Storage'
-		]
-		ACE.filelistWidgetRows = [
-			0
-		]
-	//}
-	ACE.filelistWidgetRows.sort()
-	
+function listFiles() {
 	let newFiles = Object.keys(FS.virtual)
 	let startLength = newFiles.length
 
@@ -97,42 +77,73 @@ function updateFilelist(filepath) {
 	newFiles = newFiles.sort().filter(function (f, i, arr) { 
 		return f && arr.indexOf(f) == i
 	})
+	return newFiles
+}
 
-	if(ACE.callStack) {
-		ACE.filelistWidgets[newFiles.length] = 'Call Stack'
+
+function callStack() {
+	let newFiles = []
+	if(!ACE.callStack) {
+		return newFiles
+	}
+	return newFiles.concat(ACE.callStack)
+}
+
+
+function cookieList() {
+	if(!ACE.cookiesList) {
+		return []
+	}
+	return Object.keys(ACE.cookiesList)
+		.map(function (key) {
+			return key + ': ' + ACE.cookiesList[key]
+		})
+}
+
+
+const FILE_WIDGETS = [
+	['Local Storage', listFiles],
+	['Call Stack', callStack],
+	['Cookies', cookieList],
+	['Threads', threadPool],
+]
+
+
+
+function threadPool() {
+	if(!ACE.threadPool) {
+		return []
+	}
+	return ACE.threadPool
+		.map(function (thread) {
+			return simplifyMilliseconds(Date.now() - thread[1]) + ': ' + thread[0]
+		})
+}
+
+
+function updateFilelist(filepath) {
+	if(!ACE.fileList) {
+		ACE.fileList = document.getElementById('file-list')
+	}
+	ACE.filestimer = null
+	if(!ACE.fileList) {
+		return
+	}
+	if(!ACE.filetypes) {
+		ACE.filetypes = {}
+	}
+	// SLIGHTLY MORE EXPANDABLE
+	ACE.filelistWidgets = []
+	ACE.filelistWidgetRows = []
+	let newFiles = []
+	for(let i = 0; i < FILE_WIDGETS.length; i++) {
+		// TODO: if(!filepath) continue
+		ACE.filelistWidgets[newFiles.length] = FILE_WIDGETS[i][0]
 		ACE.filelistWidgetRows.push(newFiles.length)
-		for(let i = 0; i < ACE.callStack.length; i++) {
-			newFiles[newFiles.length] = ACE.callStack[i]
-		}
+		newFiles.push(FILE_WIDGETS[i][0])
+		newFiles = newFiles.concat(FILE_WIDGETS[i][1]())
 	}
-
-	if(ACE.cookiesList) {
-		ACE.filelistWidgets[newFiles.length] = 'Cookies'
-		ACE.filelistWidgetRows.push(newFiles.length)
-		let keys = Object.keys(ACE.cookiesList)
-		for(let i = 0; i < keys.length; i++) {
-			newFiles[newFiles.length] = keys[i] + ': ' + ACE.cookiesList[keys[i]]
-		}
-	}
-
-	if(ACE.threadPool) {
-		ACE.filelistWidgets[newFiles.length] = 'Threads'
-		ACE.filelistWidgetRows.push(newFiles.length)
-		let threadCount = ACE.threadPool.length
-		for(let i = 0; i < threadCount; i++) {
-			newFiles[newFiles.length] = simplifyMilliseconds(
-					Date.now() - ACE.threadPool[i][1])
-					 + ': ' + ACE.threadPool[i][0]
-		}
-	}
-
-	let numWidgets = 0
-	for(let i = 0; i < newFiles.length; i++) {
-		if(ACE.filelistWidgets[i]) {
-			newFiles.splice(i + numWidgets, 0, ACE.filelistWidgets[i]);
-			numWidgets++
-		}
-	}
+	ACE.filelistWidgetRows.sort()
 
 	if(ACE.fileslist) {
 		let prevCollapse = ACE.filescollapsed
@@ -161,6 +172,7 @@ function updateFilelist(filepath) {
 				return obj
 			}, {})
 	}
+
 	ACE.fileslist = newFiles
 	ACE.filescount = Object.values(ACE.filesvisible)
 			.reduce(function (p, i) { return p + i }, 0)
@@ -226,12 +238,12 @@ function doFileClick(evt) {
 function getWidgetAtRow(row) {
 	let count = 0
 	do {
-		if(ACE.filelistWidgetRows[count] == row - count) {
-			return ACE.filelistWidgets[row - count]
+		if(ACE.filelistWidgetRows[count] == row) {
+			return ACE.filelistWidgets[row]
 		}
 		count++
 	} while (count < ACE.filelistWidgetRows.length
-		&& ACE.filelistWidgetRows[count] < row)
+		&& ACE.filelistWidgetRows[count] <= row)
 }
 
 
