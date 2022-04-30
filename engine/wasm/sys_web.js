@@ -49,12 +49,12 @@ function getQueryCommands() {
 		basename = hostname[1]
 	} else
 	if(window.location.protocol == 'file:') {
-		basegame = 'localhost'
+		basename = 'localhost'
 	}
 
-	if(basegame) {
+	if(basename) {
 		startup.push.apply(startup, [
-			'+set', 'fs_basegame', basegame,
+			'+set', 'fs_basegame', basename,
 			'+set', 'fs_game', 'lobby',
 		])
 	}
