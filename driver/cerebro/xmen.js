@@ -9,6 +9,10 @@ BROWSING THE WEB AND TESTING FOR LIMITS.
 
 https://suckless.org/
 
+https://15.ai/patrons
+
+https://www.classaction.org/
+
 
 */
 

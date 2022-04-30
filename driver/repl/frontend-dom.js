@@ -34,7 +34,7 @@ function runBlock(start) {
 		let funcName = NAMED_FUNCTION.exec(ace.env.document.getLine(start))[1]
 		ACE.lastLine = ace.session.getFoldWidgetRange(start).end.row
 		window['run-script'].value 
-				= ace.session.getLines(start, ACE.lastLine)
+			= ace.session.getLines(start, ACE.lastLine)
 				.join('\n').replace(/\s*$/, '') 
 				+ '\nreturn ' + funcName + '();\n'
 	}
@@ -117,8 +117,11 @@ function doLibraryLookup(functionName) {
 }
 
 
-function onFrontend() {
+function onFrontend(request) {
 	document.body.classList.add('starting')
+	window['run-script'].value = JSON.stringify({
+		responseId: request.responseId
+	})
 	window['run-accessor'].click()
 	ACE.downloaded = true
 }
@@ -155,24 +158,12 @@ function doAccessor(request) {
 		})(request.sessionId)
 	}
 	switch(request.accessor) {
-		// safe to share?
-		/*
-		case 'window.screenLeft':
-		case 'window.screenTop':
-		case 'window.outerHeight':
-		case 'window.outerWidth':
-		let propertyName = request.accessor.split('.')[1]
-		window['run-script'].value = window[propertyName]
-		window['run-accessor'].click()
-		return
-		*/
 		case '_morpheusKey':
 			ACE.dropFile = doDialog(request, ACE.dropFile)
 		return
 		case '_enterLogin':
 			ACE.enterPassword = doDialog(request, ACE.enterPassword)
 		return
-
 		default:
 			if(request.accessor === false) {
 				hideAllDialogs()
@@ -184,12 +175,14 @@ function doAccessor(request) {
 				// for now though, just check driver/library/index.js
 				let lib = doLibraryLookup(request.accessor.split('.')[1])
 				if(lib) {
+					lib.responseId = request.responseId
 					window['run-script'].value = JSON.stringify(lib)
-					window['run-accessor'].click()
 				} else {
-					window['run-script'].value = ''
-					window['run-accessor'].click()
+					window['run-script'].value = JSON.stringify({
+						responseId: request.responseId
+					})
 				}
+				window['run-accessor'].click()
 				return
 			}
 		debugger
@@ -201,9 +194,6 @@ function hideAllDialogs() {
 	let dialogs = document.getElementsByClassName('dialog')
 	for(let i = 0; i < dialogs.length; i++) {
 		dialogs[i].style.display = 'none'
-		if(dialogs[i].timeout) {
-			clearTimeout(dialogs[i].timeout)
-		}
 	}
 }
 
@@ -284,20 +274,21 @@ let temporarySessionEncryptor
 
 
 
-function doSendForm(dialog, event) {
-	if(event.currentTarget === dialog) {
+function doSendForm(responseId, dialog, event) {
+	let formResults
+	if(event.currentTarget === dialog
+		|| !(formResults = collectForm(dialog))) {
 		hideAllDialogs()
-		window['run-script'].value = ''
+		window['run-script'].value = JSON.stringify({
+			responseId: responseId
+		})
 	} else {
-		let formResults = collectForm(dialog)
-		if(formResults) {
-			// SINK!
-			let encrypted = temporarySessionEncryptor(JSON.stringify(formResults))
-			window['run-script'].value = '"' + encrypted + '"'
-		} else {
-			window['run-script'].value = ''
-			clearTimeout(dialog.timeout)
-		}
+		// SINK!
+		let encrypted = temporarySessionEncryptor(JSON.stringify(formResults))
+		window['run-script'].value = JSON.stringify({
+			responseId: responseId,
+			formData: encrypted,
+		})
 	}
 
 	// in case of any other snoopy/loggy plugins
@@ -306,7 +297,6 @@ function doSendForm(dialog, event) {
 		// whoops missed the dialog
 		waitTime = 300
 	}
-	clearTimeout(dialog.timeout)
 	setTimeout(function () {
 		window['run-accessor'].click()
 	}, waitTime)
@@ -316,12 +306,11 @@ function doSendForm(dialog, event) {
 function createDialog(request) {
 	newDialog = document.createElement('DIV')
 	newDialog.className = 'dialog'
-	newDialog.onclick = doSendForm.bind(newDialog, newDialog)
+	newDialog.onclick = doSendForm.bind(newDialog, responseId, newDialog)
 	document.body.appendChild(newDialog)
-
 	// INTERESTING, THIS NEIGHBOR WAS TALKING ABOUT CHANGING
 	//   NAMES AND PASSING VAIRABLES AROUND AND MAKING MESS,
-	//   HE UNDID THE MESS AND THE WHOLE SYSTEM RUNS FASTERS.
+	//   HE UNDID THE MESS AND THE WHOLE SYSTEM RUNS FASTER.
 	if(request.accessor) {
 		newDialog.id = request.accessor
 		// ^ WAY MORE OBVIOUS, BETTER FOR SEARCHES
@@ -448,12 +437,8 @@ function doDialog(request, newDialog) {
 		newDialog.children[0].children[0].innerText = request.title
 	}
 	// create a drop surface since the game 
-	//    and editor might interfere
+	//   and editor might interfere
 	newDialog.style.display = 'block'
-	// no await? don't want to lock up main thread
-	if(newDialog.timeout) {
-		clearTimeout(newDialog.timeout)
-	}
 
 	// IMPORTANT: prevents inputs from display in game
 	INPUT.editorActive = true
@@ -464,18 +449,12 @@ function doDialog(request, newDialog) {
 	if(input) {
 		input.focus()
 	}
-
-	newDialog.timeout = setTimeout(function () {
-		// debounce the dialog a little so scripts can
-		//   run and get an answer, or continue without an answer
-		document.body.classList.remove('accessor') // but leave dialog open in case prompted again
-		window['run-script'].value = ''
-		// circle back around so server can always control dialog
-		//   if we don't get a response within 400ms close the dialog
-		newDialog.timeout = setTimeout(function () {
-			newDialog.style.display = 'none'
-		}, 400)
-	}, 2800)
+	// no await? don't want to lock up main thread
+	// TODO: debounce the dialog a little so scripts can
+	//   run and get an answer, or continue without an answer
+	// but leave dialog open in case prompted again
+	// circle back around so server can always control dialog
+	//   if we don't get a response within 400ms close the dialog
 	// async skip click
 	return newDialog
 }
@@ -590,7 +569,7 @@ function onMessage(message) {
 		debugger
 	} else 
 	if(typeof request.frontend != 'undefined') {
-		onFrontend()
+		onFrontend(request)
 	} else
 	if(typeof request.started != 'undefined') {
 		onStarted(request)

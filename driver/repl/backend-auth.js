@@ -40,7 +40,7 @@ async function doMorpheusPass(required) {
 	previousContext.returned = false // because fuck-arounds above, ^
 	// should never happen if lib is working \/
 	if(await shouldBubbleOut(passwordContext) 
-		|| !response || !response.result) {
+		|| !response || !response.result || !response.result.formData) {
 		// silently fail, until we get back to library script
 		previousContext.paused = false
 		return
@@ -63,7 +63,7 @@ async function doMorpheusPass(required) {
 			return decrypt(morpheusForm.pass, data)
 		}
 	// decrypt with the current runId incase of extra snoopy/loggy plugins
-	})(JSON.parse(decrypt(sessionId, response.result)))
+	})(JSON.parse(decrypt(sessionId, response.result.formData)))
 
 	temporaryEncrypter = (function (morpheusForm) {
 		return async function (data) {
@@ -75,7 +75,7 @@ async function doMorpheusPass(required) {
 			return crypt(morpheusForm.pass, data)
 		}
 	// decrypt with the current runId incase of extra snoopy/loggy plugins
-	})(JSON.parse(decrypt(sessionId, response.result)))
+	})(JSON.parse(decrypt(sessionId, response.result.formData)))
 
 	// STORE THE USERNAME, SO WE DON'T HAVE TO KEEP TYPING IT
 	//   THE HASH USERNAME b****n@g****m AND THE PASSWORD ARE

@@ -22,6 +22,7 @@ async function _doAccessor(member, ctx, senderId) {
 	let memberName = member.object.name + '.' + member.property.name
 	let expression
 	switch(memberName) {
+		// safe to share?
 		case 'window.screenLeft':
 		case 'window.screenTop':
 		case 'window.outerHeight':

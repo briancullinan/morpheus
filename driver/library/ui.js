@@ -26,7 +26,7 @@ async function doDialog(dialog) {
     //} catch (e) {
     //  if(e.message.includes(''))
     //}
-		if(response && typeof response.result != 'undefined') {
+		if(response && typeof response.result.formData != 'undefined') {
 			break
 		}
 	} while(--tryTimes > 0)
