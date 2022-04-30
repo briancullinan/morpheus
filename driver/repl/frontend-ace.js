@@ -37,6 +37,12 @@ function initAce() {
 	ace.on('focus', function () { INPUT.editorActive = true })
 	ace.on('blur', function () { INPUT.editorActive = false })
 
+	// something like this for native but with normal programming language
+	// https://www.autohotkey.com/
+	key('shift+w', function (evt) {
+		// don't close? I always hated this key combination anyways
+		debugger
+	})
 }
 
 // MAYBE A FUCKING WARNING HERE LIKE CALL STACK EXCEEDED?

@@ -202,6 +202,27 @@ async function runStatement(i, AST, runContext) {
 			throw (await runStatement(0, [AST[i].argument], runContext))
 		} else
 
+		if(AST[i].type == 'TryStatement') {
+			let result
+			try {
+				result = await runStatement(0, [AST[i].block], runContext)
+			} catch (e) {
+				if(AST[i].handler) {
+					runContext.localVariables[AST[i].handler.params.name] = e
+				}
+			} finally {
+				if(AST[i].finally) {
+					return await runStatement(0, [AST[i].finally], runContext)
+				} else {
+					if(runContext.bubbleReturn !== result) {
+						console.log('WARNING: not bubbling correctly: ' 
+							+ runContext.bubbleStack[runContext.bubbleStack.length - 1])
+					}
+					return result
+				}
+			}
+		} else
+
 
 
 		{

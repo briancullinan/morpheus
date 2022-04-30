@@ -247,7 +247,7 @@ FRONTEND_JS    := \
 	$(filter-out %-plugin.js,$(wildcard driver/repl/frontend-*.js)) \
 	driver/utils/jsencrypt.js \
 	driver/utils/crypt.js \
-	driver/utils/quine.js \
+	driver/utils/keymaster.js \
 	$(wildcard engine/wasm/http/ace/*.js) \
 	engine/wasm/http/nipplejs.js \
 	$(wildcard engine/wasm/sys_*.js)
@@ -304,20 +304,21 @@ plugin: engine morph.zip
 morph.zip: backend.js frontend.js
 	@:
 
-BACKEND_FILES  := \
+BACKEND_PLUGIN  := \
 	$(wildcard driver/eval/*.js) \
 	$(wildcard driver/repl/backend*.js) \
 	driver/utils/acorn.js driver/utils/acorn-loose.js \
 	driver/utils/crypt.js driver/utils/jsencrypt.js
-FRONTEND_FILES := driver/repl/frontend-plugin.js \
+FRONTEND_PLUGIN := \
+	driver/repl/frontend-plugin.js \
 	driver/utils/jsencrypt.js driver/utils/crypt.js \
-	driver/utils/iso.js
+	driver/utils/keymaster.js
 
-backend.js: $(BACKEND_FILES)
-	$(Q)cat $(BACKEND_FILES) > $(BUILD_DIR)/plugin/backend.js
+backend.js: $(BACKEND_PLUGIN)
+	$(Q)cat $(BACKEND_PLUGIN) > $(BUILD_DIR)/plugin/backend.js
 
-frontend.js: $(FRONTEND_FILES)
-	$(Q)cat $(FRONTEND_FILES) > $(BUILD_DIR)/plugin/frontend.js
+frontend.js: $(FRONTEND_PLUGIN)
+	$(Q)cat $(FRONTEND_PLUGIN) > $(BUILD_DIR)/plugin/frontend.js
 
 index: morph.html
 	cp $(BUILD_DIR)/morph.html index.html

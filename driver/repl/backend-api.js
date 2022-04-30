@@ -220,6 +220,7 @@ async function createEnvironment(runContext) {
 		thisWindow: thisWindow,
 		window: thisWindow,
 		tabId: runContext.senderId,
+		Math: Math,
 		// TODO: micro-manage garbage collection?
 		Object: Object,
 		// snoop on timers so REPL can report async results
@@ -227,7 +228,6 @@ async function createEnvironment(runContext) {
 		setTimeout: _setTimeout.bind(null, runContext),
 		setInterval: _setInterval.bind(null, runContext),
 		Promise: _Promise.bind(null, runContext), // TODO: bind promise to something like chromedriver does
-		setWindowBounds: setWindowBounds,
 		doMorpheusKey: doMorpheusKey,
 		doMorpheusPass: doMorpheusPass,
 		clearTimeout: _clearTimeout.bind(null, runContext),
@@ -235,6 +235,7 @@ async function createEnvironment(runContext) {
 		_makeWindowAccessor: _makeWindowAccessor,
 		_makeLibraryAccessor: _makeLibraryAccessor,
 		networkSettled: _networkSettled,
+		attachDebugger: attachDebugger,
 		navigationURL: null,
 		module: WEBDRIVER_API,
 
@@ -253,6 +254,7 @@ async function createEnvironment(runContext) {
 			},
 			windows: {
 				get: chrome.windows.get,
+				update: chrome.windows.update,
 				create: _createWindow, // snoop on navigation url
 			},
 			profiles: {
@@ -315,45 +317,6 @@ async function _createWindow(options) {
 	//attachRequestHandlers(win.tabs[0].id, win.id)
 	await _networkSettled()
 	return win
-}
-
-
-async function setWindowBounds(windowId, tabs, x, y, w, h) {
-	try {
-		/*
-		let targetTabs = await chrome.tabs.query({windowId: windowId})
-		if(!targetTabs) {
-			throw new Error('Window closed or doesn\'t exist')
-		}
-		let targetId = targetTabs[0].id
-		*/
-		let targetId = tabs[0].id
-		let targets = (await chrome.debugger.getTargets())
-			.filter(t => t.tabId == targetId)
-		if(targets[0] && !targets[0].attached) {
-			await attachDebugger(targetId)
-		}
-		if(typeof x != 'undefined' && typeof y != 'undefined') {
-			await chrome.windows.update(windowId, {
-				left: Math.round(x),
-				top: Math.round(y),
-			})
-		}
-
-		if(typeof w != 'undefined' && typeof h != 'undefined') {
-			await chrome.windows.update(windowId, {
-				height: Math.round(h),
-				width: Math.round(w),
-			})
-		}
-		//let processId = await chrome.processes.getProcessIdForTab(targetId)
-
-		return await chrome.windows.get(windowId)
-	} catch (e) {
-		debugger
-		console.log(e)
-		throw new Error('Protocol error: setWindowBounds(...)')
-	}
 }
 
 const MAX_SETTLED = 10000

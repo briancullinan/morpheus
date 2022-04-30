@@ -14,7 +14,8 @@ function runBlock(start) {
 	}
 
 	document.body.classList.add('starting')
-	if(!ACE.downloaded) {
+	// maybe we don't have the plugin
+	if(!ACE.downloaded && document.body.className.includes('starting')) {
 		let cancelDownload = setTimeout(emitDownload, 3000)
 		if(chrome && chrome.runtime) {
 			chrome.runtime.sendMessage(
@@ -145,7 +146,7 @@ function doAccessor(request) {
 		&& !document.body.className.includes('paused')
 		// plus a side effect, we might use accessors in debugging
 	) {
-		debugger
+		//debugger
 	}
 	// SINK, encrypt form data directly to remote page, or directly to backend
 	//   in case of system password collection, this gurantees the data gets to 
@@ -589,6 +590,9 @@ function onMessage(message) {
 	// the rest of these are console messages
 	if(typeof request.warning != 'undefined') {
 		debugger
+	} else
+	if(typeof request.download != 'undefined') {
+		emitDownload(request.name, request.download, request.type)
 	} else
 	if(typeof request.console != 'undefined') {
 		doConsole(request)

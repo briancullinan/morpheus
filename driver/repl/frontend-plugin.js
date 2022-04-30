@@ -62,9 +62,13 @@ document.addEventListener('DOMContentLoaded', onContent)
 
 function onContent() {
 	// THIS IS FOR MAKING AN ELEMENT EYE-DROPPER TOOL, NOT STEALING PASSWORDS
-	document.addEventListener('keypress', function (evt) {
-		runKeypress()
+	key('shift+w', function () {
+		chrome.runtime.sendMessage({ 
+			// TODO: improve this interface, adding new commands should be smaller?
+			listWindows: getRunId(20),
+		}, window.postMessage)
 	})
+
 	// don't bother other tabs for now
 	if(!document.getElementById('run-script')) {
 		return

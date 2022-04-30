@@ -22,6 +22,12 @@ function doMessage(request, sender, reply) {
 		reply({ line: -1, error: 'No script!' })
 		return
 	}
+	// TODO: improve this interface for adding commands
+	//   this is kind of speciality sidebar/ui stuff.
+	if(request.listWindows) {
+		debugger
+		return
+	}
 
 	try {
 		console.log('title:', sender.tab.title)
