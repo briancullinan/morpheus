@@ -82,6 +82,12 @@ int         g_console_field_width = DEFAULT_CONSOLE_WIDTH;
 static void		Con_Fixup( void );
 
 
+static int consoleChangeCount = 0;
+static vec4_t conColorValue;
+static int textChangeCount = 0;
+vec4_t textColorValue;
+
+
 /*
 ================
 Con_ToggleConsole_f
@@ -643,7 +649,11 @@ static void Con_DrawInput( void ) {
 
 	y = con.vislines - ( smallchar_height * 2 );
 
-	re.SetColor( con.color );
+	if(cl_textColor->string[0]) {
+		re.SetColor( textColorValue );
+	} else {
+		re.SetColor( con.color );
+	}
 
 	SCR_DrawSmallChar( con.xadjust + 1 * smallchar_width, y, ']' );
 
@@ -736,6 +746,24 @@ static void Con_DrawNotify( void )
 }
 
 
+static vec4_t* parseColor(const char *color) {
+	static		vec4_t ccv;
+	char			buf[ MAX_CVAR_VALUE_STRING ], *v[4];
+	int i;
+	Q_strncpyz( buf, color, sizeof( buf ) );
+	Com_Split( buf, v, 4, ' ' );
+	for ( i = 0; i < 4 ; i++ ) {
+		ccv[ i ] = Q_atof( v[ i ] ) / 255.0f;
+		if ( ccv[ i ] > 1.0f ) {
+			ccv[ i ] = 1.0f;
+		} else if ( ccv[ i ] < 0.0f ) {
+			ccv[ i ] = 0.0f;
+		}
+	}
+	return &ccv;
+}
+
+
 /*
 ================
 Con_DrawSolidConsole
@@ -744,11 +772,6 @@ Draws the console with the solid background
 ================
 */
 static void Con_DrawSolidConsole( float frac ) {
-
-	static float conColorValue[4] = { 0.0, 0.0, 0.0, 0.0 };
-	// for cvar value change tracking
-	static char  conColorString[ MAX_CVAR_VALUE_STRING ] = { '\0' };
-
 	int				i, x, y;
 	int				rows;
 	short			*text;
@@ -757,7 +780,6 @@ static void Con_DrawSolidConsole( float frac ) {
 	int				currentColorIndex;
 	int				colorIndex;
 	float			yf, wf;
-	char			buf[ MAX_CVAR_VALUE_STRING ], *v[4];
 
 	lines = cls.glconfig.vidHeight * frac;
 	if ( lines <= 0 )
@@ -784,19 +806,9 @@ static void Con_DrawSolidConsole( float frac ) {
 		// custom console background color
 		if ( cl_conColor->string[0] ) {
 			// track changes
-			if ( strcmp( cl_conColor->string, conColorString ) ) 
-			{
-				Q_strncpyz( conColorString, cl_conColor->string, sizeof( conColorString ) );
-				Q_strncpyz( buf, cl_conColor->string, sizeof( buf ) );
-				Com_Split( buf, v, 4, ' ' );
-				for ( i = 0; i < 4 ; i++ ) {
-					conColorValue[ i ] = Q_atof( v[ i ] ) / 255.0f;
-					if ( conColorValue[ i ] > 1.0f ) {
-						conColorValue[ i ] = 1.0f;
-					} else if ( conColorValue[ i ] < 0.0f ) {
-						conColorValue[ i ] = 0.0f;
-					}
-				}
+			if(cl_conColor->modificationCount != consoleChangeCount) {
+				consoleChangeCount = cl_conColor->modificationCount;
+				memcpy(conColorValue, parseColor(cl_conColor->string), sizeof(conColorValue));
 			}
 			re.SetColor( conColorValue );
 			re.DrawStretchPic( 0, 0, wf, yf, 0, 0, 1, 1, cls.whiteShader );
@@ -856,7 +868,15 @@ static void Con_DrawSolidConsole( float frac ) {
 #endif
 
 	currentColorIndex = ColorIndex( COLOR_WHITE );
-	re.SetColor( g_color_table[ currentColorIndex ] );
+	if ( cl_textColor->string[0] ) {
+		if(cl_textColor->modificationCount != textChangeCount) {
+				textChangeCount = cl_textColor->modificationCount;
+				memcpy(textColorValue, parseColor(cl_textColor->string), sizeof(textColorValue));
+		}
+		re.SetColor( textColorValue );
+	} else {
+		re.SetColor( g_color_table[ currentColorIndex ] );
+	}
 
 	for ( i = 0 ; i < rows ; i++, y -= smallchar_height, row-- )
 	{
@@ -879,7 +899,11 @@ static void Con_DrawSolidConsole( float frac ) {
 			colorIndex = ( text[ x ] >> 8 ) & 63;
 			if ( currentColorIndex != colorIndex ) {
 				currentColorIndex = colorIndex;
-				re.SetColor( g_color_table[ colorIndex ] );
+				if(currentColorIndex == 7 && cl_textColor->string[0]) {
+					re.SetColor( textColorValue );
+				} else {
+					re.SetColor( g_color_table[ colorIndex ] );
+				}
 			}
 			SCR_DrawSmallChar( con.xadjust + (x + 1) * smallchar_width, y, text[x] & 0xff );
 		}

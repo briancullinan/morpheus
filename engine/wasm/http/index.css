@@ -180,6 +180,23 @@ body > img {
   cursor: pointer;
 }
 
+#file-list.light {
+  background-color: #FFFFFF;
+}
+
+#file-list.light .filelist-widget a,
+#file-list.light a {
+  color: #111;
+}
+
+#file-list.light a:hover {
+  background-color: #DDD;
+}
+
+#file-list.light .filelist-widget {
+  background-color: #DDD;
+}
+
 #file-list label {
   position:absolute;
   left:0;

@@ -305,6 +305,8 @@ function doSendForm(dialog, event) {
 }
 
 
+
+// TODO: move all of this to libs so we can affect interaction on other pages
 function createDialog(request) {
 	newDialog = document.createElement('DIV')
 	newDialog.className = 'dialog'
@@ -500,6 +502,25 @@ function toggleOption(option) {
 			// automatically recovered by frontend-plugin.js
 			break
 		case 'darkMode':
+			if(option.checked) {
+				ace.setTheme('ace/theme/monokai')
+				document.getElementById('file-list').classList.remove('light')
+				document.getElementById('file-list').classList.add('dark')
+				// is this the first tooling connection to the engine?
+				//   I guess file-list updates
+				if(typeof Cvar_Set != 'undefined') {
+					Cvar_Set(stringToAddress('cl_conColor'), stringToAddress('0 0 0 255'))
+					Cvar_Set(stringToAddress('cl_textColor'), stringToAddress('255 255 255 255'))
+				}
+			} else {
+				ace.setTheme('ace/theme/xcode')
+				document.getElementById('file-list').classList.add('light')
+				document.getElementById('file-list').classList.remove('dark')
+				if(typeof Cvar_Set != 'undefined') {
+					Cvar_Set(stringToAddress('cl_conColor'), stringToAddress('255 255 255 255'))
+					Cvar_Set(stringToAddress('cl_textColor'), stringToAddress('0 0 0 255'))
+				}
+			}
 			break
 		default:
 	}

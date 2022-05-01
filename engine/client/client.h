@@ -555,6 +555,9 @@ extern	cvar_t	*cl_dlDirectory;
 #endif
 extern	cvar_t	*cl_conXOffset;
 extern	cvar_t	*cl_conColor;
+#ifdef BUILD_MORPHEUS
+extern	cvar_t	*cl_textColor;
+#endif
 extern	cvar_t	*cl_inGameVideo;
 
 extern	cvar_t	*cl_lanForcePackets;

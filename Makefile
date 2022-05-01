@@ -226,7 +226,7 @@ $(BUILD_DIR)/engine/glsl/%.o: $(BUILD_DIR)/engine/glsl/%.c
 	$(Q)$(CC) -o $@ $(ENGINE_CFLAGS) -c $<
 
 SDL_CFLAGS          := \
-	$(ENGINE_CFLAGS) -Wno-macro-redefined \
+	$(ENGINE_CFLAGS) -fno-inline -Wno-macro-redefined \
 	-DSDL_VIDEO_DISABLED=1 -DSDL_JOYSTICK_DISABLED=1 \
 	-DSDL_SENSOR_DISABLED=1 -DSDL_HAPTIC_DISABLED=1 \
 	-DSDL_TIMER_UNIX=1 -DHAVE_MEMORY_H=1 -DHAVE_CLOCK_GETTIME=1 \

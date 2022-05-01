@@ -26,14 +26,14 @@ async function doDialog(dialog) {
     //} catch (e) {
     //  if(e.message.includes(''))
     //}
-		if(response && typeof response.result != 'undefined') {
+		if(response && typeof response.responseId != 'undefined') {
 			break
 		}
 	} while(--tryTimes > 0)
   //chrome.tabs.sendMessage({
   //  accessor: false // hide all dialogs
   //}, function () {})
-  return response.formData
+  return response
 }
 
 async function doPageLogin(domain) {

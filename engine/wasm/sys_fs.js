@@ -572,9 +572,9 @@ function fd_write(fd, iovs, iovsLen, nwritten) {
 	buffers.forEach(writev);
 	let newMessage = stringToAddress(String.fromCharCode.apply(null, bufferBytes))
 	debugger
-	if (fd === WASI_STDOUT_FILENO) 
+	if (fd === WASI_STDOUT_FILENO)
 		Sys_FWrite(newMessage, 1, bufferBytes.length, HEAPU32[stdout>>2])
-	if (fd === WASI_STDERR_FILENO) 
+	else if (fd === WASI_STDERR_FILENO) 
 		Sys_FWrite(newMessage, 1, bufferBytes.length, HEAPU32[stderr>>2])
 	else {
 		debugger

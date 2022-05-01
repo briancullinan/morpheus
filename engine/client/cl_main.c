@@ -67,6 +67,9 @@ cvar_t	*cl_mapAutoDownload;
 #endif
 cvar_t	*cl_conXOffset;
 cvar_t	*cl_conColor;
+#ifdef BUILD_MORPHEUS
+cvar_t	*cl_textColor;
+#endif
 cvar_t	*cl_inGameVideo;
 
 cvar_t	*cl_serverStatusResendTime;
@@ -5207,8 +5210,11 @@ void CL_Init( void ) {
 #endif
 #endif
 
-	cl_conXOffset = Cvar_Get ("cl_conXOffset", "0", 0);
-	cl_conColor = Cvar_Get( "cl_conColor", "", 0 );
+	cl_conXOffset = Cvar_Get( "cl_conXOffset", "0", 0 );
+	cl_conColor   = Cvar_Get( "cl_conColor", "", 0 );
+#ifdef BUILD_MORPHEUS
+	cl_textColor  = Cvar_Get( "cl_textColor", "", 0 );
+#endif
 
 	cl_inGameVideo = Cvar_Get( "r_inGameVideo", "1", CVAR_ARCHIVE_ND );
 	Cvar_SetDescription( cl_inGameVideo, "Controls whether in game video should be draw" );

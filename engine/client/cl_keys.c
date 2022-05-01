@@ -35,6 +35,8 @@ int			chat_playerNum;
 
 static void Field_CharEvent( field_t *edit, int ch );
 
+extern vec4_t textColorValue;
+
 /*
 =============================================================================
 
@@ -111,8 +113,13 @@ static void Field_VariableSizeDraw( field_t *edit, int x, int y, int width, int 
 
 	// draw it
 	if ( size == smallchar_width ) {
-		SCR_DrawSmallStringExt( x, y, str, g_color_table[ ColorIndexFromChar( curColor ) ],
-			qfalse, noColorEscape );
+		if(edit == &g_consoleField && ColorIndexFromChar(curColor) == 7
+			&& cl_textColor->string[0] != '\0') {
+			SCR_DrawSmallStringExt( x, y, str, textColorValue, qfalse, noColorEscape );
+		} else {
+			SCR_DrawSmallStringExt( x, y, str, g_color_table[ ColorIndexFromChar( curColor ) ],
+				qfalse, noColorEscape );
+		}
 		if ( len > drawLen + prestep ) {
 			SCR_DrawSmallChar( x + ( edit->widthInChars - 1 ) * size, y, '>' );
 		}
@@ -122,8 +129,13 @@ static void Field_VariableSizeDraw( field_t *edit, int x, int y, int width, int 
 				g_color_table[ ColorIndex( COLOR_WHITE ) ], qfalse, noColorEscape );
 		}
 		// draw big string with drop shadow
-		SCR_DrawStringExt( x, y, BIGCHAR_WIDTH, str, g_color_table[ ColorIndexFromChar( curColor ) ],
-			qfalse, noColorEscape );
+		if(edit == &g_consoleField && ColorIndexFromChar(curColor) == 7
+			&& cl_textColor->string[0] != '\0') {
+			SCR_DrawStringExt( x, y, BIGCHAR_WIDTH, str, textColorValue, qfalse, noColorEscape );
+		} else {
+			SCR_DrawStringExt( x, y, BIGCHAR_WIDTH, str, g_color_table[ ColorIndexFromChar( curColor ) ],
+				qfalse, noColorEscape );
+		}
 	}
 
 	// draw the cursor

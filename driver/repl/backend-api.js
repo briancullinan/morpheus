@@ -14,18 +14,18 @@ function _makeLibraryAccessor(callArgs, runContext) {
 
 
 function createLibrary(response, member, runContext) {
-	// TODO: extract static functionality and convert to C# style static initializer
-	//   that way, in the future, I can do the same thing to game code for static-build.
-	let libraryAST = acorn.parse(
-		'(function () {\n' + response.library + '\n})()\n'
-		, {ecmaVersion: 2020, locations: true, onComment: function () {
-			// TODO: this would be better for keeping track of @Attributes
-		}})
-	let newLibrary = libraryAST.body[0].expression.callee.body.body
 	let previousScript = runContext.script // SO IT CAN PARSE ATTRIBUTES, 
-	//   TODO: MAKE WORK ON INTERNAL FUNCTIONS, ASSIGN TO CONEXT??
-	runContext.script = response.library
 	try {
+		// TODO: extract static functionality and convert to C# style static initializer
+		//   that way, in the future, I can do the same thing to game code for static-build.
+		let libraryAST = acorn.parse(
+			'(function () {\n' + response.library + '\n})()\n'
+			, {ecmaVersion: 2020, locations: true, onComment: function () {
+				// TODO: this would be better for keeping track of @Attributes
+			}})
+		let newLibrary = libraryAST.body[0].expression.callee.body.body
+		//   TODO: MAKE WORK ON INTERNAL FUNCTIONS, ASSIGN TO CONEXT??
+		runContext.script = response.library
 		for(let i = 0; i < newLibrary.length; i++) {
 			if(newLibrary[i].type == 'FunctionDeclaration'
 				&& newLibrary[i].id) {
