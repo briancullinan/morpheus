@@ -48,7 +48,9 @@
 //#define S_ISDIR( mode ) ( mode & _S_IFDIR )
 #define PATH_MAX 260
 #endif
+#ifndef __WASM__
 #include <glib.h>
+#endif
 
 #define VFS_MAXDIRS 64
 

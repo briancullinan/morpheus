@@ -97,7 +97,9 @@
 #include "qthreads.h"
 #include "inout.h"
 #include "vfs.h"
+#ifndef __WASM__
 #include "png.h"
+#endif
 #include "md4.h"
 
 #include "stringfixedsize.h"

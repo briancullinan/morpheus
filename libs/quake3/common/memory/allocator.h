@@ -22,9 +22,7 @@
 #if !defined( INCLUDED_MEMORY_ALLOCATOR_H )
 #define INCLUDED_MEMORY_ALLOCATOR_H
 
-#ifndef __WASM__
 #include <memory>
-#endif
 #include <stddef.h>
 
 #if 0
@@ -164,9 +162,7 @@ public:
 };
 
 
-#ifndef __WASM__
 #include <algorithm>
-#endif
 #include "generic/object.h"
 
 

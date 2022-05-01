@@ -25,11 +25,9 @@
 /// \file
 /// C-style null-terminated-character-array string library.
 
-#ifndef __WASM__
 #include <cstring>
 #include <cctype>
 #include <algorithm>
-#endif
 
 #include "memory/allocator.h"
 #include "generic/arrayrange.h"

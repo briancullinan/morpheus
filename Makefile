@@ -333,6 +333,7 @@ RADIANT_VERSION  := 1.5.0n
 RADIANT_MAJOR_VERSION:=5
 RADIANT_MINOR_VERSION:=0
 Q3MAP2_CFLAGS = \
+	--target=wasm32 \
 	-DPOSIX  -std=c++17 \
 	-D_XOPEN_SOURCE=700 -D__EMSCRIPTEN__=1 \
 	-D__WASM__=1 -D__wasi__=1 -D__wasm32__=1 \
@@ -342,7 +343,6 @@ Q3MAP2_CFLAGS = \
 	-DQ3MAP_VERSION="\"$(Q3MAP_VERSION)\"" \
 	-DRADIANT_MAJOR_VERSION="\"$(RADIANT_MAJOR_VERSION)\"" \
 	-DRADIANT_MINOR_VERSION="\"$(RADIANT_MINOR_VERSION)\"" \
-	-nostartfiles \
   -fno-exceptions \
   -fvisibility=hidden \
   --sysroot libs/wasi-sysroot \
@@ -381,7 +381,7 @@ endef
 
 define DO_Q3MAP2_CXX
 	$(echo_cmd) "Q3MAP2_CC $<"
-	$(Q)$(CXX) -E -o $@ $(Q3MAP2_CFLAGS) -c $<
+	$(Q)$(CXX) -o $@ $(Q3MAP2_CFLAGS) -c $<
 endef
 
 Q3MAP2_FILES = $(wildcard $(Q3MAP2_SOURCE)/*.cpp)
