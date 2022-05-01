@@ -91,6 +91,7 @@ BUILD_DIRS     := \
 	$(BUILD_DIR).mkdir/engine/ \
 	$(BUILD_DIR).mkdir/engine/glsl/ \
 	$(BUILD_DIR).mkdir/sdl/ \
+	$(BUILD_DIR).mkdir/q3map2/ \
 	$(BUILD_DIR).mkdir/sdl/audio/ \
 	$(BUILD_DIR).mkdir/sdl/audio/emscripten/ \
 	$(BUILD_DIR).mkdir/sdl/atomic/ \
@@ -323,8 +324,33 @@ frontend.js: $(FRONTEND_PLUGIN)
 index: morph.html
 	cp $(BUILD_DIR)/morph.html index.html
 
-build-tools: # q3map2.wasm q3asm.wasm q3lcc.wasm 
+build-tools: q3map2.wasm # q3asm.wasm q3lcc.wasm 
 	@:
+
+
+
+
+Q3MAP2_CFLAGS = $(BASE_CFLAGS)
+
+define DO_CLI_LD
+	$(echo_cmd) "WASM-LD $1"
+	$(Q)$(CC) -o $(BUILD_DIR)/$1 $2 $(WASI_LDFLAGS)
+endef
+
+define DO_Q3MAP2_CC
+	$(echo_cmd) "Q3MAP2_CC $<"
+	$(Q)$(CC) -o $@ $(Q3MAP2_CFLAGS) -c $<
+endef
+
+q3map2.wasm: $(BUILD_DIRS) $(Q3MAP2_FILES) $(Q3MAP2_OBJS)
+	$(call DO_CLI_LD,$@,$(Q3MAP2_OBJS))
+
+$(BUILD_DIR)/q3map2/%.o: $(Q3MAP2_SOURCE)/%.c
+	$(DO_Q3MAP2_CC)
+
+
+
+
 
 deploy: engine plugin build-tools
 	@:

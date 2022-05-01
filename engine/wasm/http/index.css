@@ -180,21 +180,25 @@ body > img {
   cursor: pointer;
 }
 
-#file-list.light {
+body.light #command-bar,
+body.light #file-list {
   background-color: #FFFFFF;
 }
 
-#file-list.light .filelist-widget a,
-#file-list.light a {
-  color: #111;
+body.light #command-bar,
+body.light #file-list .filelist-widget a,
+body.light #file-list a {
+  color: #111111;
 }
 
-#file-list.light a:hover {
-  background-color: #DDD;
+body.light #file-list a:hover,
+body.light #file-list .filelist-widget {
+  background-color: #DDDDDD;
 }
 
-#file-list.light .filelist-widget {
-  background-color: #DDD;
+body.light #command-bar label {
+  background-color: #FFFFFF;
+  border-color: #FFFFFF;
 }
 
 #file-list label {

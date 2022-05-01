@@ -332,7 +332,6 @@ EMSCRIPTENAUDIO_OpenDevice(_THIS, void *handle, const char *devname, int iscaptu
                 try {
                     dynCall('vi', $2, [$3]);
                 } catch (e) {
-                    debugger;
                 }
             };
             SDL2.audio.scriptProcessorNode['connect'](SDL2.audioContext['destination']);

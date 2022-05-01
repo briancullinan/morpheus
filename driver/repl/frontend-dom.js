@@ -504,8 +504,8 @@ function toggleOption(option) {
 		case 'darkMode':
 			if(option.checked) {
 				ace.setTheme('ace/theme/monokai')
-				document.getElementById('file-list').classList.remove('light')
-				document.getElementById('file-list').classList.add('dark')
+				document.body.classList.remove('light')
+				document.body.classList.add('dark')
 				// is this the first tooling connection to the engine?
 				//   I guess file-list updates
 				if(typeof Cvar_Set != 'undefined') {
@@ -514,8 +514,8 @@ function toggleOption(option) {
 				}
 			} else {
 				ace.setTheme('ace/theme/xcode')
-				document.getElementById('file-list').classList.add('light')
-				document.getElementById('file-list').classList.remove('dark')
+				document.body.classList.add('light')
+				document.body.classList.remove('dark')
 				if(typeof Cvar_Set != 'undefined') {
 					Cvar_Set(stringToAddress('cl_conColor'), stringToAddress('255 255 255 255'))
 					Cvar_Set(stringToAddress('cl_textColor'), stringToAddress('0 0 0 255'))

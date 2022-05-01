@@ -228,6 +228,7 @@ define DO_Q3RCC_CC
 	$(Q)$(CC) -o $@ $(Q3RCC_CFLAGS) -c $<
 endef
 
+
 Q3RCC_FILES  := $(filter-out %/dagcheck.c,$(wildcard $(Q3RCC_SOURCE)/*.c))
 DAGCHK_FILES := $(Q3RCC_SOURCE)/dagcheck.md \
 								$(BUILD_DIR)/q3rcc/dagcheck.c
