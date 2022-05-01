@@ -23,7 +23,9 @@
 #define __INOUT__
 
 // inout is the only stuff relying on xml, include the headers there
+#ifndef __WASM__
 #include "libxml/tree.h"
+#endif
 
 template<typename Element> class BasicVector3;
 typedef BasicVector3<float> Vector3;

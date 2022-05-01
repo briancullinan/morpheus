@@ -27,24 +27,21 @@ CC             := libs/$(COMPILE_PLATFORM)/wasi-sdk-14.0/bin/clang
 CXX            := libs/$(COMPILE_PLATFORM)/wasi-sdk-14.0/bin/clang++
 
 WASI_INCLUDES  := \
+	--target=wasm32 \
 	-Ilibs/wasi-sysroot/include \
 	-I$(SDL_SOURCE)/include 
 
 BASE_CFLAGS    := \
-	$(CFLAGS) -Wall --target=wasm32 \
+	$(CFLAGS) -fno-rtti -Wall \
 	-Wimplicit -fstrict-aliasing  -fno-inline \
 	-ftree-vectorize -fsigned-char -MMD \
 	-ffast-math -fno-short-enums  -fPIC \
-	-D_XOPEN_SOURCE=700 \
-	-D__EMSCRIPTEN__=1 \
-	-D__WASM__=1 \
-	-D__wasi__=1 \
-	-D__wasm32__=1 \
-	-D_WASI_EMULATED_SIGNAL \
-	-D_WASI_EMULATED_MMAN=1 \
-	-std=gnu11
+	-D_XOPEN_SOURCE=700 -D__EMSCRIPTEN__=1 \
+	-D__WASM__=1 -D__wasi__=1 -D__wasm32__=1 \
+	-D_WASI_EMULATED_SIGNAL -D_WASI_EMULATED_MMAN=1 
 
-CLIENT_CFLAGS  := $(BASE_CFLAGS) $(WASI_INCLUDES)
+
+CLIENT_CFLAGS  := $(BASE_CFLAGS) -std=gnu11 $(WASI_INCLUDES)
 
 WASI_SYSROOT   := libs/wasi-sysroot/lib/wasm32-wasi
 WASI_LDFLAGS   := $(LDFLAGS) \
@@ -75,6 +72,7 @@ ENGINE_SOURCE  := engine
 WASM_SOURCE    := engine/wasm
 HTTP_SOURCE    := $(WASM_SOURCE)/http
 SDL_SOURCE     := libs/SDL2-2.0.14
+Q3MAP2_SOURCE  := libs/quake3/q3map2
 
 
 # LAYOUT BUILD_DIRS UPFRONT
@@ -182,6 +180,7 @@ ENGINE_INCLUDES:= \
 	-Iengine/wasm
 
 ENGINE_CFLAGS  := $(BASE_CFLAGS) \
+	-std=gnu11 \
 	-DGL_GLEXT_PROTOTYPES=1 -DGL_ARB_ES2_compatibility=1 \
 	-DGL_EXT_direct_state_access=1 -DUSE_Q3KEY=1 \
 	-DBUILD_MORPHEUS=1  -DUSE_RECENT_EVENTS=1 \
@@ -283,7 +282,7 @@ morph.html: $(INDEX_FILES) $(INDEX_OBJS)
 multigame: # q3asm.wasm q3lcc.wasm ui.qvm cgame.qvm qagame.qvm
 	@:
 
-engine: morph.wasm morph.opt
+engine: q3map2.wasm morph.wasm morph.opt
 	@:
 
 PLUGIN_FILES   := \
@@ -329,26 +328,70 @@ build-tools: q3map2.wasm # q3asm.wasm q3lcc.wasm
 
 
 
+Q3MAP_VERSION    := 2.5.17n
+RADIANT_VERSION  := 1.5.0n
+RADIANT_MAJOR_VERSION:=5
+RADIANT_MINOR_VERSION:=0
+Q3MAP2_CFLAGS = \
+	-DPOSIX  -std=c++17 \
+	-D_XOPEN_SOURCE=700 -D__EMSCRIPTEN__=1 \
+	-D__WASM__=1 -D__wasi__=1 -D__wasm32__=1 \
+	-D_WASI_EMULATED_SIGNAL -D_WASI_EMULATED_MMAN=1 \
+	-D__WASM__=1 \
+	-DRADIANT_VERSION="\"$(RADIANT_VERSION)\"" \
+	-DQ3MAP_VERSION="\"$(Q3MAP_VERSION)\"" \
+	-DRADIANT_MAJOR_VERSION="\"$(RADIANT_MAJOR_VERSION)\"" \
+	-DRADIANT_MINOR_VERSION="\"$(RADIANT_MINOR_VERSION)\"" \
+	-nostartfiles \
+  -fno-exceptions \
+  -fvisibility=hidden \
+  --sysroot libs/wasi-sysroot \
+	-I$(Q3MAP2_SOURCE) \
+	-I$(Q3MAP2_SOURCE)/../include \
+	-I$(Q3MAP2_SOURCE)/../common \
+	$(WASI_INCLUDES) 
 
-Q3MAP2_CFLAGS = $(BASE_CFLAGS)
+#$(BASE_CFLAGS) \
+	-DRADIANT_VERSION="\"$(RADIANT_VERSION)\"" \
+	-DQ3MAP_VERSION="\"$(Q3MAP_VERSION)\"" \
+	-DRADIANT_MAJOR_VERSION="\"$(RADIANT_MAJOR_VERSION)\"" \
+	-DRADIANT_MINOR_VERSION="\"$(RADIANT_MINOR_VERSION)\"" \
+	-fno-common \
+	-Ilibs/tools/quake3/common \
+	-Ilibs/tools/quake3/../libs \
+	-Ilibs/tools/quake3/../include \
+	-Ilibs/libpng-1.6.37 \
+	-I/usr/include/libxml2 \
+	-I/usr/local/Cellar/jpeg/9e/include \
+	-I/usr/local/Cellar/glib/2.70.4/include/glib-2.0 \
+	-I/usr/local/Cellar/glib/2.70.4/lib/glib-2.0/include \
+	-I/usr/local/opt/gettext/include \
+	-I/usr/local/Cellar/pcre/8.45/include \
+	-I/usr/local/Cellar/libpng/1.6.37/include/libpng16 \
+	-I$(Q3MAP2_SOURCE) \
+	-I$(Q3MAP2_SOURCE)/../include \
+	-I$(Q3MAP2_SOURCE)/../common \
+	$(WASI_INCLUDES) 
+
 
 define DO_CLI_LD
 	$(echo_cmd) "WASM-LD $1"
-	$(Q)$(CC) -o $(BUILD_DIR)/$1 $2 $(WASI_LDFLAGS)
+	$(Q)$(CXX) -o $(BUILD_DIR)/$1 $2 $(WASI_LDFLAGS)
 endef
 
-define DO_Q3MAP2_CC
+define DO_Q3MAP2_CXX
 	$(echo_cmd) "Q3MAP2_CC $<"
-	$(Q)$(CC) -o $@ $(Q3MAP2_CFLAGS) -c $<
+	$(Q)$(CXX) -E -o $@ $(Q3MAP2_CFLAGS) -c $<
 endef
+
+Q3MAP2_FILES = $(wildcard $(Q3MAP2_SOURCE)/*.cpp)
+Q3MAP2_OBJS  = $(subst $(Q3MAP2_SOURCE)/,$(BUILD_DIR)/q3map2/,$(Q3MAP2_FILES:.cpp=.o))
 
 q3map2.wasm: $(BUILD_DIRS) $(Q3MAP2_FILES) $(Q3MAP2_OBJS)
 	$(call DO_CLI_LD,$@,$(Q3MAP2_OBJS))
 
-$(BUILD_DIR)/q3map2/%.o: $(Q3MAP2_SOURCE)/%.c
-	$(DO_Q3MAP2_CC)
-
-
+$(BUILD_DIR)/q3map2/%.o: $(Q3MAP2_SOURCE)/%.cpp
+	$(DO_Q3MAP2_CXX)
 
 
 

@@ -38,8 +38,10 @@
 #endif
 
 // network broadcasting
+#ifndef __WASM__
 #include "l_net/l_net.h"
 #include "libxml/tree.h"
+#endif
 
 // utf8 conversion
 #include <glib.h>
