@@ -319,6 +319,20 @@ function CreateAndCall(code, params, vargs) {
 	return func.apply(func, args)
 }
 
+function Sys_RandomBytes (string, len) {
+  if(!HEAP8.buffer.length) {
+    updateGlobalBufferAndViews()
+  }
+	if(typeof crypto != 'undefined') {
+		crypto.getRandomValues(HEAP8.subarray(string, string+(len / 4)))
+	} else {
+		for(let i = 0; i < (len / 4); i++) {
+			HEAP8[string] = Math.random() * 255
+		}
+	}
+	return true;
+}
+
 var SYS = {
 	evaledFuncs: {},
 	evaledCount: 0,
@@ -327,8 +341,6 @@ var SYS = {
 	//emscripten_resize_heap: _emscripten_resize_heap,
 	//emscripten_get_heap_size: _emscripten_get_heap_size,
 	Sys_RandomBytes: Sys_RandomBytes,
-	Sys_Milliseconds: Sys_Milliseconds,
-	Sys_Microseconds: Sys_Microseconds,
 	Sys_Exit: Sys_Exit,
 	Sys_Edit: Sys_Edit,
 	exit: Sys_Exit,
@@ -341,6 +353,5 @@ var SYS = {
 	Sys_Print: Sys_Print,
 	Sys_SetStatus: Sys_SetStatus,
 	CL_MenuModified: CL_MenuModified,
-	Com_RealTime: Com_RealTime,
 	CreateAndCall: CreateAndCall,
 }

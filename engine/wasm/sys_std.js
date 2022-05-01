@@ -114,19 +114,6 @@ function Sys_Milliseconds() {
 	//}
 }
 
-function Sys_RandomBytes (string, len) {
-  if(!HEAP8.buffer.length) {
-    updateGlobalBufferAndViews()
-  }
-	if(typeof crypto != 'undefined') {
-		crypto.getRandomValues(HEAP8.subarray(string, string+(len / 4)))
-	} else {
-		for(let i = 0; i < (len / 4); i++) {
-			HEAP8[string] = Math.random() * 255
-		}
-	}
-	return true;
-}
 
 function Com_RealTime(tm) {
 	// locale time is really complicated
@@ -215,25 +202,12 @@ typedef struct qtime_s {
 	// locale time is really complicated
 	//   use simple Q3 time structure
   Sys_time: Com_RealTime,
-  Sys_RandomBytes: Sys_RandomBytes,
   Sys_Milliseconds: Sys_Milliseconds,
   Sys_Microseconds: Sys_Microseconds,
   Sys_gettime: clock_gettime,
   clock_time_get: function () { debugger },
 	clock_res_get: function () { debugger },
 }
-
-const DEFAULT_OUTPUT_DEVNAME = "System audio output device"
-
-/*
-function Sys_getenv(varname) {
-  let envar = addressToString(varname)
-  if(envar == 'SDL_AUDIO_DEVICE_NAME') {
-    return stringToAddress(DEFAULT_OUTPUT_DEVNAME)
-  }
-  return stringToAddress('')
-}
-*/
 
 function Sys_exec() {
   // TODO: in browser, try to download wasm like normal only from host address
@@ -261,6 +235,29 @@ function Sys_wait(status) {
   return 0 // TODO: return error if it happens in _start()
 }
 
+
+function updateGlobalBufferAndViews() {
+	let buf = ENV.memory.buffer
+	if(typeof window != 'undefined') {
+		Module.HEAP8 = window.HEAP8 = new Int8Array(buf);
+		Module.HEAPU8 = window.HEAPU8 = new Uint8Array(buf);
+		Module.HEAP16 = window.HEAP16 = new Int16Array(buf);
+		Module.HEAPU16 = window.HEAPU16 = new Uint16Array(buf);
+		Module.HEAP32 = window.HEAP32 = new Int32Array(buf);
+		Module.HEAPU32 = window.HEAPU32 = new Uint32Array(buf);
+		Module.HEAPF32 = window.HEAPF32 = new Float32Array(buf);
+		Module.HEAPF64 = window.HEAPF64 = new Float64Array(buf);
+	} else if (typeof global != 'undefined') {
+		Module.HEAP8 = global.HEAP8 = new Int8Array(buf);
+		Module.HEAPU8 = global.HEAPU8 = new Uint8Array(buf);
+		Module.HEAP16 = global.HEAP16 = new Int16Array(buf);
+		Module.HEAPU16 = global.HEAPU16 = new Uint16Array(buf);
+		Module.HEAP32 = global.HEAP32 = new Int32Array(buf);
+		Module.HEAPU32 = global.HEAPU32 = new Uint32Array(buf);
+		Module.HEAPF32 = global.HEAPF32 = new Float32Array(buf);
+		Module.HEAPF64 = global.HEAPF64 = new Float64Array(buf);
+	}
+}
 
 
 var STD = {

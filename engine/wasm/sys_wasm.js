@@ -36,29 +36,6 @@ for(let i = 0; i < startKeys.length; i++) {
 	updateGlobalFunctions(startValues[i])
 }
 
-function updateGlobalBufferAndViews() {
-	let buf = ENV.memory.buffer
-	if(typeof window != 'undefined') {
-		Module.HEAP8 = window.HEAP8 = new Int8Array(buf);
-		Module.HEAPU8 = window.HEAPU8 = new Uint8Array(buf);
-		Module.HEAP16 = window.HEAP16 = new Int16Array(buf);
-		Module.HEAPU16 = window.HEAPU16 = new Uint16Array(buf);
-		Module.HEAP32 = window.HEAP32 = new Int32Array(buf);
-		Module.HEAPU32 = window.HEAPU32 = new Uint32Array(buf);
-		Module.HEAPF32 = window.HEAPF32 = new Float32Array(buf);
-		Module.HEAPF64 = window.HEAPF64 = new Float64Array(buf);
-	} else if (typeof global != 'undefined') {
-		Module.HEAP8 = global.HEAP8 = new Int8Array(buf);
-		Module.HEAPU8 = global.HEAPU8 = new Uint8Array(buf);
-		Module.HEAP16 = global.HEAP16 = new Int16Array(buf);
-		Module.HEAPU16 = global.HEAPU16 = new Uint16Array(buf);
-		Module.HEAP32 = global.HEAP32 = new Int32Array(buf);
-		Module.HEAPU32 = global.HEAPU32 = new Uint32Array(buf);
-		Module.HEAPF32 = global.HEAPF32 = new Float32Array(buf);
-		Module.HEAPF64 = global.HEAPF64 = new Float64Array(buf);
-	}
-}
-
 
 function initEnvironment(ENGINE) {
 	if(!ENV.table) {
@@ -293,7 +270,7 @@ function initBrowser() {
 if(typeof window != 'undefined') {
 	// TODO: change when hot reloading works
 	window.addEventListener('load', function () {
-		if(!typeof window.initAce != 'undefined') {
+		if(typeof window.initAce != 'undefined') {
 			initAce()
 		}
 

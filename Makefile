@@ -87,6 +87,7 @@ BUILD_DIRS     := \
 	$(BUILD_DIR).mkdir/uivm/ \
 	$(BUILD_DIR).mkdir/plugin/ \
 	$(BUILD_DIR).mkdir/engine/ \
+	$(BUILD_DIR).mkdir/ded/ \
 	$(BUILD_DIR).mkdir/engine/glsl/ \
 	$(BUILD_DIR).mkdir/sdl/ \
 	$(BUILD_DIR).mkdir/q3map2/ \
@@ -151,10 +152,16 @@ define DO_ENGINE_OPT
 endef
 
 RENDGLSL_OBJS  := $(wildcard engine/renderer2/glsl/*.glsl)
-ENGINE_FILES   := $(wildcard $(ENGINE_SOURCE)/*/*.c)
-RENDGLSL_FILES := \
-	$(addprefix $(BUILD_DIR)/engine/glsl/,$(notdir $(RENDGLSL_OBJS:.glsl=.c)))
-ENGINE_OBJS    := $(addprefix $(BUILD_DIR)/engine/,$(notdir $(ENGINE_FILES:.c=.o))) \
+ENGINE_SLIM    := sv_init.c sv_main.c sv_bot.c sv_game.c
+ENGINE_FILES   := $(ENGINE_SOURCE)/botlib/be_interface.c \
+	$(wildcard $(ENGINE_SOURCE)/botlib/l_*.c) \
+	$(wildcard $(ENGINE_SOURCE)/client/*.c) \
+	$(wildcard $(ENGINE_SOURCE)/qcommon/*.c) \
+	$(wildcard $(ENGINE_SOURCE)/renderer2/*.c) \
+	$(addprefix $(ENGINE_SOURCE)/server/,$(ENGINE_SLIM)) \
+	$(wildcard $(ENGINE_SOURCE)/wasm/*.c) 
+ENGINE_OBJS    := \
+	$(addprefix $(BUILD_DIR)/engine/,$(notdir $(ENGINE_FILES:.c=.o))) \
 	$(addprefix $(BUILD_DIR)/engine/glsl/,$(notdir $(RENDGLSL_OBJS:.glsl=.o)))
 
 SDL_NEEDED     := \
@@ -180,7 +187,7 @@ ENGINE_INCLUDES:= \
 	-Iengine/wasm
 
 ENGINE_CFLAGS  := $(BASE_CFLAGS) \
-	-std=gnu11 \
+	-std=gnu11          -DBUILD_SLIM_CLIENT=1 \
 	-DGL_GLEXT_PROTOTYPES=1 -DGL_ARB_ES2_compatibility=1 \
 	-DGL_EXT_direct_state_access=1 -DUSE_Q3KEY=1 \
 	-DBUILD_MORPHEUS=1  -DUSE_RECENT_EVENTS=1 \
@@ -277,19 +284,21 @@ morph.html: $(INDEX_FILES) $(INDEX_OBJS)
 		'$(BUILD_DIR)/morph.js', 'engine/renderer2/bigchars.png', \
 		'$(BUILD_DIR)/morph.wasm', 'driver/landing/ide.html')"
 	node -e "require('./engine/wasm/bin/make').normalEmbed( \
-		'$(BUILD_DIR)/morph.html', 'driver/library', 'driver/', 'localhost/')"
+		'$(BUILD_DIR)/morph.html', 'driver/library', 'driver/', 'lobby/')"
 
 multigame: # q3asm.wasm q3lcc.wasm ui.qvm cgame.qvm qagame.qvm
 	@:
 
-engine: q3map2.wasm morph.wasm morph.opt
+
+
+engine: morph.wasm morph.opt # q3map2.wasm 
 	@:
 
 PLUGIN_FILES   := \
 	driver/manifest.json \
 	driver/rules.json \
-	$(BUILD_DIR)/frontend.js \
-	$(BUILD_DIR)/backend.js \
+	$(BUILD_DIR)/plugin/frontend.js \
+	$(BUILD_DIR)/plugin/backend.js \
 	$(HTTP_SOURCE)/index.html \
 	$(HTTP_SOURCE)/index.css \
 	$(HTTP_SOURCE)/redpill.png 
@@ -301,7 +310,7 @@ plugin: engine morph.zip
 	$(Q)cp $(HTTP_SOURCE)/redpill.png $(BUILD_DIR)/plugin/redpill.png
 	@:
 
-morph.zip: backend.js frontend.js
+morph.zip: backend.js frontend.js $(PLUGIN_FILES)
 	@:
 
 BACKEND_PLUGIN  := \
@@ -320,11 +329,54 @@ backend.js: $(BACKEND_PLUGIN)
 frontend.js: $(FRONTEND_PLUGIN)
 	$(Q)cat $(FRONTEND_PLUGIN) > $(BUILD_DIR)/plugin/frontend.js
 
-index: morph.html
+index: sys_worker.js morph.html
 	cp $(BUILD_DIR)/morph.html index.html
 
-build-tools: q3map2.wasm # q3asm.wasm q3lcc.wasm 
+build-tools: # q3map2.wasm # q3asm.wasm q3lcc.wasm 
 	@:
+
+
+
+
+
+
+
+DED_FILES    := $(wildcard $(ENGINE_SOURCE)/botlib/*.c) \
+	$(wildcard $(ENGINE_SOURCE)/qcommon/*.c) \
+	$(wildcard $(ENGINE_SOURCE)/server/*.c) \
+	$(filter-out %/sys_snd.c,$(wildcard $(ENGINE_SOURCE)/wasm/*.c))
+DED_OBJS     := $(addprefix $(BUILD_DIR)/ded/,$(notdir $(DED_FILES:.c=.o)))
+
+morph.ded.wasm: $(BUILD_DIRS) $(DED_FILES) $(DED_OBJS)
+	$(call DO_ENGINE_LD,$@,$(DED_OBJS))
+
+morph.ded.opt: morph.ded.wasm $(BUILD_DIR)/morph.ded.wasm
+	$(call DO_ENGINE_OPT,$(BUILD_DIR)/morph.ded.opt,$(BUILD_DIR)/morph.ded.wasm)
+
+sys_worker.js: dedicated 
+	@:
+
+dedicated: morph.ded.wasm morph.ded.opt # q3map2.wasm for MemoryMaps
+	@: 
+
+$(BUILD_DIR)/ded/%.o: $(ENGINE_SOURCE)/botlib/%.c
+	$(echo_cmd) "BOTLIB_CC $<"
+	$(Q)$(CC) -o $@ -DDEDICATED=1 -DBOTLIB=1 $(ENGINE_CFLAGS) -c $<
+
+$(BUILD_DIR)/ded/%.o: $(ENGINE_SOURCE)/qcommon/%.c
+	$(echo_cmd) "COMMON_CC $<"
+	$(Q)$(CC) -o $@ -DDEDICATED=1 $(ENGINE_CFLAGS) -c $<
+
+$(BUILD_DIR)/ded/%.o: $(ENGINE_SOURCE)/server/%.c
+	$(echo_cmd) "SERVER_CC $<"
+	$(Q)$(CC) -o $@ -DDEDICATED=1 $(ENGINE_CFLAGS) -c $<
+
+$(BUILD_DIR)/ded/%.o: $(ENGINE_SOURCE)/wasm/%.c
+	$(echo_cmd) "WASM_CC $<"
+	$(Q)$(CC) -o $@ -DDEDICATED=1 $(ENGINE_CFLAGS) -c $<
+
+
+
 
 
 
@@ -338,7 +390,6 @@ Q3MAP2_CFLAGS = \
 	-D_XOPEN_SOURCE=700 -D__EMSCRIPTEN__=1 \
 	-D__WASM__=1 -D__wasi__=1 -D__wasm32__=1 \
 	-D_WASI_EMULATED_SIGNAL -D_WASI_EMULATED_MMAN=1 \
-	-D__WASM__=1 \
 	-DRADIANT_VERSION="\"$(RADIANT_VERSION)\"" \
 	-DQ3MAP_VERSION="\"$(Q3MAP_VERSION)\"" \
 	-DRADIANT_MAJOR_VERSION="\"$(RADIANT_MAJOR_VERSION)\"" \
@@ -352,6 +403,7 @@ Q3MAP2_CFLAGS = \
 
 Q3MAP2_LDFLAGS = $(WASI_LDFLAGS) \
 	$(WASI_SYSROOT)/libc++.a $(WASI_SYSROOT)/libc++abi.a -Wl,--no-entry
+
 
 
 define DO_CLI_LD

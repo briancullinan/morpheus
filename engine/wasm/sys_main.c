@@ -270,6 +270,7 @@ rserr_t GLimp_StartDriverAndSetMode(int mode, const char *modeFS, qboolean fulls
 void GLimp_Shutdown( qboolean unloadDLL );
 
 
+#ifndef DEDICATED
 /*
 ===============
 GLimp_Init
@@ -347,6 +348,8 @@ void GLimp_InitGamma( glconfig_t *config )
 void GLimp_SetGamma( unsigned char red[256], unsigned char green[256], unsigned char blue[256] )
 {
 }
+
+#endif
 
 
 /*
