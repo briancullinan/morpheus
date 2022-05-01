@@ -1662,7 +1662,9 @@ void                        MakeTreePortals( tree_t *tree );
 
 
 /* leakfile.c */
+#ifndef __WASM__
 xmlNodePtr                  LeakFile( tree_t *tree );
+#endif
 
 
 /* prtfile.c */

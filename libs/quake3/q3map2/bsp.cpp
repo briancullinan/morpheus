@@ -286,7 +286,9 @@ void ProcessWorldModel( void ){
 	entity_t    *e;
 	tree_t      *tree;
 	face_t      *faces;
+#ifndef __WASM__
 	xmlNodePtr polyline, leaknode;
+#endif
 	char level[ 2 ];
 	const char  *value;
 
@@ -337,6 +339,7 @@ void ProcessWorldModel( void ){
 		Sys_FPrintf( SYS_NOXMLflag | SYS_ERR, "**********************\n" );
 		Sys_FPrintf( SYS_NOXMLflag | SYS_ERR, "******* leaked *******\n" );
 		Sys_FPrintf( SYS_NOXMLflag | SYS_ERR, "**********************\n" );
+#ifndef __WASM__
 		polyline = LeakFile( tree );
 		leaknode = xmlNewNode( NULL, (const xmlChar*)"message" );
 		xmlNodeAddContent( leaknode, (const xmlChar*)"MAP LEAKED\n" );
@@ -345,6 +348,7 @@ void ProcessWorldModel( void ){
 		level[1] = 0;
 		xmlSetProp( leaknode, (const xmlChar*)"level", (const xmlChar*)level );
 		xml_SendNode( leaknode );
+#endif
 		if ( leaktest ) {
 			Sys_FPrintf( SYS_WRN, "--- MAP LEAKED, ABORTING LEAKTEST ---\n" );
 			exit( 0 );

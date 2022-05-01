@@ -51,6 +51,8 @@ netmessage_t msg;
 
 bool verbose = false;
 
+#ifndef __WASM__
+
 // our main document
 // is streamed through the network to Radiant
 // possibly written to disk at the end of the run
@@ -335,6 +337,8 @@ void xml_message_push( int flag, const char* characters, size_t length ){
 	}
 }
 
+#endif
+
 // all output ends up through here
 void FPrintf( int flag, char *buf ){
 	static bool bGotXML = false;
@@ -437,7 +441,9 @@ void Error( const char *error, ... ){
 	sprintf( out_buffer, "************ ERROR ************\n%s\n", tmp );
 
 	FPrintf( SYS_ERR, out_buffer );
+#ifndef __WASM__
 	xml_message_flush();
+#endif
 
 #ifdef DBG_XML
 	DumpXML();

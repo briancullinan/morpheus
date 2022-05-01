@@ -525,7 +525,9 @@ void SetBrushContents( brush_t *b ){
 
 	/* check for detail & structural */
 	if ( ( compileFlags & C_DETAIL ) && ( compileFlags & C_STRUCTURAL ) ) {
+#ifndef __WASM__
 		xml_Select( "Mixed detail and structural (defaulting to structural)", mapEnt->mapEntityNum, entitySourceBrushes, false );
+#endif
 		compileFlags &= ~C_DETAIL;
 	}
 
@@ -620,7 +622,9 @@ void AddBrushBevels( void ){
 			if ( i == buildBrush->numsides ) {
 				// add a new side
 				if ( buildBrush->numsides == MAX_BUILD_SIDES ) {
+#ifndef __WASM__
 					xml_Select( "MAX_BUILD_SIDES", buildBrush->entityNum, buildBrush->brushNum, true );
+#endif
 				}
 				memset( s, 0, sizeof( *s ) );
 				buildBrush->numsides++;
@@ -768,7 +772,9 @@ void AddBrushBevels( void ){
 
 					// add this plane
 					if ( buildBrush->numsides == MAX_BUILD_SIDES ) {
+#ifndef __WASM__
 						xml_Select( "MAX_BUILD_SIDES", buildBrush->entityNum, buildBrush->brushNum, true );
+#endif
 					}
 					s2 = &buildBrush->sides[buildBrush->numsides];
 					buildBrush->numsides++;
@@ -1053,7 +1059,9 @@ static void ParseRawBrush( bool onlyLights ){
 
 		/* test side count */
 		if ( buildBrush->numsides >= MAX_BUILD_SIDES ) {
+#ifndef __WASM__
 			xml_Select( "MAX_BUILD_SIDES", buildBrush->entityNum, buildBrush->brushNum, true );
+#endif
 		}
 
 		/* add side */
@@ -1206,7 +1214,9 @@ bool RemoveDuplicateBrushPlanes( brush_t *b ){
 
 		// check for a degenerate plane
 		if ( sides[i].planenum == -1 ) {
+#ifndef __WASM__
 			xml_Select( "degenerate plane", b->entityNum, b->brushNum, false );
+#endif
 			// remove it
 			for ( k = i + 1 ; k < b->numsides ; k++ ) {
 				sides[k - 1] = sides[k];
@@ -1219,7 +1229,9 @@ bool RemoveDuplicateBrushPlanes( brush_t *b ){
 		// check for duplication and mirroring
 		for ( j = 0 ; j < i ; j++ ) {
 			if ( sides[i].planenum == sides[j].planenum ) {
+#ifndef __WASM__
 				xml_Select( "duplicate plane", b->entityNum, b->brushNum, false );
+#endif
 				// remove the second duplicate
 				for ( k = i + 1 ; k < b->numsides ; k++ ) {
 					sides[k - 1] = sides[k];
@@ -1231,7 +1243,9 @@ bool RemoveDuplicateBrushPlanes( brush_t *b ){
 
 			if ( sides[i].planenum == ( sides[j].planenum ^ 1 ) ) {
 				// mirror plane, brush is invalid
+#ifndef __WASM__
 				xml_Select( "mirrored plane", b->entityNum, b->brushNum, false );
+#endif
 				return false;
 			}
 		}

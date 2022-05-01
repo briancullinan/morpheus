@@ -485,7 +485,9 @@ void MakeTreePortals_r( node_t *node ){
 
 	if ( !c_worldMinmax.surrounds( node->minmax ) ) {
 		if ( node->portals && node->portals->winding ) {
+#ifndef __WASM__
 			xml_Winding( "WARNING: Node With Unbounded Volume", node->portals->winding->p, node->portals->winding->numpoints, false );
+#endif
 		}
 	}
 	if ( node->planenum == PLANENUM_LEAF ) {

@@ -89,6 +89,13 @@ static void LoadDDSBuffer( byte *buffer, int size, byte **pixels, int *width, in
    note: this function is a total hack, as it reads/writes the png struct directly!
  */
 
+#ifdef __WASM__
+// TODO: use canvas
+
+void LoadPNGBuffer( byte *buffer, int size, byte **pixels, int *width, int *height );
+
+#else
+
 struct pngBuffer_t
 {
 	byte    *buffer;
@@ -106,7 +113,6 @@ void PNGReadData( png_struct *png, png_byte *buffer, png_size_t size ){
 	pb->offset += size;
 	//%	Sys_Printf( "Copying %d bytes from 0x%08X to 0x%08X (offset: %d of %d)\n", size, &pb->buffer[ pb->offset ], buffer, pb->offset, pb->size );
 }
-
 
 
 /*
@@ -221,6 +227,8 @@ static void LoadPNGBuffer( byte *buffer, int size, byte **pixels, int *width, in
 
 }
 
+
+#endif
 
 
 /*

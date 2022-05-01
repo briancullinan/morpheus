@@ -345,7 +345,9 @@ winding_t *WindingFromDrawSurf( mapDrawSurface_t *ds ){
 			p[i] = ds->verts[i].xyz;
 		}
 
+#ifndef __WASM__
 		xml_Winding( "WindingFromDrawSurf failed: MAX_POINTS_ON_WINDING exceeded", p, max, true );
+#endif
 	}
 
 	w = AllocWinding( ds->numVerts );

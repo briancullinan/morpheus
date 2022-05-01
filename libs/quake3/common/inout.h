@@ -30,6 +30,8 @@
 template<typename Element> class BasicVector3;
 typedef BasicVector3<float> Vector3;
 
+#ifndef __WASM__
+
 // some useful xml routines
 xmlNodePtr xml_NodeForVec( const Vector3& v );
 void xml_SendNode( xmlNodePtr node );
@@ -40,6 +42,8 @@ void xml_Select( const char *msg, int entitynum, int brushnum, bool bError );
 // note: we might want to add a boolean to use this as a warning or an error thing..
 void xml_Winding( const char *msg, const Vector3 p[], int numpoints, bool die );
 void xml_Point( const char *msg, const Vector3& pt );
+
+#endif
 
 void Broadcast_Setup( const char *dest );
 void Broadcast_Shutdown();

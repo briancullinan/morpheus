@@ -294,7 +294,9 @@ void ParsePatch( bool onlyLights ){
 
 	/* warn and select degenerate patch */
 	if ( degenerate ) {
+#ifndef __WASM__
 		xml_Select( "degenerate patch", mapEnt->mapEntityNum, entitySourceBrushes, false );
+#endif
 		free( m.verts );
 		return;
 	}

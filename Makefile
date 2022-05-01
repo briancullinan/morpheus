@@ -51,11 +51,11 @@ WASI_LDFLAGS   := $(LDFLAGS) \
 	-Wl,--export=stderr -Wl,--export=stdout  \
 	-Wl,--export=errno --no-standard-libraries \
 	-Wl,--allow-undefined-file=engine/wasm/wasm.syms \
-	engine/wasm/wasi/libclang_rt.builtins-wasm32.a \
-	$(WASI_SYSROOT)/libc.a
+	engine/wasm/wasi/libclang_rt.builtins-wasm32.a
 
-CLIENT_LDFLAGS := $(WASI_LDFLAGS) -Wl,--no-entry 
-	
+CLIENT_LDFLAGS := $(WASI_LDFLAGS) \
+	$(WASI_SYSROOT)/libc.a -Wl,--no-entry 
+
 
 # WRITE THIS IN A WAY THAT THE FILE TREE
 #   CAN PARSE IT AND SHOW A SWEET LITTLE GRAPH
@@ -333,8 +333,8 @@ RADIANT_VERSION  := 1.5.0n
 RADIANT_MAJOR_VERSION:=5
 RADIANT_MINOR_VERSION:=0
 Q3MAP2_CFLAGS = \
-	--target=wasm32 \
-	-DPOSIX  -std=c++17 \
+	--target=wasm32-unknown-wasi \
+	-DPOSIX  -std=c++17 -fno-exceptions \
 	-D_XOPEN_SOURCE=700 -D__EMSCRIPTEN__=1 \
 	-D__WASM__=1 -D__wasi__=1 -D__wasm32__=1 \
 	-D_WASI_EMULATED_SIGNAL -D_WASI_EMULATED_MMAN=1 \
@@ -343,40 +343,20 @@ Q3MAP2_CFLAGS = \
 	-DQ3MAP_VERSION="\"$(Q3MAP_VERSION)\"" \
 	-DRADIANT_MAJOR_VERSION="\"$(RADIANT_MAJOR_VERSION)\"" \
 	-DRADIANT_MINOR_VERSION="\"$(RADIANT_MINOR_VERSION)\"" \
-  -fno-exceptions \
-  -fvisibility=hidden \
-  --sysroot libs/wasi-sysroot \
+	-fvisibility=hidden \
+	--sysroot libs/wasi-sysroot \
 	-I$(Q3MAP2_SOURCE) \
 	-I$(Q3MAP2_SOURCE)/../include \
 	-I$(Q3MAP2_SOURCE)/../common \
-	$(WASI_INCLUDES) 
+	$(WASI_INCLUDES)
 
-#$(BASE_CFLAGS) \
-	-DRADIANT_VERSION="\"$(RADIANT_VERSION)\"" \
-	-DQ3MAP_VERSION="\"$(Q3MAP_VERSION)\"" \
-	-DRADIANT_MAJOR_VERSION="\"$(RADIANT_MAJOR_VERSION)\"" \
-	-DRADIANT_MINOR_VERSION="\"$(RADIANT_MINOR_VERSION)\"" \
-	-fno-common \
-	-Ilibs/tools/quake3/common \
-	-Ilibs/tools/quake3/../libs \
-	-Ilibs/tools/quake3/../include \
-	-Ilibs/libpng-1.6.37 \
-	-I/usr/include/libxml2 \
-	-I/usr/local/Cellar/jpeg/9e/include \
-	-I/usr/local/Cellar/glib/2.70.4/include/glib-2.0 \
-	-I/usr/local/Cellar/glib/2.70.4/lib/glib-2.0/include \
-	-I/usr/local/opt/gettext/include \
-	-I/usr/local/Cellar/pcre/8.45/include \
-	-I/usr/local/Cellar/libpng/1.6.37/include/libpng16 \
-	-I$(Q3MAP2_SOURCE) \
-	-I$(Q3MAP2_SOURCE)/../include \
-	-I$(Q3MAP2_SOURCE)/../common \
-	$(WASI_INCLUDES) 
+Q3MAP2_LDFLAGS = $(WASI_LDFLAGS) \
+	$(WASI_SYSROOT)/libc++.a $(WASI_SYSROOT)/libc++abi.a -Wl,--no-entry
 
 
 define DO_CLI_LD
 	$(echo_cmd) "WASM-LD $1"
-	$(Q)$(CXX) -o $(BUILD_DIR)/$1 $2 $(WASI_LDFLAGS)
+	$(Q)$(CXX) -o $(BUILD_DIR)/$1 $2 $(Q3MAP2_LDFLAGS) 
 endef
 
 define DO_Q3MAP2_CXX

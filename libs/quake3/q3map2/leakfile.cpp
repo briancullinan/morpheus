@@ -43,6 +43,8 @@
  */
 
 
+#ifndef __WASM__
+
 /*
    =============
    LeakFile
@@ -117,3 +119,5 @@ xmlNodePtr LeakFile( tree_t *tree ){
 
 	return xml_node;
 }
+
+#endif
