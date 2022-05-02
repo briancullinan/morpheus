@@ -66,6 +66,12 @@ async function _doAccessor(member, runContext, senderId) {
 		case 'window.location':
 			expression = '(\'data:application/json;utf-8,\'+JSON.stringify(window.location))'
 			break
+		case 'document.cookie':
+			expression = 'document.cookie'
+			break
+		case 'window.localStorage':
+			expression = 'Array(window.localStorage.length).fill().map(function (i) { return window.localStorage.key(i) })'
+			break
 		default:
 			
 	}
@@ -85,6 +91,10 @@ async function _doAccessor(member, runContext, senderId) {
 		throw new Error('Member access error: ' + memberName)
 	}
 
+	if(memberName == 'window.localStorage') {
+		debugger
+		_makeLocalStorage()
+	} else
 	if (typeof response.library != 'undefined') {
 		return createLibrary(response, member, runContext)
 	} else 
@@ -105,7 +115,6 @@ async function _doAccessor(member, runContext, senderId) {
 	} else {
 		return response.result
 	}
-	// window.screenLeft, window.outerHeight
 }
 
 
@@ -117,12 +126,8 @@ function _makeWindowAccessor(result, runContext) {
 	result._accessor = async function (i, member, AST, ctx, callback) {
 		return await _doAccessor({
 			// polyfill to window name since we know it's a window type
-			object: {
-				name: 'window'
-			},
-			property: {
-				name: member.property.name
-			}
+			object: { name: 'window' },
+			property: { name: member.property.name },
 		}, ctx, ctx.localVariables.tabId)
 	}
 	return result

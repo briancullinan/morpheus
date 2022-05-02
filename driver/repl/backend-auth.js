@@ -234,26 +234,31 @@ async function doMorpheusKey() {
 //   SAFE AWAY FROM OTHER SCRIPTS BEING RUN SHOULD BE OKAY.
 // https://stackoverflow.com/a/10215056
 
+const PARENT_PROCESS = 0
+const WORKER_PROCESS = 1
 
 
 let morphKey = false
-chrome.storage.sync.get('_morpheusKey', async function(data) {
-	try {
-		if(data._morpheusKey) {
-			morphKey = JSON.parse(data._morpheusKey)
-		} else {
-			await chrome.storage.sync.set({
-				'_morpheusKey': JSON.stringify([])
-			})
-		}
-	} catch (e) {
-		try {
-			await chrome.storage.sync.set({
-				'_morpheusKey': JSON.stringify([])
-			})
-		} catch (e) {
-			debugger
+if(typeof chrome == 'undefined') {
+	chrome = {}
+}
+if(typeof chrome.storage == 'undefined') {
+	/*
+	chrome.storage = {
+		sync: {
+			get: function (key) {
+				let localStorage = _doAccessor({
+					object: { name: 'window' },
+					property: { name: 'localStorage' },
+				}, currentContext, PARENT_PROCESS)
+				let value = localStorage._accessor({
+					object: { name: 'localStorage' },
+					property: { name: key },
+				}, currentContext, PARENT_PROCESS)
+				return value
+			}
 		}
 	}
-})
+	*/
+}
 

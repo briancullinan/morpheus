@@ -1,4 +1,4 @@
-let window = self;
+
 let oldRunTimer
 
 // TODO: WAS GOING TO USE THIS AS A TEMPLATE FOR 
@@ -284,24 +284,25 @@ function doWebComplete(details) {
 	//   MULTIPLE PROMISES, INTERESTING IT CAN CAUSE PAGE TO STALL.
 	// no return
 	saveCookies[details.frameId] = (function (url) {
-		return setTimeout(function () {
-			chrome.debugger.sendCommand({
-				tabId: details.tabId || runContext.localVariables.tabId
-			}, 'Runtime.evaluate', {
-				// TODO: attach encrypter to every page for forms transmissions
-				expression: 'document.cookie'
-			}, function (cookie) {
-				if(!cookie || !cookie.result || cookie.result.fail 
-						|| !cookie.result.value) {
-					return
-				}
-				let cookieEncoded = JSON.stringify(encodeCookie(cookie.result.value))
-				chrome.tabs.sendMessage(runContext.senderId, {
-					// TODO: encrypt encoded stuff with runContext.runId
-					cookie: cookieEncoded
-				}, function () {})
-				Promise.resolve(addCookie(cookie.result.value, url))
-			})
+		return setTimeout(async function () {
+			
+			let cookie = await _doAccessor({
+				object: { name: 'document' },
+				property: { name: 'cookie' },
+			}, runContext, details.tabId || runContext.localVariables.tabId)
+			// TODO: attach encrypter to every page for forms transmissions
+
+			if(!cookie || !cookie.result || cookie.result.fail 
+					|| !cookie.result.value) {
+				return
+			}
+			let cookieEncoded = JSON.stringify(encodeCookie(cookie.result.value))
+			chrome.tabs.sendMessage(runContext.senderId, {
+				// TODO: encrypt encoded stuff with runContext.runId
+				cookie: cookieEncoded
+			}, function () {})
+			Promise.resolve(addCookie(cookie.result.value, url))
+
 		}, 100)
 	})()
 
@@ -352,6 +353,7 @@ function doCommitted(details) {
 		})
 	}
 }
+
 
 chrome.webNavigation.onBeforeNavigate.addListener(doWebNavigation)
 chrome.webNavigation.onCompleted.addListener(doWebComplete)

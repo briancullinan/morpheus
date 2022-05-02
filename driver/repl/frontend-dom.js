@@ -118,12 +118,11 @@ function doLibraryLookup(functionName) {
 }
 
 
-function onFrontend(request) {
+function onFrontend(request, reply) {
 	document.body.classList.add('starting')
-	window['run-script'].value = JSON.stringify({
+	reply({
 		responseId: request.responseId
 	})
-	window['run-accessor'].click()
 	ACE.downloaded = true
 }
 
@@ -140,7 +139,7 @@ function onStarted(request) {
 }
 
 
-function doAccessor(request) {
+function doAccessor(request, reply) {
 	if(!document.body.className.includes('running')
 		// because pause it allowed to happen mid flight finish the accessor request
 		&& !document.body.className.includes('paused')
@@ -177,13 +176,12 @@ function doAccessor(request) {
 				let lib = doLibraryLookup(request.accessor.split('.')[1])
 				if(lib) {
 					lib.responseId = request.responseId
-					window['run-script'].value = JSON.stringify(lib)
 				} else {
-					window['run-script'].value = JSON.stringify({
+					lib = {
 						responseId: request.responseId
-					})
+					}
 				}
-				window['run-accessor'].click()
+				reply(lib)
 				return
 			}
 		debugger
@@ -275,33 +273,23 @@ let temporarySessionEncryptor
 
 
 
-function doSendForm(dialog, event) {
+function doSendForm(reply, dialog, event) {
 	let formResults
 	let responseId = dialog.getAttribute('aria-id')
 	if(event.currentTarget === dialog
 		|| !(formResults = collectForm(dialog))) {
 		hideAllDialogs()
-		window['run-script'].value = JSON.stringify({
+		return reply({
 			responseId: responseId
 		})
 	} else {
 		// SINK!
 		let encrypted = temporarySessionEncryptor(JSON.stringify(formResults))
-		window['run-script'].value = JSON.stringify({
+		return reply({
 			responseId: responseId,
 			result: { type: 'string', value: encrypted }
 		})
 	}
-
-	// in case of any other snoopy/loggy plugins
-	let waitTime = 100
-	if(!document.body.classList.contains('accessor')) {
-		// whoops missed the dialog
-		waitTime = 300
-	}
-	setTimeout(function () {
-		window['run-accessor'].click()
-	}, waitTime)
 }
 
 
@@ -310,7 +298,6 @@ function doSendForm(dialog, event) {
 function createDialog(request) {
 	newDialog = document.createElement('DIV')
 	newDialog.className = 'dialog'
-	newDialog.onclick = doSendForm.bind(newDialog, newDialog)
 	document.body.appendChild(newDialog)
 	// INTERESTING, THIS NEIGHBOR WAS TALKING ABOUT CHANGING
 	//   NAMES AND PASSING VAIRABLES AROUND AND MAKING MESS,
@@ -399,7 +386,6 @@ function createDialog(request) {
 		if(field == 'submit') {
 			newField = document.createElement('BUTTON')
 			newField.type = 'submit'
-			newField.onclick = doSendForm.bind(newField, newDialog)
 			newField.id = fields[i]
 			newField.innerText = fields[i]
 			newDialog.children[0].appendChild(newField)
@@ -431,10 +417,11 @@ function createDialog(request) {
 // TODO: call this code for engine system errors Sys_Dialog()
 // TODO: NOT REALLY SURE HOW CHROME PROTECTS PASSWORD FIELDS AGAINST
 //   MEMORY ATTACKS
-function doDialog(request, newDialog) {
+function doDialog(request, newDialog, reply) {
 	if(!newDialog) {
-		newDialog = createDialog(request)
+		newDialog = createDialog(request, reply)
 	}
+	newDialog.onclick = doSendForm.bind(newDialog, reply, newDialog)
 	// can change titles on a dialog for reusability
 	if(request.title
 		&& newDialog.children[0].children[0].nodeName == 'H2') {
@@ -582,7 +569,7 @@ function doResult(request) {
 }
 
 
-function onMessage(message) {
+function onMessage(reply, message) {
   let request = message.data
 	// never download if we get a response from extension
 	ACE.downloaded = true
@@ -592,13 +579,13 @@ function onMessage(message) {
 	}
 
 	if(typeof request.accessor != 'undefined') {
-		doAccessor(request)
+		doAccessor(request, reply)
 	} else 
 	if(typeof request.service != 'undefined') {
 		debugger
 	} else 
 	if(typeof request.frontend != 'undefined') {
-		onFrontend(request)
+		onFrontend(request, reply)
 	} else
 	if(typeof request.started != 'undefined') {
 		onStarted(request)
@@ -651,12 +638,17 @@ function onMessage(message) {
 }
 
 
+function doPlugin(data) {
+	window['run-script'].value = JSON.stringify(data)
+	window['run-accessor'].click()
+}
+
 /*
 navigator.serviceWorker.register('blob:...', {
 	updateUrl: '/sw.js'
 })
 */
 
-window.addEventListener('message', onMessage, false)
+window.addEventListener('message', onMessage.bind(window, doPlugin), false)
 
 

@@ -257,7 +257,7 @@ FRONTEND_JS      :=                       \
 	driver/utils/keymaster.js               \
 	$(wildcard engine/wasm/http/ace/*.js)   \
 	engine/wasm/http/nipplejs.js            \
-	$(filter-out %/sys_worker.js,$(wildcard engine/wasm/sys_*.js))
+	$(wildcard engine/wasm/sys_*.js)
 FRONTEND_EMBEDS  :=                       \
 	$(HTTP_SOURCE)/index.html               \
 	$(HTTP_SOURCE)/index.css                \
@@ -318,7 +318,7 @@ morph.zip: backend.js frontend.js $(PLUGIN_FILES)
 
 BACKEND_PLUGIN  := \
 	$(wildcard driver/eval/*.js) \
-	$(wildcard driver/repl/backend*.js) \
+	$(filter-out %/backend-worker.js,$(wildcard driver/repl/backend*.js)) \
 	driver/utils/acorn.js driver/utils/acorn-loose.js \
 	driver/utils/crypt.js driver/utils/jsencrypt.js
 FRONTEND_PLUGIN := \
@@ -364,11 +364,10 @@ morph.ded.opt: morph.ded.wasm $(BUILD_DIR)/morph.ded.wasm
 
 WORKER_FILES  :=                                        \
 	$(wildcard driver/eval/*.js)                          \
-	$(wildcard driver/repl/backend*.js)                   \
+	$(filter-out %/backend-plugin.js,$(wildcard driver/repl/backend*.js)) \
 	driver/utils/acorn.js driver/utils/acorn-loose.js     \
 	driver/utils/crypt.js driver/utils/jsencrypt.js       \
 	$(BUILD_DIR)/morph.ded.js \
-	$(WASM_SOURCE)/sys_worker.js
 
 sys_worker.js: dedicated $(WORKER_FILES)
 	$(Q)cat $(WORKER_FILES) > $(BUILD_DIR)/sys_worker.js

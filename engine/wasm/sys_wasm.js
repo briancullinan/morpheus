@@ -200,6 +200,9 @@ function initEngine(program) {
 	}
 }
 
+function doWorker(data) {
+	SYS.worker.postMessage(JSON.stringify(data))
+}
 
 function initWorker() {
 
@@ -214,7 +217,7 @@ function initWorker() {
 		.join('')
 	const blob = new Blob([workerData], {type: 'application/javascript'})
 	SYS.worker = new Worker(URL.createObjectURL(blob))
-
+	SYS.worker.addEventListener('message', onMessage.bind(SYS.worker, doWorker))
 }
 
 

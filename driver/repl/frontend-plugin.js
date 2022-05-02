@@ -14,7 +14,7 @@ function socketError(evt) {
 
 function generateRunId() {
 	let runId = getRunId(20)
-	return function addRunIdInjection(request) {
+	return function (request) {
 		request.runId = runId
 		return request
 	}
@@ -63,6 +63,7 @@ document.addEventListener('DOMContentLoaded', onContent)
 function onContent() {
 	// THIS IS FOR MAKING AN ELEMENT EYE-DROPPER TOOL, NOT STEALING PASSWORDS
 	key('shift+w', function () {
+		debugger
 		chrome.runtime.sendMessage({ 
 			// TODO: improve this interface, adding new commands should be smaller?
 			listWindows: getRunId(20),
@@ -131,7 +132,6 @@ function getRunId(length) {
 }
 
 
-let awaitingAccessor = false
 let awaitingResponse = {}
 
 
