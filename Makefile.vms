@@ -59,7 +59,7 @@ WASI_LDFLAGS       := $(LDFLAGS) \
 	engine/wasm/wasi/libclang_rt.builtins-wasm32.a \
 	$(WASI_SYSROOT)/libc.a
 
-CLIENT_LDFLAGS     := $(WASI_LDFLAGS) -Wl,--no-entry 
+CLIENT_LDFLAGS     := $(WASI_LDFLAGS)
 	
 
 # WRITE THIS IN A WAY THAT THE FILE TREE

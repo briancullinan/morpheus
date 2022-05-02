@@ -42,14 +42,15 @@ function normalReplace(indexFile, cssFile, scriptFile, skinFile, wasmFile
     [/<\/html>/, '<script async type="application/javascript">' 
       + formatForVFS(workerFile, path.basename(workerFile)) + '</script></html>'],
     [/quake3e\.wasm/ig, path.basename(wasmFile)],
+    [/quake3e\.ded\.wasm/ig, path.basename(wasmFile).replace('.js', '.ded.js')],
   ]
   for(let i = 0; i < replacements.length; i++) {
     let matchString = index.match(replacements[i][0])
-    if(matchString.index) {
+    if(matchString && matchString.index) {
       index = index.substring(0, matchString.index)
         + replacements[i][1] + index.substring(matchString.index
         + matchString[0].length, index.length)
-    } else if(matchString.length) {
+    } else if(matchString && matchString.length) {
       index = index.replace(replacements[i][0], replacements[i][1])
     } else {
       throw new Error('Unmatched normal expression: ' + replacements[i][0])

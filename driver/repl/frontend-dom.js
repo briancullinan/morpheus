@@ -258,6 +258,9 @@ function collectForm(dialog) {
 let temporarySessionEncryptor
 
 
+function doWorker(data) {
+	SYS.worker.postMessage(JSON.stringify(data))
+}
 
 
 function doSendForm(reply, dialog, event) {

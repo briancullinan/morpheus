@@ -56,7 +56,7 @@ WASI_LDFLAGS   := $(LDFLAGS) \
 	engine/wasm/wasi/libclang_rt.builtins-wasm32.a
 
 CLIENT_LDFLAGS := $(WASI_LDFLAGS) \
-	$(WASI_SYSROOT)/libc.a -Wl,--no-entry 
+	$(WASI_SYSROOT)/libc.a 
 
 
 # WRITE THIS IN A WAY THAT THE FILE TREE
@@ -426,7 +426,7 @@ Q3MAP2_CFLAGS = \
 	$(WASI_INCLUDES)
 
 Q3MAP2_LDFLAGS = $(WASI_LDFLAGS) \
-	$(WASI_SYSROOT)/libc++.a $(WASI_SYSROOT)/libc++abi.a -Wl,--no-entry
+	$(WASI_SYSROOT)/libc++.a $(WASI_SYSROOT)/libc++abi.a 
 
 
 

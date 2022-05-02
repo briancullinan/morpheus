@@ -66,12 +66,13 @@ function stringsToMemory(list, length) {
   }
 	// add list length so we can return addresses like char **
 	let start = STD.sharedMemory + STD.sharedCounter
-	let posInSeries = start + list.length * 4
+	let posInSeries = start + (list.length + 1) * 4
 	for (let i = 0; i < list.length; i++) {
 		HEAPU32[(start+i*4)>>2] = posInSeries // save the starting address in the list
 		stringToAddress(list[i], posInSeries)
 		posInSeries += list[i].length + 1
 	}
+  HEAPU32[(start+list.length*4)>>2] = 0
 	if(length) HEAPU32[length >> 2] = posInSeries - start
 	STD.sharedCounter = posInSeries - STD.sharedMemory
 	STD.sharedCounter += 4 - (STD.sharedCounter % 4)
@@ -113,6 +114,60 @@ function Sys_Milliseconds() {
 	return Date.now() - DATE.timeBase;
 	//}
 }
+
+
+
+// TODO: in browser, try to download wasm like normal only from host address
+//   or from cl_dlurl address, localStorage or IndexedDB could be vulnerable.
+// THATS WHY ITS ENCRYPTED AGAIN.
+function Sys_exec(program, args) {
+  // try to find and execute wasm in same context like INSECURE DLLs in Windows
+  // we only have inmemory FS and specific system functions, there isn't much
+  //   anyone can do from here on native to break out of nodejs sandbox
+	let programStr = addressToString(program)
+	if(programStr.length < 1) {
+		return 1
+	}
+	if(!FS.virtual[programStr] 
+		|| FS.virtual[programStr].mode >> 12 != ST_FILE) {
+    if(!programStr.includes('.wasm'))
+  		programStr += '.wasm'
+	}
+	if(!FS.virtual[programStr]) {
+    programStr = programStr.replace('.wasm', '.js')
+  }
+  if(!FS.virtual[programStr] 
+		|| FS.virtual[programStr].mode >> 12 != ST_FILE) {
+    throw new Error('Command not found: ' + programStr)
+  }
+
+	// skip arg[0] = program name, will fill it in when it resolves
+	//   this is always a system level decision, I think
+	let varg = args+4
+	let startArgs = []
+	while(HEAPU32[varg>>2]!=0) {
+		startArgs.push(addressToString(HEAPU32[varg>>2]))
+		varg+=4
+	}
+	
+  if(SYS.forked) {
+    SYS.forked = false
+    SYS.worker.postMessage({
+      script: 'initAll(' + JSON.stringify([ programStr ].concat(startArgs)) + ')'
+    })
+  } else {
+    initAll([ programStr ].concat(startArgs), {
+      SYS: SYS
+    }).catch(function(e) {
+			// TODO: send something back to LCC?
+			console.error(e)
+      // THIS IS WHAT HAPPENS WHEN A CHILD PROCESS DIES
+      Sys_Exit(1)
+		})
+  }
+	return 0 // INIT OK! POSIX WOOOO!
+}
+
 
 
 function Com_RealTime(tm) {
@@ -209,18 +264,25 @@ typedef struct qtime_s {
 	clock_res_get: function () { debugger },
 }
 
-function Sys_exec() {
-  // TODO: in browser, try to download wasm like normal only from host address
-  //   or from cl_dlurl address, localStorage or IndexedDB could be vulnerable.
-  // THATS WHY ITS ENCRYPTED AGAIN.
-  debugger
-}
 
 
 function Sys_fork() {
   // TODO: prepare worker to call into
   //return ++Sys.threadCount
-  return 0
+  SYS.forked = true
+	if(typeof window.preFS == 'undefined'
+		|| typeof window.preFS['sys_worker.js'] == 'undefined'
+	//	|| !document.body.classList.contains('paused')
+	) {
+		return
+	}
+	const workerData = Array.from(FS.virtual['sys_worker.js'].contents)
+		.map(function (c) { return String.fromCharCode(c) }).join('')
+	const blob = new Blob([workerData], {type: 'application/javascript'})
+	SYS.worker = new Worker(URL.createObjectURL(blob))
+	// TODO something with signals API
+	SYS.worker.addEventListener('message', onMessage.bind(SYS.worker, doWorker))
+
 }
 
 
@@ -273,108 +335,8 @@ var STD = {
   Sys_setjmp: function (id) { try {  } catch (e) { } },
   Sys_fork: Sys_fork,
   Sys_wait: Sys_wait,
-  //Sys_exec: Sys_exec,
-  //Sys_execv: Sys_exec,
-  //Sys_getenv: Sys_getenv,
-  /*
-  memset: function (addr, val, count) {
-    HEAP8.fill(val, addr, addr + count)
-    return addr
-  },
-  fprintf: function (f, err, args) {
-    // TODO: rewrite va_args in JS for convenience?
-    console.log(addressToString(err), addressToString(HEAPU32[(args) >> 2]));
-  },
-  tolower: function tolower(c) { return String.fromCharCode(c).toLowerCase().charCodeAt(0) },
-  atoi: function (i) { return parseInt(addressToString(i)) },
-  atol: function (i) { return parseInt(addressToString(i)) },
-  atof: function (f) { return parseFloat(addressToString(f)) },
-  atod: function (f) { return parseFloat(addressToString(f)) },
-  strtof: function (f, n) { 
-    // TODO: convert this to some sort of template?
-    let str = addressToString(f)
-    let result = parseFloat(str)
-    if(isNaN(result)) {
-      if(n) HEAP32[(n) >> 2] = f
-      return 0
-    } else {
-      if(n) HEAP32[(n) >> 2] = f + str.length
-      return result
-    }
-  },
-  strlen: function (addr) { return HEAP8.subarray(addr).indexOf(0) },
-  memcpy: function (dest, source, length) {
-    HEAP8.copyWithin(dest, source, source + length)
-  },
-  strncpy: function (dest, src, cnt) {
-    stringToAddress(addressToString(src).substr(0, cnt - 1), dest)
-    HEAP8[dest + cnt - 1] = 0
-  },
-  strcmp: function (str1, str2) {
-    let i = 0
-    while(i < 1024) {
-      if(HEAP8[str1 + i] == HEAP8[str2 + i] == 0) {
-        // are equal, keep checking
-      } else if(HEAP8[str1 + i] < HEAP8[str2 + i])
-        return -1
-      else 
-        return 1
-      i++
-    }
-    return 0
-  },
-  strcat: function (dest, source) { 
-    let length = HEAP8.subarray(source).indexOf(0) + 1
-    let start = HEAP8.subarray(dest).indexOf(0)
-    HEAP8.copyWithin(dest + start, source, source + length )
-    return dest
-  },
-  strchr: function (str, ch) {
-    let length = HEAP8.subarray(str).indexOf(0)
-    let pos = HEAP8.subarray(str, str + length).indexOf(ch)
-    return pos == -1 ? null : str + pos
-  },
-  memmove: function (dest, source, length) {
-    HEAP8.copyWithin(dest, source, source + length)
-  },
-  strrchr: function (str, ch) {
-    let length = HEAP8.subarray(str).indexOf(0)
-    let pos = Uint8Array.from(HEAP8.subarray(str, str + length))
-      .reverse().indexOf(ch)
-    return pos == -1 ? null : str + length - pos - 1
-  },
-  strcpy: function (dest, source) {
-    let length = HEAP8.subarray(source).indexOf(0) + 1
-    HEAP8.copyWithin(dest, source, source + length)
-    return dest
-  },
-  strncmp: function (str, cmp, cnt) {
-    return addressToString(str).substr(0, cnt).localeCompare(addressToString(cmp).substr(0, cnt));
-  },
-  strpbrk: function () { debugger },
-  strstr: function (haystack, needle) {
-    let i = 0
-    let offset = 0
-    while(i < 1024) {
-      if(HEAP8[haystack + i] == HEAP8[needle]) {
-        offset = i
-      } else if (HEAP8[haystack + i] == HEAP8[needle + (i - offset)]) {
-        // matches
-      } else {
-        offset = 0
-      }
-      i++
-    }
-    return offset == 0 ? null : haystack + offset
-  },
-  memcmp: function () { debugger },
-  qsort: function () { debugger },
-  strncat: function () { debugger },
-  strtod: function (str, n) { return STD.strtof(str, n) },
-  */
-  stringsToMemory: stringsToMemory,
-  addressToString: addressToString,
-  stringsToMemory: stringsToMemory,
+  Sys_exec: Sys_exec,
+	Sys_execv: Sys_exec,
 }
 
 

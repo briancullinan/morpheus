@@ -165,7 +165,7 @@ int Sys_ParseArgs( int argc, char* argv[] )
 }
 
 
-Q_EXPORT int RunGame( int argc, char* argv[] )
+Q_EXPORT int _start( int argc, char* argv[] )
 {
 	char con_title[ MAX_CVAR_VALUE_STRING ];
 	int xpos, ypos;

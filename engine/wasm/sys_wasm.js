@@ -170,29 +170,32 @@ function updateEnvironment(program, ENV) {
 }
 
 
-function initEngine(program) {
+function initProgram(startArgs) {
 	// ALL THE VARIABLES WE NEED SHOULD BE ASSIGNED TO GLOBAL BY NOW
-	if(!program) {
-		throw new Error("no program!")
-	}
 	try {
 		SYS.exited = false
 		if(typeof window['Z_Malloc'] == 'undefined') {
 			window.Z_Malloc = window['Z_MallocDebug']
 		}
 		// Startup args is expecting a char **
-		let startArgs = getQueryCommands()
 		if(typeof fs_loading != 'undefined') {
 			HEAPU32[fs_loading >> 2] = FS.isSyncing
 		}
-		RunGame(startArgs.length, stringsToMemory(startArgs))
-		HEAPU32[fs_loading >> 2] = FS.isSyncing
+		Sys_Mkdirp(stringToAddress('tmp'))
+		_start(startArgs.length, stringsToMemory(startArgs))
+		if(typeof fs_loading != 'undefined') {
+			HEAPU32[fs_loading >> 2] = FS.isSyncing
+		}
 		// should have Cvar system by now
-		INPUT.fpsUnfocused = Cvar_VariableIntegerValue(stringToAddress('com_maxfpsUnfocused'));
-		INPUT.fps = Cvar_VariableIntegerValue(stringToAddress('com_maxfps'))
-		// this might help prevent this thing that krunker.io does where it lags when it first starts up
-		SYS.frameInterval = setInterval(Sys_Frame, 
-			1000 / (HEAP32[gw_active >> 2] ? INPUT.fps : INPUT.fpsUnfocused));
+		if(typeof INPUT != 'undefined') {
+			INPUT.fpsUnfocused = Cvar_VariableIntegerValue(stringToAddress('com_maxfpsUnfocused'));
+			INPUT.fps = Cvar_VariableIntegerValue(stringToAddress('com_maxfps'))
+		}
+		if(typeof Sys_Frame != 'undefined') {
+			// this might help prevent this thing that krunker.io does where it lags when it first starts up
+			SYS.frameInterval = setInterval(Sys_Frame, 
+				1000 / (HEAP32[gw_active >> 2] ? INPUT.fps : INPUT.fpsUnfocused));
+		}
 	} catch (e) {
 		console.log(e)
 		Sys_Exit(1)
@@ -200,49 +203,22 @@ function initEngine(program) {
 	}
 }
 
-function doWorker(data) {
-	SYS.worker.postMessage(JSON.stringify(data))
-}
-
-function initWorker() {
-	if(typeof window.preFS == 'undefined'
-		|| typeof window.preFS['sys_worker.js'] == 'undefined'
-	//	|| !document.body.classList.contains('paused')
-	) {
-		return
-	}
-	const workerData = Array.from(FS.virtual['sys_worker.js'].contents)
-		.map(function (c) { return String.fromCharCode(c) }).join('')
-	const blob = new Blob([workerData], {type: 'application/javascript'})
-	SYS.worker = new Worker(URL.createObjectURL(blob))
-	SYS.worker.addEventListener('message', onMessage.bind(SYS.worker, doWorker))
-}
 
 
-function initBrowser() {
-	//const viewport = document.getElementById('viewport-frame')
-	if(typeof document != 'undefined') {
-		GL.canvas = document.getElementsByTagName('canvas')[0]
-	}
-	const ENGINE = initEnvironment({
-		SYS: SYS,
-		GL: GL,
-		EMGL: EMGL,
-		INPUT: INPUT,
+function initFilesystem() {
+	return new Promise(function (resolve) {
+		setTimeout(function () {
+			// might as well start this early, transfer 
+			//    IndexedDB from disk/memory to application memory
+			readAll()
+			resolve()
+		}, 200)
 	})
-	ENGINE.canvas = GL.canvas
+}
 
-	function initFilesystem() {
-		return new Promise(function (resolve) {
-			setTimeout(function () {
-				// might as well start this early, transfer 
-				//    IndexedDB from disk/memory to application memory
-				readAll()
-				resolve()
-			}, 200)
-		})
-	}
 
+
+function initAll(startArgs, ENGINE) {
 	// slight delay to let window settle from big wasm data
 	function initPreload() {
 		return new Promise(function (resolve) {
@@ -267,39 +243,56 @@ function initBrowser() {
 			})
 	}
 
-
-
 	isStreaming = false
-	return initFilesystem()
-		.then(function () {
-			if(typeof FS.virtual['quake3e.wasm'] != 'undefined') {
-				return Promise.resolve(initPreload())
-			} else {
-				isStreaming = true
-				return Promise.resolve(initStreaming())
-			}
-		})
+	let startupPromise
+	if(typeof FS.virtual['quake3e.wasm'] != 'undefined') {
+		startupPromise = Promise.resolve(initPreload())
+	} else {
+		isStreaming = true
+		startupPromise = Promise.resolve(initStreaming())
+	}
+	return startupPromise
 		.then(function (bytes) {
 			return initWasm(bytes, ENGINE)
 		})
 		.then(function (program) {
 			return updateEnvironment(program, ENGINE)
 		})
-		.then(initEngine)
-		.then(initWorker)
-
+		.then(function (program) {
+			initProgram(startArgs)
+		})
 }
 
 if(typeof window != 'undefined') {
 	// TODO: change when hot reloading works
 	window.addEventListener('load', function () {
+		//const viewport = document.getElementById('viewport-frame')
+		if(typeof document != 'undefined') {
+			GL.canvas = document.getElementsByTagName('canvas')[0]
+		}
+
+		const ENGINE = initEnvironment({
+			SYS: SYS,
+			GL: GL,
+			EMGL: EMGL,
+			INPUT: INPUT,
+		})
+	
 		if(typeof window.initAce != 'undefined') {
 			initAce()
 		}
 
-		if(typeof Module == 'undefined') {
-			initBrowser()
-		}
+		Promise.resolve(initFilesystem())
+		.then(function () {
+			return initAll(getQueryCommands(), ENGINE)
+		})
+		.then(function () {
+			Sys_fork()
+			let startArgs = [
+				'+set', 'dedicated', '1',
+			].concat(getQueryCommands())
+			Sys_exec(stringToAddress('quake3e.ded.wasm'), stringsToMemory(startArgs))
+		})
 
 	}, false)
 
@@ -309,6 +302,10 @@ if (typeof module != 'undefined') {
 		initEnvironment,
 		initWasm,
 		updateEnvironment,
+		initProgram,
+		initAll,
+		initFilesystem,
+		initWorker,
 	}
 
 }

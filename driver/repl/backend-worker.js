@@ -16,6 +16,7 @@ if(typeof window == 'undefined') {
 function doMessage(reply, request) {
 	let AST
 
+	debugger
 	if(!request.script && request.runId) {
 		doStatusResponse(request, reply)
 		return
@@ -106,7 +107,9 @@ function pruneOldRuns() {
 }
 
 
-self.onmessage = doMessage.bind(self, self.postMessage);
+self.onmessage = function (request) {
+	doMessage(self.postMessage, request.data)
+}
 
 function getRunId(length) {
 	let output = []
