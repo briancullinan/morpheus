@@ -1,4 +1,4 @@
-
+let window = globalThis
 let oldRunTimer
 
 // TODO: WAS GOING TO USE THIS AS A TEMPLATE FOR 

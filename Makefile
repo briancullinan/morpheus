@@ -2,6 +2,8 @@
 
 .DEFAULT_GOAL      := release
 
+LANDING_PAGE = driver/landing/ide.html
+
 # echo_cmd is silent in verbose mode, makes sense
 ifeq ($(V),1)
 echo_cmd=@:
@@ -282,7 +284,7 @@ morph.html: $(INDEX_FILES) $(INDEX_OBJS)
 	node -e "require('./engine/wasm/bin/make').normalReplace( \
 		'$(BUILD_DIR)/morph.html', '$(HTTP_SOURCE)/index.css', \
 		'$(BUILD_DIR)/morph.js', 'engine/renderer2/bigchars.png', \
-		'$(BUILD_DIR)/morph.wasm', 'driver/landing/ide.html', \
+		'$(BUILD_DIR)/morph.wasm', '$(LANDING_PAGE)', \
 		'$(BUILD_DIR)/sys_worker.js' )"
 	node -e "require('./engine/wasm/bin/make').normalEmbedAll( \
 		'$(BUILD_DIR)/morph.html', 'driver/library', 'driver/', 'lobby/')"
