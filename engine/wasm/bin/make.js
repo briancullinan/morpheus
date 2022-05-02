@@ -39,8 +39,8 @@ function normalReplace(indexFile, cssFile, scriptFile, skinFile, wasmFile
       + rfs(skinFile, 'base64')+ '" />'],
     [/<\/html>/, '<script async type="application/javascript">' 
       + formatForVFS(wasmFile, path.basename(wasmFile)) + '</script></html>'],
-    //[/<\/html>/, '<script async type="application/javascript">' 
-    //  + formatForVFS(workerFile, path.basename(workerFile)) + '</script></html>'],
+    [/<\/html>/, '<script async type="application/javascript">' 
+      + formatForVFS(workerFile, path.basename(workerFile)) + '</script></html>'],
     [/quake3e\.wasm/ig, path.basename(wasmFile)],
   ]
   for(let i = 0; i < replacements.length; i++) {

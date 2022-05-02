@@ -153,8 +153,6 @@ function Sys_exec(program, args) {
 		throw new Error('Command not found: ' + programStr)
 	}
 
-	//require('child_process').exec()
-
 	// skip arg[0] = program name, will fill it in when it resolves
 	//   this is always a system level decision, I think
 	let varg = args+4
@@ -170,7 +168,7 @@ function Sys_exec(program, args) {
 		.catch(e => {
 			// TODO: send something back to LCC?
 			console.error(e)
-			process.exit(1)
+			Sys_Exit(1)
 		})
 	return 0 // INIT OK! POSIX WOOOO!
 }
@@ -199,8 +197,6 @@ for(let i = 0; i < process.argv.length; i++) {
 			path.dirname(a).length > 1 && fs.existsSync(path.dirname(a)))
 		) {
 			foundFiles.push(a)
-		//} else if (path.join(process.cwd, a)) {
-		//	foundFiles.push(path.join(process.cwd, a))
 		} else {
 			//console.log('WARNING: File not found: ' + a)
 		}

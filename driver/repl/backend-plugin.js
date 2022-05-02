@@ -1,3 +1,4 @@
+
 let window = globalThis
 let oldRunTimer
 
@@ -285,23 +286,19 @@ function doWebComplete(details) {
 	// no return
 	saveCookies[details.frameId] = (function (url) {
 		return setTimeout(async function () {
-			
 			let cookie = await _doAccessor({
 				object: { name: 'document' },
 				property: { name: 'cookie' },
 			}, runContext, details.tabId || runContext.localVariables.tabId)
-			// TODO: attach encrypter to every page for forms transmissions
-
-			if(!cookie || !cookie.result || cookie.result.fail 
-					|| !cookie.result.value) {
+			if(!cookie) {
 				return
 			}
-			let cookieEncoded = JSON.stringify(encodeCookie(cookie.result.value))
+			let cookieEncoded = JSON.stringify(encodeCookie(cookie))
 			chrome.tabs.sendMessage(runContext.senderId, {
 				// TODO: encrypt encoded stuff with runContext.runId
 				cookie: cookieEncoded
 			}, function () {})
-			Promise.resolve(addCookie(cookie.result.value, url))
+			//Promise.resolve(addCookie(cookie, url))
 
 		}, 100)
 	})()

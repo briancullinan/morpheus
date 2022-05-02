@@ -13,6 +13,8 @@ const DEFAULT_PAUSED_INTERVAL = 100
 async function shouldBubbleOut(runContext) {
 	if(runContext.paused
 		&& (runContext.bubbleFile == '<eval>'
+		// TODO: @Rollback() for failed dialogs to step back 1 statement 
+		//   so we can play the thread and pick up again
 			|| runContext.bubbleAST.type == 'DebuggerStatement')
 		) {
 		// add a paused handler for debug and continue

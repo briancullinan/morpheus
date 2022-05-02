@@ -33,7 +33,8 @@ async function doMorpheusPass(required) {
 	let newContext = {
 		senderId: previousContext.senderId
 	}
-	let passwordContext = await createRunContext(newContext, await createEnvironment(newContext))
+	let passwordContext = await createRunContext(newContext, 
+			await createEnvironment(newContext))
 	passwordContext.localVariables.thisWindow = previousContext.localVariables.thisWindow
 	let loginFunction = await getRemoteCall('doSystemLogin', passwordContext)
 	let response = await loginFunction()

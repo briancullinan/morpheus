@@ -201,6 +201,7 @@ body.light #command-bar label {
   border-color: #FFFFFF;
 }
 
+/*
 #file-list label {
   position:absolute;
   left:0;
@@ -221,6 +222,7 @@ body.light #command-bar label {
 #file-list .level1 ~ :not(.level1) {
   display:none;
 }
+*/
 
 
 #file-list .file a {
@@ -484,6 +486,22 @@ body.started.running .run-button.small:hover {
 
 .dialog input[type="radio"]:checked + label {
   background: #333;
+}
+
+#file-list .interaction .dialog > *:first-child {
+  top: 100%;
+  left: 0;
+  margin-top: 0;
+  margin-left: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+#file-list .interaction:hover .dialog > *:first-child,
+#file-list .interaction .dialog:hover > *:first-child,
+#file-list .interaction a:hover + .dialog > *:first-child {
+  position: absolute;
+  overflow: visible;
 }
 
 

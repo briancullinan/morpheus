@@ -376,7 +376,8 @@ sys_worker.js: dedicated $(WORKER_FILES)
 
 $(BUILD_DIR)/morph.ded.js: $(BUILD_DIR)/morph.ded.wasm
 	node -e "require('./engine/wasm/bin/make').normalBase64( \
-		'$(BUILD_DIR)/morph.ded.js', '$(BUILD_DIR)/morph.ded.wasm', 'morph.wasm')"
+		'$(BUILD_DIR)/morph.ded.js', '$(BUILD_DIR)/morph.ded.wasm', \
+		'morph.wasm' )"
 
 
 dedicated: morph.ded.wasm morph.ded.opt # q3map2.wasm for MemoryMaps

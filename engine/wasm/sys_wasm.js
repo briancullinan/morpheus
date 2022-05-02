@@ -205,7 +205,6 @@ function doWorker(data) {
 }
 
 function initWorker() {
-
 	if(typeof window.preFS == 'undefined'
 		|| typeof window.preFS['sys_worker.js'] == 'undefined'
 	//	|| !document.body.classList.contains('paused')
@@ -213,8 +212,7 @@ function initWorker() {
 		return
 	}
 	const workerData = Array.from(FS.virtual['sys_worker.js'].contents)
-		.map(function (c) { return String.fromCharCode(c) })
-		.join('')
+		.map(function (c) { return String.fromCharCode(c) }).join('')
 	const blob = new Blob([workerData], {type: 'application/javascript'})
 	SYS.worker = new Worker(URL.createObjectURL(blob))
 	SYS.worker.addEventListener('message', onMessage.bind(SYS.worker, doWorker))
@@ -222,8 +220,10 @@ function initWorker() {
 
 
 function initBrowser() {
-	const viewport = document.getElementById('viewport-frame')
-	GL.canvas = document.getElementsByTagName('canvas')[0]
+	//const viewport = document.getElementById('viewport-frame')
+	if(typeof document != 'undefined') {
+		GL.canvas = document.getElementsByTagName('canvas')[0]
+	}
 	const ENGINE = initEnvironment({
 		SYS: SYS,
 		GL: GL,
@@ -303,7 +303,8 @@ if(typeof window != 'undefined') {
 
 	}, false)
 
-} else if (typeof module != 'undefined') {
+} else 
+if (typeof module != 'undefined') {
 	module.exports = {
 		initEnvironment,
 		initWasm,

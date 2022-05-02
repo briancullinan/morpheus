@@ -159,16 +159,12 @@ function doAccessor(request, reply) {
 	}
 	switch(request.accessor) {
 		case '_morpheusKey':
-			ACE.dropFile = doDialog(request, ACE.dropFile)
+			ACE.dropFile = doDialog(request, ACE.dropFile, reply)
 		return
 		case '_enterLogin':
-			ACE.enterPassword = doDialog(request, ACE.enterPassword)
+			ACE.enterPassword = doDialog(request, ACE.enterPassword, reply)
 		return
 		default:
-			if(request.accessor === false) {
-				hideAllDialogs()
-				return
-			} else
 			if(request.accessor.startsWith('exports.')) {
 				// TODO: this is where we ask the Language-Server which file 
 				//   the symbol is in and figure out if it needs to be translated.
@@ -189,14 +185,6 @@ function doAccessor(request, reply) {
 }
 
 
-function hideAllDialogs() {
-	let dialogs = document.getElementsByClassName('dialog')
-	for(let i = 0; i < dialogs.length; i++) {
-		dialogs[i].style.display = 'none'
-	}
-}
-
-
 
 function doError(request) {
 	if(request.error.includes('No script')) {
@@ -208,7 +196,6 @@ function doError(request) {
 
 	document.body.classList.remove('running')
 	document.body.classList.add('stopped')
-	hideAllDialogs()
 	// SEARCH GITHUB: getElementsByClassName('.
 	//   WHAT IF MY BOT COULD DEBUG OTHER PEOPLE'S CODE
 	//   WHILE THEY ARE SLEEP LIKE THE SANDMAN?
@@ -276,19 +263,26 @@ let temporarySessionEncryptor
 function doSendForm(reply, dialog, event) {
 	let formResults
 	let responseId = dialog.getAttribute('aria-id')
-	if(event.currentTarget === dialog
-		|| !(formResults = collectForm(dialog))) {
-		hideAllDialogs()
-		return reply({
-			responseId: responseId
-		})
-	} else {
+	if(event.target && event.target.tagName == 'BUTTON') {
 		// SINK!
 		let encrypted = temporarySessionEncryptor(JSON.stringify(formResults))
 		return reply({
 			responseId: responseId,
 			result: { type: 'string', value: encrypted }
 		})
+	} else
+	if(event.target === dialog
+		|| !(formResults = collectForm(dialog))) {
+		dialog.style.display = 'none'
+		let dialogI = ACE.interactions.indexOf(dialog)
+		if(dialogI > -1) {
+			ACE.interactions.splice(dialogI, 1)
+			updateFilelist('Interactions')
+		}
+		return reply({
+			responseId: responseId
+		})
+	} else {
 	}
 }
 
@@ -340,6 +334,9 @@ function createDialog(request) {
 	if (!request.form) {
 		return newDialog
 	}
+	// TODO: create a drop surface since the game 
+	//   and editor might interfere
+
 
 	let fields = Object.keys(request.form)
 	for(let i = 0; i < fields.length; i++) {
@@ -421,6 +418,7 @@ function doDialog(request, newDialog, reply) {
 	if(!newDialog) {
 		newDialog = createDialog(request, reply)
 	}
+	console.assert(reply)
 	newDialog.onclick = doSendForm.bind(newDialog, reply, newDialog)
 	// can change titles on a dialog for reusability
 	if(request.title
@@ -428,18 +426,25 @@ function doDialog(request, newDialog, reply) {
 		newDialog.children[0].children[0].innerText = request.title
 	}
 	newDialog.setAttribute('aria-id', request.responseId)
-	// create a drop surface since the game 
-	//   and editor might interfere
-	newDialog.style.display = 'block'
-
 	// IMPORTANT: prevents inputs from display in game
 	INPUT.editorActive = true
 	let input = newDialog.getElementsByTagName('input')[0]
 	if(!input) {
 		input = newDialog.getElementsByTagName('button')[0]
 	}
-	if(input) {
+	if(newDialog.style.display == 'none') {
+		newDialog.style.display = 'block'
 		input.focus()
+	} else {
+		newDialog.style.display = 'block'
+	}
+
+	if(typeof ACE.interactions == 'undefined') {
+		ACE.interactions = []
+	}
+	if(!ACE.interactions.includes(newDialog)) {
+		ACE.interactions.push(newDialog)
+		updateFilelist('Interactions')
 	}
 	// no await? don't want to lock up main thread
 	// TODO: debounce the dialog a little so scripts can

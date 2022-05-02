@@ -35,6 +35,7 @@ function createLibrary(response, member, runContext) {
 			}
 		}
 	} catch (e) {
+		debugger
 		console.log('WARNING: ' + e.message)
 	} finally {
 		runContext.script = previousScript
@@ -76,6 +77,7 @@ async function _doAccessor(member, runContext, senderId) {
 			
 	}
 	let response
+	// TODO: attach encrypter to every page for forms transmissions
 	if(expression) {
 		response = await chrome.debugger.sendCommand({
 			tabId: senderId
@@ -270,6 +272,14 @@ async function createEnvironment(runContext) {
 			log: doConsole.bind(console, runContext.senderId)
 		},
 
+	}
+	if(typeof initBrowser != 'undefined') {
+		env.initBrowser = initBrowser
+	}
+	// TODO: import a bunch of quake 3 functions automatically
+	// TODO: return as "function" type to backend, and treat like RPC
+	if(typeof Sys_exec != 'undefined') {
+		env.Sys_exec = Sys_exec
 	}
 	return env
 }

@@ -1,11 +1,11 @@
 // Library functions for web-driver
 function screenshot() {
-  let png = await chrome.tabs.captureVisibleTab({format: 'png'})
-  await chrome.tabs.sendMessage({
+  let png = chrome.tabs.captureVisibleTab({format: 'png'});
+  chrome.tabs.sendMessage({
     name: 'screenshot.png', 
     download: png, 
     type: 'image/png'
-  })
+  });
 }
 
 

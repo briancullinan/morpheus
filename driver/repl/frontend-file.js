@@ -102,12 +102,45 @@ function cookieList() {
 
 
 const FILE_WIDGETS = [
-	['Local Storage', listFiles],
-	['Call Stack', callStack],
-	['Cookies', cookieList],
-	['Threads', threadPool],
+	['Local Storage', listFiles, renderFile],
+	['Call Stack', callStack, renderFunc],
+	['Cookies', cookieList, renderCookie],
+	['Threads', threadPool, renderThread],
+	['Interactions', interactionsList, renderInteractions],
 ]
 
+
+function renderInteractions(link, item, path) {
+	let dialogs = document.getElementsByClassName('dialog')
+	for(let i = 0; i < dialogs.length; i++) {
+		if(dialogs[i].getAttribute('aria-id') == path) {
+			let title = dialogs[i].getElementsByTagName('h2')[0]
+			item.className = 'interaction'
+			if(title) {
+				if(link.innerText != title.innerText)
+					link.innerText = title.innerText
+			} else {
+				if(link.innerText != dialogs[i].innerText.substr(0, 100))
+					link.innerText = dialogs[i].innerText.substr(0, 100)
+			}
+			if(dialogs[i].parentElement !== item) {
+				item.appendChild(dialogs[i])
+			}
+			break
+		}
+	}
+}
+
+
+function interactionsList() {
+	if(!ACE.interactions) {
+		return []
+	}
+	return ACE.interactions
+		.map(function (dialog) {
+			return dialog.getAttribute('aria-id')
+		})
+}
 
 
 function threadPool() {
@@ -138,7 +171,7 @@ function updateFilelist(filepath) {
 	let newFiles = []
 	for(let i = 0; i < FILE_WIDGETS.length; i++) {
 		// TODO: if(!filepath) continue
-		ACE.filelistWidgets[newFiles.length] = FILE_WIDGETS[i][0]
+		ACE.filelistWidgets[newFiles.length] = FILE_WIDGETS[i]
 		ACE.filelistWidgetRows.push(newFiles.length)
 		newFiles.push(FILE_WIDGETS[i][0])
 		newFiles = newFiles.concat(FILE_WIDGETS[i][1]())
@@ -246,6 +279,97 @@ function getWidgetAtRow(row) {
 		&& ACE.filelistWidgetRows[count] <= row)
 }
 
+function getWidgetBeforeRow(row) {
+	let count = 0
+	let widget
+	do {
+		if(ACE.filelistWidgetRows[count] <= row) {
+			widget = ACE.filelistWidgets[row]
+		}
+		count++
+	} while (count < ACE.filelistWidgetRows.length
+		&& ACE.filelistWidgetRows[count] <= row)
+	return widget
+}
+
+
+function renderFile(link, item, path) {
+	let segments = path.split('/')
+	if(link.innerText != segments.slice(-1)[0]) {
+	 	link.innerText = segments.slice(-1)[0]
+	}
+	link.style.backgroundPosition = ((segments.length - 1) * 20 + 10) + 'px 50%'
+	if(item.classList.contains('filelist-widget'))
+		item.classList.remove('filelist-widget')
+	link.style.paddingLeft = (segments.length * 20 + 20) + 'px'
+	if(isDirectory(path)) {
+		if(!item.classList.contains('folder'))
+			item.classList.add('folder')
+		if(!ACE.filescollapsed[path] && !item.classList.contains('open'))
+			item.classList.add('open')
+		if(ACE.filescollapsed[path] && item.classList.contains('open'))
+			item.classList.remove('open')
+		if(item.classList.contains('file'))
+			item.classList.remove('file')
+	} else {
+		if(item.className != 'file')
+			item.className = 'file'
+		if(item.classList.contains('folder'))
+			item.classList.remove('folder')
+	}
+
+}
+
+
+function renderWidget(link, item, path) {
+	if(link.innerText != path) { // otherwise annoying flash in element page
+		link.innerText = path
+	}
+	link.style.paddingLeft = '10px'
+	if(!item.classList.contains('filelist-widget'))
+		item.classList.add('filelist-widget')
+	if(!ACE.filescollapsed[path] && !item.classList.contains('open'))
+		item.classList.add('open')
+	if(ACE.filescollapsed[path] && item.classList.contains('open'))
+		item.classList.remove('open')
+	if(item.classList.contains('folder'))
+		item.classList.remove('folder')
+	if(item.classList.contains('file'))
+		item.classList.remove('file')
+
+}
+
+
+function renderFunc(link, item, path) {
+	if(link.innerText != path) { // otherwise annoying flash in element page
+		link.style.paddingLeft = '10px'
+		link.style.backgroundPosition = '10px 50%'
+		link.innerText = path
+	}
+	item.className = ''
+}
+
+
+function renderCookie(link, item, path) {
+	if(link.innerText != path) { // otherwise annoying flash in element page
+		link.style.paddingLeft = '10px'
+		link.style.backgroundPosition = '10px 50%'
+		link.innerText = path
+	}
+	item.className = ''
+}
+
+
+function renderThread(link, item, path) {
+	if(link.innerText != path) { // otherwise annoying flash in element page
+		link.style.paddingLeft = '10px'
+		link.style.backgroundPosition = '10px 50%'
+		link.innerText = path
+	}
+	item.className = ''
+}
+
+
 
 
 // DO THE SAME KIND OF VIRTUAL RENDERING TECHNIQUE ACE USES ON CODE,
@@ -285,6 +409,9 @@ function renderFilelist() {
 		ACE.fileList.scrollTop / ace.renderer.lineHeight)
 	let displayCount = 0
 
+	let renderFunction = getWidgetBeforeRow(startLine)[2]
+	let widget
+
 	for(
 		let j = startLine; // small efficiency gain?
 		displayCount < virtualLineCount && j < ACE.fileslist.length;
@@ -314,41 +441,12 @@ function renderFilelist() {
 		// TODO: SHOW SEPERATED DIRECTORIES IN ONE LINE LIKE VISUAL STUDIO CODE DOES
 		//   GITHUB ALSO DOES IT FOR FOLDERS THAT ONLY HAVE 1 PATH
 		if(ACE.filesmoved) {
-			let segments = ACE.fileslist[j].split('/')
 			link.setAttribute('aria-id', j) // WTF WAS THIS CRAP???
-			link.innerText = segments.slice(-1)[0]
-			link.style.backgroundPosition = ((segments.length - 1) * 20 + 10) + 'px 50%'
-			if(getWidgetAtRow(j)) {
-				link.style.paddingLeft = '10px'
-				if(!item.classList.contains('filelist-widget'))
-					item.classList.add('filelist-widget')
-				if(!ACE.filescollapsed[ACE.fileslist[j]] && !item.classList.contains('open'))
-					item.classList.add('open')
-				if(ACE.filescollapsed[ACE.fileslist[j]] && item.classList.contains('open'))
-					item.classList.remove('open')
-				if(item.classList.contains('folder'))
-					item.classList.remove('folder')
-				if(item.classList.contains('file'))
-					item.classList.remove('file')
+			if((widget = getWidgetAtRow(j))) {
+				renderFunction = widget[2]
+				renderWidget(link, item, ACE.fileslist[j])
 			} else {
-				if(item.classList.contains('filelist-widget'))
-					item.classList.remove('filelist-widget')
-				link.style.paddingLeft = (segments.length * 20 + 20) + 'px'
-				if(isDirectory(ACE.fileslist[j])) {
-					if(!item.classList.contains('folder'))
-						item.classList.add('folder')
-					if(!ACE.filescollapsed[ACE.fileslist[j]] && !item.classList.contains('open'))
-						item.classList.add('open')
-					if(ACE.filescollapsed[ACE.fileslist[j]] && item.classList.contains('open'))
-						item.classList.remove('open')
-					if(item.classList.contains('file'))
-						item.classList.remove('file')
-				} else {
-					if(item.className != 'file')
-						item.className = 'file'
-					if(item.classList.contains('folder'))
-						item.classList.remove('folder')
-				}
+				renderFunction(link, item, ACE.fileslist[j])
 			}
 			item.style.display = 'block'
 		}
