@@ -89,7 +89,7 @@ async function _doAccessor(member, runContext, senderId) {
 			accessor: memberName
 		})
 	}
-	if (typeof response.fail != 'undefined') {
+	if (!response || typeof response.fail != 'undefined') {
 		throw new Error('Member access error: ' + memberName)
 	}
 
@@ -191,6 +191,7 @@ function _Promise(runContext, resolve) {
 
 }
 
+
 async function createRunContext(runContext, env) {
 	Object.assign(runContext, {
 		timers: {},
@@ -204,7 +205,7 @@ async function createRunContext(runContext, env) {
 		async: false,
 		ended: false,
 		paused: false,
-		continue: false, // TODO: implement continuations / long jumps for debugger
+		continue: false,  // TODO: implement continuations / long jumps for debugger
 		// I think by pushing runStatement(AST[i]) <- i onto a stack and restoring for()?
 		// TODO: continuations, check for anonymous functions, variable/function declarations
 		// TODO: allow moving cursor to any symbol using address of symbol in AST
@@ -214,7 +215,7 @@ async function createRunContext(runContext, env) {
 }
 
 
-async function createEnvironment(runContext) {
+async function createRUNEnvironment(runContext, extras) {
 	// TODO: this is where we add Chrome security model,
 	//    this they decided "IT'S TOO DANGEROUS"
 	// A nice design was never explored.
@@ -246,33 +247,12 @@ async function createEnvironment(runContext) {
 		navigationURL: null,
 		module: WEBDRIVER_API,
 
-		// google extension-style API calls
-		chrome: {
-			tabs: {
-				get: chrome.tabs.get,
-				// GOOGLE COLLAB IS COOL AND ALL, BUT IT'S
-				//   NOT LIKE I CAN EDIT COLLAB SOURCE CODE
-				//   AND HACK MY OWN SHARED UI LIKE I CAN HERE \/
-				sendMessage: _sendMessage,
-			},
-			debugger: {
-				getTargets: chrome.debugger.getTargets,
-				sendCommand: _sendCommand,
-			},
-			windows: {
-				get: chrome.windows.get,
-				update: chrome.windows.update,
-				create: _createWindow, // snoop on navigation url
-			},
-			profiles: {
-				list: function () { return morphKey }
-			},
-		},
 		console: {
 			log: doConsole.bind(console, runContext.senderId)
 		},
-
 	}
+	Object.assign(env, extras)
+
 	if(typeof initBrowser != 'undefined') {
 		env.initBrowser = initBrowser
 	}

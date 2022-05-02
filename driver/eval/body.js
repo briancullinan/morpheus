@@ -224,7 +224,13 @@ async function runStatement(i, AST, runContext) {
 				}
 			}
 		} else
-
+		if(AST[i].type == 'ArrayExpression') {
+			let result = []
+			for(let j = 0; j < AST[i].elements.length; j++) {
+				result.push(await runStatement(0, [AST[i].elements[j]], runContext))
+			}
+			return result
+		}
 
 
 		{
@@ -277,14 +283,12 @@ async function runBody(AST, runContext) {
 }
 
 
-async function doPlay(runContext) {
+async function doPlay(runContext, extras) {
 	try {
-		let env = await createEnvironment(runContext)
+		let env = await createRUNEnvironment(runContext, extras)
 		await createRunContext(runContext, env)
 		threads[runContext.runId] = runContext
 		runContext.bubbleTime = Date.now()
-		// attach debugger
-		await attachDebugger(runContext.senderId)
 		// run code from client
 		let result = await runBody(runContext.body[0].expression.callee.body.body, runContext)
 		if(await shouldBubbleOut(runContext)) {

@@ -1,6 +1,8 @@
 
-let window = globalThis
 let oldRunTimer
+if(typeof window == 'undefined') {
+  globalThis.window = globalThis
+}
 
 // TODO: WAS GOING TO USE THIS AS A TEMPLATE FOR 
 //   BOOKMARKS2PDF. NO SCRIPTING, NO ACE, JUST BACKEND
@@ -53,6 +55,29 @@ function doMessage(request, sender, reply) {
 		script: request.script,
 		runId: request.runId,
 		senderId: sender.tab.id,
+	}, {
+		// google extension-style API calls
+		chrome: {
+			tabs: {
+				get: chrome.tabs.get,
+				// GOOGLE COLLAB IS COOL AND ALL, BUT IT'S
+				//   NOT LIKE I CAN EDIT COLLAB SOURCE CODE
+				//   AND HACK MY OWN SHARED UI LIKE I CAN HERE \/
+				sendMessage: _sendMessage,
+			},
+			debugger: {
+				getTargets: chrome.debugger.getTargets,
+				sendCommand: _sendCommand,
+			},
+			windows: {
+				get: chrome.windows.get,
+				update: chrome.windows.update,
+				create: _createWindow, // snoop on navigation url
+			},
+			profiles: {
+				list: function () { return morphKey }
+			},
+		},
 	}), 300)
 
 	// send a list of recent runs so we can reattach to other browser sessions
@@ -102,7 +127,11 @@ function pruneOldRuns() {
 }
 
 
-chrome.runtime.onMessage.addListener(doMessage)
+chrome.runtime.onMessage.addListener(function (request, sender, reply) {
+	// attach debugger
+	await attachDebugger(sender.tab.id)
+	doMessage(request, sender, reply)
+})
 
 
 function doInstall() {

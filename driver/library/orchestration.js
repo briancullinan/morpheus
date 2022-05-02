@@ -74,9 +74,10 @@ async function setWindowBounds(windowId, tabs, x, y, w, h) {
 		*/
 		let targetId = tabs[0].id
 		let targets = (await chrome.debugger.getTargets())
-			.filter(t => 
-        // TODO: fix this need for check when contexts are fixed
-        typeof t.tabId != 'undefined' && t.tabId == targetId)
+			.filter(function (t) { 
+				// TODO: fix this need for check when contexts are fixed
+				return typeof t.tabId != 'undefined' && t.tabId == targetId
+			})
 		if(targets[0] && !targets[0].attached) {
 			await attachDebugger(targetId)
 		}

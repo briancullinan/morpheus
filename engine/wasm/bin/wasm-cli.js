@@ -9,9 +9,6 @@ const path = require('path')
 const FS = require('../sys_fs.js')
 const {Sys_Mkdirp, ST_FILE} = FS
 const {
-	initEnvironment,
-	initWasm,
-	updateEnvironment,
 	initProgram,
 	initAll,
 } = require('../sys_wasm.js')

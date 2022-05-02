@@ -1,6 +1,9 @@
+
+let oldRunTimer
 if(typeof window == 'undefined') {
   globalThis.window = globalThis
 }
+
 
 // TODO:
 // DONE 2 (3?) - Make with ES interpreter, dedicated WASM
@@ -12,11 +15,28 @@ if(typeof window == 'undefined') {
 // 4 - SV_MemoryMaps() and dynamic compile
 // 2 - Sys_execv() from sys_cli.js
 
+if(typeof chrome == 'undefined') {
+	chrome = {}
+}
+if(typeof chrome.tabs == 'undefined') {
+	chrome.tabs = {
+		sendMessage: function (senderId, data) {
+			self.postMessage(data)
+		}
+	}
+}
+if(typeof chrome.debugger == 'undefined') {
+	chrome.debugger = {
+		getTargets: function () {
+			debugger
+		}
+	}
+}
+
 
 function doMessage(reply, request) {
 	let AST
 
-	debugger
 	if(!request.script && request.runId) {
 		doStatusResponse(request, reply)
 		return

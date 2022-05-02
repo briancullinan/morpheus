@@ -37,7 +37,7 @@ for(let i = 0; i < startKeys.length; i++) {
 }
 
 
-function initEnvironment(ENGINE) {
+function initWASMEnvironment(ENGINE) {
 	if(!ENV.table) {
 		const importTable = new WebAssembly.Table({ 
 			initial: 2000, 
@@ -271,7 +271,7 @@ if(typeof window != 'undefined') {
 			GL.canvas = document.getElementsByTagName('canvas')[0]
 		}
 
-		const ENGINE = initEnvironment({
+		const ENGINE = initWASMEnvironment({
 			SYS: SYS,
 			GL: GL,
 			EMGL: EMGL,
@@ -289,7 +289,7 @@ if(typeof window != 'undefined') {
 		.then(function () {
 			Sys_fork()
 			let startArgs = [
-				'+set', 'dedicated', '1',
+				'+set', 'dedicated', '1'
 			].concat(getQueryCommands())
 			Sys_exec(stringToAddress('quake3e.ded.wasm'), stringsToMemory(startArgs))
 		})
@@ -299,13 +299,12 @@ if(typeof window != 'undefined') {
 } else 
 if (typeof module != 'undefined') {
 	module.exports = {
-		initEnvironment,
+		initWASMEnvironment,
 		initWasm,
 		updateEnvironment,
 		initProgram,
 		initAll,
 		initFilesystem,
-		initWorker,
 	}
 
 }

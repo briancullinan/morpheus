@@ -153,7 +153,8 @@ function Sys_exec(program, args) {
   if(SYS.forked) {
     SYS.forked = false
     SYS.worker.postMessage({
-      script: 'initAll(' + JSON.stringify([ programStr ].concat(startArgs)) + ')'
+      script: 'initAll(' + JSON.stringify([ programStr ].concat(startArgs)) 
+          + ', {})'
     })
   } else {
     initAll([ programStr ].concat(startArgs), {
@@ -281,7 +282,9 @@ function Sys_fork() {
 	const blob = new Blob([workerData], {type: 'application/javascript'})
 	SYS.worker = new Worker(URL.createObjectURL(blob))
 	// TODO something with signals API
-	SYS.worker.addEventListener('message', onMessage.bind(SYS.worker, doWorker))
+	SYS.worker.addEventListener('message', function (event) {
+    onMessage(doWorker, event)
+  })
 
 }
 
