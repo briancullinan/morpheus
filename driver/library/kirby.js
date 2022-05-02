@@ -8,3 +8,6 @@
 
 // TODO: RUN A LIBRARY SCRIPT IN THE CLOUD, PUT IT THERE USING MODERN CI
 
+// LOL, PACMAN play on package manager, but actually looks like pacman as
+//   it's installing, you can play pac-man
+

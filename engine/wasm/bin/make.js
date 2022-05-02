@@ -27,7 +27,7 @@ window.preFS['${path}']='${file2Base64(resource)}';
 
 function normalReplace(indexFile, cssFile, scriptFile, skinFile, wasmFile
    // masterfile really?
-   , htmlBody) {
+   , htmlBody, workerFile) {
 	const {readFileSync: rfs, writeFileSync: wfs} = require('fs');
   let index = rfs(indexFile).toString('utf-8')
   let replacements = [
@@ -39,6 +39,8 @@ function normalReplace(indexFile, cssFile, scriptFile, skinFile, wasmFile
       + rfs(skinFile, 'base64')+ '" />'],
     [/<\/html>/, '<script async type="application/javascript">' 
       + formatForVFS(wasmFile, path.basename(wasmFile)) + '</script></html>'],
+    [/<\/html>/, '<script async type="application/javascript">' 
+      + formatForVFS(workerFile, path.basename(workerFile)) + '</script></html>'],
     [/quake3e\.wasm/ig, path.basename(wasmFile)],
   ]
   for(let i = 0; i < replacements.length; i++) {
@@ -57,7 +59,7 @@ function normalReplace(indexFile, cssFile, scriptFile, skinFile, wasmFile
 
 }
 
-function normalEmbed(indexFile, directory, pathMatch, pathReplace) {
+function normalEmbedAll(indexFile, directory, pathMatch, pathReplace) {
 	const {
     readFileSync: rfs, 
     writeFileSync: wfs,
@@ -82,9 +84,18 @@ function normalEmbed(indexFile, directory, pathMatch, pathReplace) {
   wfs(indexFile, index)
 }
 
+
+function normalBase64(writeFile, embedFile, pathInVFS) {
+	const {
+    writeFileSync: wfs,
+  } = require('fs')
+  wfs(writeFile, formatForVFS(embedFile, pathInVFS))
+}
+
+
 module.exports = {
   formatForVFS,
   normalReplace,
-  normalEmbed,
-
+  normalEmbedAll,
+  normalBase64
 }

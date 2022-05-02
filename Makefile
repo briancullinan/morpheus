@@ -247,21 +247,21 @@ $(BUILD_DIR)/sdl/%.o: $(SDL_SOURCE)/src/%.c
 	$(Q)$(CC) -o $@ $(SDL_CFLAGS) -c $<
 
 # these will be embedded as virtual filesystem files
-LIBRARY_FILES  := $(wildcard driver/library/*.js)
+LIBRARY_FILES    := $(wildcard driver/library/*.js)
 
 # these will be included in the page
-FRONTEND_JS    := \
+FRONTEND_JS      :=                       \
 	$(filter-out %-plugin.js,$(wildcard driver/repl/frontend-*.js)) \
-	driver/utils/jsencrypt.js \
-	driver/utils/crypt.js \
-	driver/utils/keymaster.js \
-	$(wildcard engine/wasm/http/ace/*.js) \
-	engine/wasm/http/nipplejs.js \
-	$(wildcard engine/wasm/sys_*.js)
-FRONTEND_EMBEDS:= \
-	$(HTTP_SOURCE)/index.html \
-	$(HTTP_SOURCE)/index.css \
-	engine/renderer2/bigchars.png \
+	driver/utils/jsencrypt.js               \
+	driver/utils/crypt.js                   \
+	driver/utils/keymaster.js               \
+	$(wildcard engine/wasm/http/ace/*.js)   \
+	engine/wasm/http/nipplejs.js            \
+	$(filter-out %/sys_worker.js,$(wildcard engine/wasm/sys_*.js))
+FRONTEND_EMBEDS  :=                       \
+	$(HTTP_SOURCE)/index.html               \
+	$(HTTP_SOURCE)/index.css                \
+	engine/renderer2/bigchars.png 
 
 INDEX_FILES    := morph.wasm $(FRONTEND_EMBEDS) $(FRONTEND_JS)
 INDEX_OBJS     := $(BUILD_DIR)/morph.wasm $(BUILD_DIR)/morph.js
@@ -282,9 +282,12 @@ morph.html: $(INDEX_FILES) $(INDEX_OBJS)
 	node -e "require('./engine/wasm/bin/make').normalReplace( \
 		'$(BUILD_DIR)/morph.html', '$(HTTP_SOURCE)/index.css', \
 		'$(BUILD_DIR)/morph.js', 'engine/renderer2/bigchars.png', \
-		'$(BUILD_DIR)/morph.wasm', 'driver/landing/ide.html')"
-	node -e "require('./engine/wasm/bin/make').normalEmbed( \
+		'$(BUILD_DIR)/morph.wasm', 'driver/landing/ide.html', \
+		'$(BUILD_DIR)/sys_worker.js' )"
+	node -e "require('./engine/wasm/bin/make').normalEmbedAll( \
 		'$(BUILD_DIR)/morph.html', 'driver/library', 'driver/', 'lobby/')"
+#	node -e "require('./engine/wasm/bin/make').normalEmbedAll( \
+#		'$(BUILD_DIR)/morph.html', 'driver/cerebro', 'driver/', 'lobby/')"
 
 multigame: # q3asm.wasm q3lcc.wasm ui.qvm cgame.qvm qagame.qvm
 	@:
@@ -353,11 +356,32 @@ morph.ded.wasm: $(BUILD_DIRS) $(DED_FILES) $(DED_OBJS)
 morph.ded.opt: morph.ded.wasm $(BUILD_DIR)/morph.ded.wasm
 	$(call DO_ENGINE_OPT,$(BUILD_DIR)/morph.ded.opt,$(BUILD_DIR)/morph.ded.wasm)
 
-sys_worker.js: dedicated 
-	@:
+# OKAY THIS IS BASICALLY THE PART THAT COULD BENEFIT IF MAKEFILE RAN IN THE BROWSER
+# TODO: I COULD COMPRESS ALL THE CODE FILES IN WINDOW.PREFS, MAKE INDEX.HTML ON 
+#   LOAD JUST LIKE BUSYBOX SELF EXTRACTING IMAGE. THEN WHEN I MAKE THE SYS_WORKER.JS
+#   I CAN USE A BLOB, OR CREATE SOME GENERIC IDBFS WORKER FOR BOTH SERVICE WORKER AND
+#   BACKGROUND WORKER THAT JUST LOADS WHATEVER LATEST .WASM DOWNLOADED FILE.
+
+WORKER_FILES  :=                                        \
+	$(wildcard driver/eval/*.js)                          \
+	$(wildcard driver/repl/backend*.js)                   \
+	driver/utils/acorn.js driver/utils/acorn-loose.js     \
+	driver/utils/crypt.js driver/utils/jsencrypt.js       \
+	$(BUILD_DIR)/morph.ded.js \
+	$(WASM_SOURCE)/sys_worker.js
+
+sys_worker.js: dedicated $(WORKER_FILES)
+	$(Q)cat $(WORKER_FILES) > $(BUILD_DIR)/sys_worker.js
+
+$(BUILD_DIR)/morph.ded.js: $(BUILD_DIR)/morph.ded.wasm
+	node -e "require('./engine/wasm/bin/make').normalBase64( \
+		'$(BUILD_DIR)/morph.ded.js', '$(BUILD_DIR)/morph.ded.wasm', 'morph.wasm')"
+
 
 dedicated: morph.ded.wasm morph.ded.opt # q3map2.wasm for MemoryMaps
 	@: 
+
+
 
 $(BUILD_DIR)/ded/%.o: $(ENGINE_SOURCE)/botlib/%.c
 	$(echo_cmd) "BOTLIB_CC $<"
@@ -374,8 +398,6 @@ $(BUILD_DIR)/ded/%.o: $(ENGINE_SOURCE)/server/%.c
 $(BUILD_DIR)/ded/%.o: $(ENGINE_SOURCE)/wasm/%.c
 	$(echo_cmd) "WASM_CC $<"
 	$(Q)$(CC) -o $@ -DDEDICATED=1 $(ENGINE_CFLAGS) -c $<
-
-
 
 
 

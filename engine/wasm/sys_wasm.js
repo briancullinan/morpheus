@@ -201,6 +201,23 @@ function initEngine(program) {
 }
 
 
+function initWorker() {
+
+	if(typeof window.preFS == 'undefined'
+		|| typeof window.preFS['sys_worker.js'] == 'undefined'
+	//	|| !document.body.classList.contains('paused')
+	) {
+		return
+	}
+	const workerData = Array.from(FS.virtual['sys_worker.js'].contents)
+		.map(function (c) { return String.fromCharCode(c) })
+		.join('')
+	const blob = new Blob([workerData], {type: 'application/javascript'})
+	SYS.worker = new Worker(URL.createObjectURL(blob))
+
+}
+
+
 function initBrowser() {
 	const viewport = document.getElementById('viewport-frame')
 	GL.canvas = document.getElementsByTagName('canvas')[0]
@@ -247,6 +264,8 @@ function initBrowser() {
 			})
 	}
 
+
+
 	isStreaming = false
 	return initFilesystem()
 		.then(function () {
@@ -264,6 +283,7 @@ function initBrowser() {
 			return updateEnvironment(program, ENGINE)
 		})
 		.then(initEngine)
+		.then(initWorker)
 
 }
 
@@ -277,6 +297,7 @@ if(typeof window != 'undefined') {
 		if(typeof Module == 'undefined') {
 			initBrowser()
 		}
+
 	}, false)
 
 } else if (typeof module != 'undefined') {
