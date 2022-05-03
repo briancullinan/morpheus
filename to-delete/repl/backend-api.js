@@ -47,94 +47,6 @@ function createLibrary(response, member, runContext) {
 
 
 
-async function _doAccessor(member, runContext, senderId) {
-	if(!member.object.name || !member.property.name
-	//	|| member.object.name != 'window' /* no safety? */
-	) {
-		throw new Error('MemberExpression: Not implemented!')
-	}
-	// TODO: call tree? multiple level? 
-	let memberName = member.object.name + '.' + member.property.name
-	let expression
-	switch(memberName) {
-		// safe to share?
-		case 'window.screenLeft':
-		case 'window.screenTop':
-		case 'window.outerHeight':
-		case 'window.outerWidth':
-			expression = memberName
-			break
-		case 'window.location':
-			expression = '(\'data:application/json;utf-8,\'+JSON.stringify(window.location))'
-			break
-		case 'document.cookie':
-			expression = 'document.cookie'
-			break
-		case 'window.localStorage':
-			expression = 'Array(window.localStorage.length).fill().map(function (i) { return window.localStorage.key(i) })'
-			break
-		default:
-			
-	}
-	let response
-	// TODO: attach encrypter to every page for forms transmissions
-	if(expression) {
-		response = await chrome.debugger.sendCommand({
-			tabId: senderId
-		}, 'Runtime.evaluate', {
-			expression: expression
-		})
-	} else {
-		response = await chrome.tabs.sendMessage(senderId, {
-			accessor: memberName
-		})
-	}
-	if (!response || typeof response.fail != 'undefined') {
-		throw new Error('Member access error: ' + memberName)
-	}
-
-	if(memberName == 'window.localStorage') {
-		debugger
-		_makeLocalStorage()
-	} else
-	if (typeof response.library != 'undefined') {
-		return createLibrary(response, member, runContext)
-	} else 
-	if (typeof response.result.object != 'undefined') {
-		// TODO: add an _accessor to Objects?
-		debugger
-	} else 
-	if (typeof response.result.value != 'undefined') {
-		if(response.result.type == 'string'
-			&& response.result.value.startsWith('data:')) {
-			let isJSON = response.result.value.split(';')
-			if(isJSON.length > 1 && isJSON[0].endsWith('application/json')) {
-				let firstLine = isJSON[1].split(',').slice(1).join(',')
-				return JSON.parse(firstLine + isJSON.slice(2).join(';'))
-			}
-		}
-		return response.result.value
-	} else {
-		return response.result
-	}
-}
-
-
-// this _accessor template is getting pretty big, TODO: combine with above but differentiate eval versus ask
-function _makeWindowAccessor(result, runContext) {
-	if(typeof result != 'object' || !result) {
-		return result
-	}
-	result._accessor = async function (i, member, AST, ctx, callback) {
-		return await _doAccessor({
-			// polyfill to window name since we know it's a window type
-			object: { name: 'window' },
-			property: { name: member.property.name },
-		}, ctx, ctx.localVariables.tabId)
-	}
-	return result
-}
-
 
 // WHY DO THIS? Because setTimeout bubbles up, we don't want run context to continue
 // THIS WILL HELP WHEN IMPLEMENTING @Before, @After, @Done to see if end action
@@ -191,28 +103,6 @@ function _Promise(runContext, resolve) {
 
 }
 
-
-async function createRunContext(runContext, env) {
-	Object.assign(runContext, {
-		timers: {},
-		bubbleStack: [],
-		bubbleLine: -1,
-		bubbleFile: '<eval>',
-		bubbleColumn: 0,
-		localVariables: env,
-		localFunctions: {},
-		asyncRunners: 0,
-		async: false,
-		ended: false,
-		paused: false,
-		continue: false,  // TODO: implement continuations / long jumps for debugger
-		// I think by pushing runStatement(AST[i]) <- i onto a stack and restoring for()?
-		// TODO: continuations, check for anonymous functions, variable/function declarations
-		// TODO: allow moving cursor to any symbol using address of symbol in AST
-		// OR: WAIT IN STILLRUNNING() FOR UNPAUSE
-	})
-	return runContext
-}
 
 
 async function createRUNEnvironment(runContext, extras) {

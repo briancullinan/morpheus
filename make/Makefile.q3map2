@@ -1,0 +1,47 @@
+
+
+Q3MAP_VERSION    := 2.5.17n
+RADIANT_VERSION  := 1.5.0n
+RADIANT_MAJOR_VERSION:=5
+RADIANT_MINOR_VERSION:=0
+Q3MAP2_CFLAGS = \
+	--target=wasm32-unknown-wasi \
+	-DPOSIX  -std=c++17 -fno-exceptions \
+	-D_XOPEN_SOURCE=700 -D__EMSCRIPTEN__=1 \
+	-D__WASM__=1 -D__wasi__=1 -D__wasm32__=1 \
+	-D_WASI_EMULATED_SIGNAL -D_WASI_EMULATED_MMAN=1 \
+	-DRADIANT_VERSION="\"$(RADIANT_VERSION)\"" \
+	-DQ3MAP_VERSION="\"$(Q3MAP_VERSION)\"" \
+	-DRADIANT_MAJOR_VERSION="\"$(RADIANT_MAJOR_VERSION)\"" \
+	-DRADIANT_MINOR_VERSION="\"$(RADIANT_MINOR_VERSION)\"" \
+	-fvisibility=hidden \
+	--sysroot libs/wasi-sysroot \
+	-I$(Q3MAP2_SOURCE) \
+	-I$(Q3MAP2_SOURCE)/../include \
+	-I$(Q3MAP2_SOURCE)/../common \
+	$(WASI_INCLUDES)
+
+Q3MAP2_LDFLAGS = $(WASI_LDFLAGS) \
+	$(WASI_SYSROOT)/libc++.a $(WASI_SYSROOT)/libc++abi.a 
+
+
+
+define DO_CLI_LD
+	$(echo_cmd) "WASM-LD $1"
+	$(Q)$(CXX) -o $(BUILD_DIR)/$1 $2 $(Q3MAP2_LDFLAGS) 
+endef
+
+define DO_Q3MAP2_CXX
+	$(echo_cmd) "Q3MAP2_CC $<"
+	$(Q)$(CXX) -o $@ $(Q3MAP2_CFLAGS) -c $<
+endef
+
+Q3MAP2_FILES = $(wildcard $(Q3MAP2_SOURCE)/*.cpp)
+Q3MAP2_OBJS  = $(subst $(Q3MAP2_SOURCE)/,$(BUILD_DIR)/q3map2/,$(Q3MAP2_FILES:.cpp=.o))
+
+q3map2.wasm: $(BUILD_DIRS) $(Q3MAP2_FILES) $(Q3MAP2_OBJS)
+	$(call DO_CLI_LD,$@,$(Q3MAP2_OBJS))
+
+$(BUILD_DIR)/q3map2/%.o: $(Q3MAP2_SOURCE)/%.cpp
+	$(DO_Q3MAP2_CXX)
+

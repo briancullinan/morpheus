@@ -1,10 +1,5 @@
 
 
-let threads = {
-
-}
-
-
 // log an object.property to the console
 function doProperty(value, noRecurse) {
 	// TODO: detect runCallStatements symbols on function.AST and call code generation worker
@@ -40,44 +35,6 @@ function doProperty(value, noRecurse) {
 	}
 }
 
-
-
-
-function doConsole(tabId, ...args) {
-	console.log(args)
-	let consoleStrings = args.map(a => doProperty(a)).join ('\n')
-	chrome.tabs.sendMessage(tabId, { console: consoleStrings }, function(response) {
-
-	});
-}
-
-
-
-async function doStatus(runContext, doSleep) {
-	try {
-		chrome.tabs.sendMessage(runContext.senderId, { 
-			status: _encodeRuns(),
-			// always subtract 1 because code is wrapping in a 1-line function above
-			line: runContext.bubbleLine - 1,
-			stack: runContext.bubbleStack,
-			file: runContext.bubbleFile,
-		}, function(response) {
-	
-		});
-		console.log(runContext.bubbleLine)
-		// don't sleep on library functions
-		if(doSleep && runContext.bubbleFile == '<eval>') {
-			console.log('DELAYING! ' + runContext.bubbleLine)
-			await new Promise(resolve => setTimeout(resolve, DEFAULT_SHORT_DELAY))
-		}
-	} catch (e) {
-		if(e.message.includes('context invalidated')) {
-
-		} else {
-			debugger
-		}
-	}
-}
 
 
 function doAssert() {
@@ -144,39 +101,6 @@ function doAssignments(AST, runContext) {
 	return assignments
 }
 
-
-function doError(err, runContext) {
-	try {
-		runContext.ended = true
-		console.log('line: ' + (runContext.bubbleLine - 1), err)
-		chrome.tabs.sendMessage(runContext.senderId, { 
-			error: err.message + '',
-			// always subtract 1 because code is wrapping in a 1-line function above
-			line: runContext.bubbleLine - 1,
-			file: runContext.bubbleFile,
-			stack: runContext.bubbleStack,
-			// LOOK AT THIS FANCY SHIT GOOGLE CHROME DEBUGGER!
-			//   MAKE A LIST OF ASSIGNMENTS NEARBY AND SEND THEIR CURRENT VALUE TO THE FRONTEND
-			//   TO SAVE THE DEVELOPER TIME RERUNNING THEIR WHOLE PROGRAM JUST TO SET UP A BREAK
-			//   POINT, JUST TO CHECK THE VALUE OF A LOOSELY TYPED VARIABLE. SEE THAT? LOOSE
-			//   TYPING WORKS JUST FINE IF YOUR TOOLS SUPPORT YOU INSTEAD OF WORKING AGAINST YOU
-			// SEE, IT'S A CATCH22, WHY WOULD I SPIN MY WHEELS FIXING CHROME DEBUGGER'S SOURCE CODE
-			//   WHEN THE EXPECTATION IS THAT IF I DON'T LIKE IT, I CAN FIX IT MYSELF. THAT'S WHY
-			//   IT SUCKS STILL. THE WHOLE "OPEN SOURCE DOESN'T OWE YOU ANYTHING", IS A SELF 
-			//   DEFEATING PRINCINPAL, LIKE IF ALL THE AMERICAN FARMERS DECIDED TO LET PEOPLE STARVE
-			//                                         (HUNGRY? FIX THE TRACTOR YOURSELF)
-			//   THEY DON'T OWE YOU ANYTHING, NOT EVEN LIFE SUPPORT. FUCK OFF FOSS, FOSS OWES ME
-			//   EVERYTHING BECAUSE I'LL BE THE ONE STUCK CLEANING THIS SHIT CODE UP.
-			//   TECHNICAL DEBT APPLIES TO PUBLISHING INCORRECT CODE ALSO. CODE IS LIKE LITTER.
-		}, function(response) {
-	
-		});
-	} catch (e) {
-		if(!e.message.includes('context invalidated')) {
-			throw e
-		}
-	}
-}
 
 
 

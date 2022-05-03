@@ -56,7 +56,7 @@ async function runStatement(i, AST, runContext) {
 				//   but doStatus() also does @Delay()
 				let doSleep = runContext.bubbleFile == '<eval>'
 						&& (!AST[i].callee || AST[i].callee.name != 'sleep')
-				await doStatus(runContext, doSleep)
+				await doStatus(doSleep)
 			}
 		}
 
@@ -189,10 +189,10 @@ async function runStatement(i, AST, runContext) {
 			//   SKYBOXES ON A CLOUD GPU FROM OTHER WORLDS/GAMES?
 			runContext.bubbleAST = AST[i]
 			runContext.paused = true
-			chrome.tabs.sendMessage(runContext.senderId, { 
+			sendMessage({ 
 				paused: '.', 
 				line: runContext.bubbleLine - 1
-			}, function () { console.log('debugging') })
+			})
 			return
 		} else
 
@@ -283,35 +283,6 @@ async function runBody(AST, runContext) {
 }
 
 
-async function doPlay(runContext, extras) {
-	try {
-		let env = await createRUNEnvironment(runContext, extras)
-		await createRunContext(runContext, env)
-		threads[runContext.runId] = runContext
-		runContext.bubbleTime = Date.now()
-		// run code from client
-		let result = await runBody(runContext.body[0].expression.callee.body.body, runContext)
-		if(await shouldBubbleOut(runContext)) {
-			// TODO: send async status?
-		} else if (runContext.async) {
-			chrome.tabs.sendMessage(runContext.senderId, { 
-				async: _encodeRuns()
-			}, function(response) {
-
-			});
-		} else {
-			chrome.tabs.sendMessage(runContext.senderId, {
-				result: result + ''
-			}, function(response) {
-
-			});
-		}
-					
-	} catch (e) {
-		doError(e, runContext)
-	}
-
-}
 
 
 

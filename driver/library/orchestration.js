@@ -22,30 +22,20 @@ async function newWindow() {
   return newWin
 }
 
-async function navigateTo(url, wait) {
-	let targets = (await chrome.debugger.getTargets())
-  // weird this doesn't work with promises
-	//	.filter(t =>
-  //    && t.tabId == tabId)
-  for(let i = 0; i < targets.length; i++) {
-    if(typeof targets[i].tabId != 'undefined'
-      && targets[i].tabId == tabId
-    ) {
-      if(!targets[i].attached) {
-        await attachDebugger(tabId)
-      }
-      break
-    }
-  }
+
+function navigateTo(url, wait) {
   // hint to the content filter where we are going
 	navigationURL = url
-	let dom = await chrome.debugger.sendCommand('Runtime.evaluate', {
-		expression: 'window.location = "' + url + '";'
-	})
+	window.location = url
 	// wait for network to settle, or duck out
   if(typeof wait == 'undefined' || wait !== false) {
-    await networkSettled()
+		networkSettled()
   }
+}
+
+// TODO
+function sendCommand() {
+	// copy function body to Runtime.evaluate
 }
 
 

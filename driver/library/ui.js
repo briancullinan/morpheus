@@ -21,7 +21,7 @@ async function doDialog(dialog) {
 	let response
 	do {
     //try {
-      response = await chrome.tabs.sendMessage(dialog)
+      response = await sendMessage(dialog)
     //} catch (e) {
     //  if(e.message.includes(''))
     //}
@@ -37,53 +37,55 @@ async function doDialog(dialog) {
 }
 
 async function doPageLogin(domain) {
-  // LOL! WTF IS THAT? PIE IN SKY!
-  let morphKey = chrome.profiles.list() 
-  let loginDialog = { 
+  return await doDialog({ 
     accessor: '_enterLogin',
     title: 'Enter password: ' + domain,
-  }
-  let loginForm = {}
-  for(let i = 0; i < morphKey.length; i++) {
-    loginForm[morphKey[i]] = 'radio'
-  }
-  loginForm['user'] = 'text'
-  loginForm['pass'] = 'pass'
-  loginForm['Save Forever'] = 'submit'
-  loginForm['Save Session'] = 'submit'
-  loginDialog.form = loginForm
-  return await doDialog(loginDialog)
+    // LOL! WTF IS THAT? PIE IN SKY! LOVE DEPENDENCY INJECTION.
+    profiles: chrome.profiles.list() 
+  })
 }
 
 async function doSystemLogin() {
-  // LOL! WTF IS THAT? PIE IN SKY!
-  let morphKey = chrome.profiles.list() 
-  let loginDialog = { 
+  return await doDialog({ 
     accessor: '_enterLogin',
     title: 'Enter a system password.',
-  }
-  let loginForm = {}
-  for(let i = 0; i < morphKey.length; i++) {
-    loginForm[morphKey[i]] = 'radio'
-  }
-  loginForm['user'] = 'text'
-  loginForm['pass'] = 'pass'
-  loginForm['Save Forever'] = 'submit'
-  loginForm['Save Session'] = 'submit'
-  loginDialog.form = loginForm
-  return await doDialog(loginDialog)
+    profiles: chrome.profiles.list() 
+  })
 }
 
 
 async function doKeyDialog() {
-  let keyCollectDialog = { 
+  return await doDialog({
     accessor: '_morpheusKey',
     dragDrop: true,
-    text: 'Drop a PEM private/public key pair here.\n'
-    + 'This will encrypt any client-stored data,\n'
-    + 'So it\'s extra private.\n'
-    + 'openssl genrsa -des3 -out private.pem 2048\n'
-    + 'openssl rsa -in private.pem -outform PEM -pubout -out public.pem\n'
-  }
-  return await doDialog(keyCollectDialog)
+  })
 }
+
+
+function doDialog(request, reply) {
+  let template = Array.from(FS.virtual['library/interactions/dialogs.html']
+    .contents).map(function (c) { return String.fromCharCode(c) }).join('')
+  let dom = parseDocument(template)
+  let dialog = dom.getElementsById(request.accessor)
+  if(!dialog) {
+    return
+  }
+  if(request.profiles) { // TODO: templates? Mustache?
+
+  }
+	dialog.setAttribute('aria-id', request.responseId)
+  request.action = function () {
+    // SINK!
+    let formResults = collectForm(dialog)
+    let encrypted = temporarySessionEncryptor(JSON.stringify(formResults))
+    hideDialog(dialog)
+    return reply({
+      responseId: responseId,
+      result: { type: 'string', value: encrypted }
+    })
+  }
+  showDialog(dialog, request)
+  return dialog
+}
+
+

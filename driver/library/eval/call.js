@@ -237,6 +237,8 @@ async function runCall(AST, runContext) {
     throw new Error('Call stack exceeded!')
   }
 
+  runContext.localVariables.arguments = params
+
   try {
     let result;
     if(AST.type == 'NewExpression') {

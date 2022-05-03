@@ -1,0 +1,115 @@
+
+define DO_ENGINE_LD
+	$(echo_cmd) "WASM-LD $1"
+	$(Q)$(CC) -o $(BUILD_DIR)/$1 $2 $(CLIENT_LDFLAGS)
+endef
+
+define DO_SAFE_MOVE
+	-$(Q)mv $2 $2.bak 2> /dev/null
+	$(Q)mv $1 $2 2> /dev/null
+	-$(Q)rm $2.bak 2> /dev/null
+endef
+
+define DO_ENGINE_OPT
+	$(echo_cmd) "OPT_CC $2"
+	$(Q)wasm-opt -Os --no-validation -o $1 $2
+	$(call DO_SAFE_MOVE,$1,$2)
+endef
+
+RENDGLSL_OBJS  := $(wildcard engine/renderer2/glsl/*.glsl)
+ENGINE_SLIM    := sv_init.c sv_main.c sv_bot.c sv_game.c
+ENGINE_FILES   := $(ENGINE_SOURCE)/botlib/be_interface.c \
+	$(wildcard $(ENGINE_SOURCE)/botlib/l_*.c) \
+	$(wildcard $(ENGINE_SOURCE)/client/*.c) \
+	$(wildcard $(ENGINE_SOURCE)/qcommon/*.c) \
+	$(wildcard $(ENGINE_SOURCE)/renderer2/*.c) \
+	$(addprefix $(ENGINE_SOURCE)/server/,$(ENGINE_SLIM)) \
+	$(wildcard $(ENGINE_SOURCE)/wasm/*.c) 
+ENGINE_OBJS    := \
+	$(addprefix $(BUILD_DIR)/engine/,$(notdir $(ENGINE_FILES:.c=.o))) \
+	$(addprefix $(BUILD_DIR)/engine/glsl/,$(notdir $(RENDGLSL_OBJS:.glsl=.o)))
+
+SDL_NEEDED     := \
+	SDL.o SDL_assert.o SDL_error.o  SDL_dataqueue.o  SDL_hints.o \
+	audio/SDL_audio.o audio/SDL_mixer.o audio/emscripten/SDL_emscriptenaudio.o \
+	audio/SDL_audiotypecvt.o audio/SDL_audiocvt.o \
+	atomic/SDL_atomic.o events/SDL_events.o \
+	atomic/SDL_spinlock.o thread/generic/SDL_sysmutex.o \
+	thread/SDL_thread.o timer/unix/SDL_systimer.o \
+	thread/generic/SDL_syssem.o thread/generic/SDL_systls.o \
+	thread/generic/SDL_systhread.o 
+SDL_OBJS       := $(addprefix $(BUILD_DIR)/sdl/,$(SDL_NEEDED))
+
+morph.wasm: $(BUILD_DIRS) $(ENGINE_FILES) $(ENGINE_OBJS) $(SDL_OBJS)
+	$(call DO_ENGINE_LD,$@,$(ENGINE_OBJS) $(SDL_OBJS))
+
+morph.opt: morph.wasm $(BUILD_DIR)/morph.wasm
+	$(call DO_ENGINE_OPT,$(BUILD_DIR)/morph.opt,$(BUILD_DIR)/morph.wasm)
+
+ENGINE_INCLUDES:= \
+	-Igames/lobby/q3_ui \
+	-I$(SDL_SOURCE)/include \
+	-Iengine/wasm
+
+ENGINE_CFLAGS  := $(BASE_CFLAGS) \
+	-std=gnu11          -DBUILD_SLIM_CLIENT=1 \
+	-DGL_GLEXT_PROTOTYPES=1 -DGL_ARB_ES2_compatibility=1 \
+	-DGL_EXT_direct_state_access=1 -DUSE_Q3KEY=1 \
+	-DBUILD_MORPHEUS=1  -DUSE_RECENT_EVENTS=1 \
+	-DUSE_MD5=1         -DUSE_VULKAN=0 \
+	-DUSE_SDL=0         -DNO_VM_COMPILED=1 \
+	-DUSE_ABS_MOUSE=1   -DUSE_LAZY_LOAD=1 \
+	-DUSE_LAZY_MEMORY=1 -DUSE_MASTER_LAN=1 \
+	$(ENGINE_INCLUDES) \
+	$(WASI_INCLUDES)
+
+$(BUILD_DIR)/engine/%.o: $(ENGINE_SOURCE)/botlib/%.c
+	$(echo_cmd) "BOTLIB_CC $<"
+	$(Q)$(CC) -o $@ -DBOTLIB=1 $(ENGINE_CFLAGS) -c $<
+
+$(BUILD_DIR)/engine/%.o: $(ENGINE_SOURCE)/client/%.c
+	$(echo_cmd) "CLIENT_CC $<"
+	$(Q)$(CC) -o $@ $(ENGINE_CFLAGS) -c $<
+
+$(BUILD_DIR)/engine/%.o: $(ENGINE_SOURCE)/qcommon/%.c
+	$(echo_cmd) "COMMON_CC $<"
+	$(Q)$(CC) -o $@ $(ENGINE_CFLAGS) -c $<
+
+$(BUILD_DIR)/engine/%.o: $(ENGINE_SOURCE)/renderer2/%.c
+	$(echo_cmd) "REND2_CC $<"
+	$(Q)$(CC) -o $@ $(ENGINE_CFLAGS) -c $<
+
+$(BUILD_DIR)/engine/%.o: $(ENGINE_SOURCE)/server/%.c
+	$(echo_cmd) "SERVER_CC $<"
+	$(Q)$(CC) -o $@ $(ENGINE_CFLAGS) -c $<
+
+$(BUILD_DIR)/engine/%.o: $(ENGINE_SOURCE)/wasm/%.c
+	$(echo_cmd) "WASM_CC $<"
+	$(Q)$(CC) -o $@ $(ENGINE_CFLAGS) -c $<
+
+$(BUILD_DIR)/engine/glsl/%.c: $(ENGINE_SOURCE)/renderer2/glsl/%.glsl
+	$(echo_cmd) "REF_STR $@"
+	$(Q)echo "const char *fallbackShader_$(notdir $(basename $(@:.c=.glsl))) =" >> $@
+	$(Q)cat $(@:.c=.glsl) | sed -e 's/^/\"/;s/$$/\\n\"/' | tr -d '\r' >> $@
+	$(Q)echo ";" >> $@
+
+$(BUILD_DIR)/engine/glsl/%.o: $(BUILD_DIR)/engine/glsl/%.c
+	$(echo_cmd) "GLSL_CC $<"
+	$(Q)$(CC) -o $@ $(ENGINE_CFLAGS) -c $<
+
+SDL_CFLAGS          := \
+	$(ENGINE_CFLAGS) -fno-inline -Wno-macro-redefined \
+	-DSDL_VIDEO_DISABLED=1 -DSDL_JOYSTICK_DISABLED=1 \
+	-DSDL_SENSOR_DISABLED=1 -DSDL_HAPTIC_DISABLED=1 \
+	-DSDL_TIMER_UNIX=1 -DHAVE_MEMORY_H=1 -DHAVE_CLOCK_GETTIME=1 \
+	-D_GNU_SOURCE=1 -DHAVE_STDLIB_H=1 -DHAVE_GETENV=0 \
+	-DHAVE_UNISTD_H=1 -DHAVE_MATH_H=1 -DHAVE_M_PI=1 \
+	-DHAVE_STDIO_H=1 -DHAVE_ALLOCA_H=1 -DHAVE_STRING_H=1 \
+	-DSDL_THREADS_DISABLED=1 -DSDL_AUDIO_DRIVER_EMSCRIPTEN=1
+
+$(BUILD_DIR)/sdl/%.o: $(SDL_SOURCE)/src/%.c
+	$(echo_cmd) "SDL_CC $<"
+	$(Q)$(CC) -o $@ $(SDL_CFLAGS) -c $<
+
+engine: morph.wasm morph.opt # q3map2.wasm 
+	@:

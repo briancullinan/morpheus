@@ -6,6 +6,8 @@ let temporaryEncrypter
 let temporaryUser
 
 
+// TODO: MAKE MORE GENERALIZED?
+
 
 // THIS IS THE KITCHEN SINK. AND ANYWHERE THAT USES "CRYPT(" AND "TEMPORARYENCRYPTOR("
 

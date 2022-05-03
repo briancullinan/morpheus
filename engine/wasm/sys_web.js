@@ -151,6 +151,7 @@ function Sys_Exit(code) {
 	// redirect to lvlworld
 	let returnUrl = addressToString(Cvar_VariableString(stringToAddress('cl_returnURL')))
 	if(returnUrl) {
+	//	navigateTo(returnUrl)
 	//	window.location = returnUrl
 	}
 }

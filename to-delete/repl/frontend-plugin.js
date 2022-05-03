@@ -173,25 +173,6 @@ function doMessage(request, sender, reply) {
 		return
 	}
 
-	// access a client variable they've shared from code
-	// basic client status message
-	// THIS IS PURELY FOR TECHNICALLY MATCHING CLICKS ON THE PAGE
-	//   BACK UP WITH THE RIGHT PROCESS, THIS IS NOT A SECURITY THING.
-	let responseEventId = getRunId(20)
-	awaitingResponse[responseEventId] = (function (responseTimer) {
-		if(typeof request == 'object' && request) {
-			request.responseId = responseEventId
-		}
-		window.postMessage(request)
-		return function (response) {
-			clearTimeout(responseTimer)
-			reply(response)
-			delete awaitingResponse[responseEventId]
-		}
-	})(setTimeout(function () {
-		awaitingResponse[responseEventId]()
-		delete awaitingResponse[responseEventId]
-	}, 3000))
 	return true
 
 }

@@ -1,0 +1,131 @@
+
+Q3LCC_CFLAGS     := $(CLIENT_CFLAGS) \
+	-Wno-logical-op-parentheses \
+	-Wno-unused-variable \
+	-Wno-misleading-indentation \
+	-Wno-unused-label \
+	-Wno-parentheses \
+	-Wno-dangling-else \
+	-Wno-missing-braces \
+	-Wno-parentheses
+
+
+
+
+# MAKE Q3LCC-WASM TO RECOMPILE GAME CODE IN BROWSER-WORKER
+Q3ASM_FILES  := $(wildcard $(Q3ASM_SOURCE)/*.c)
+Q3ASM_OBJS   := $(subst libs/,$(BUILD_DIR)/,$(Q3ASM_FILES:.c=.o))
+
+define DO_Q3ASM_CC
+	$(echo_cmd) "Q3ASM_CC $<"
+	$(Q)$(CC) -o $@ $(Q3LCC_CFLAGS) -c $<
+endef
+
+define DO_WASM_LD
+	$(echo_cmd) "WASM-LD $1"
+	$(Q)$(CC) -o $(BUILD_DIR)/$1 $2 $(CLIENT_LDFLAGS)
+endef
+
+
+
+
+define DO_CLI_LD
+	$(echo_cmd) "WASM-LD $1"
+	$(Q)$(CC) -o $(BUILD_DIR)/$1 $2 $(WASI_LDFLAGS)
+endef
+
+q3asm.wasm: $(BUILD_DIRS) $(Q3ASM_FILES) $(Q3ASM_OBJS)
+	$(call DO_CLI_LD,$@,$(Q3ASM_OBJS))
+
+$(BUILD_DIR)/q3asm/%.o: $(Q3ASM_SOURCE)/%.c
+	$(DO_Q3ASM_CC)
+
+
+
+define DO_CLIEXE_LD
+	$(echo_cmd) "WASM-LD $1"
+	$(Q)$(CC) -o $(BUILD_DIR)/$1 \
+		$(WASI_SYSROOT)/libwasi-emulated-signal.a \
+		$(WASI_SYSROOT)/libwasi-emulated-getpid.a \
+		$2 $(WASI_LDFLAGS)
+endef
+
+define DO_Q3LCC_CC
+	$(echo_cmd) "Q3LCC_CC $<"
+	$(Q)$(CC) -o $@ $(Q3LCC_CFLAGS) -c $<
+endef
+
+Q3LCC_FILES  := $(wildcard $(Q3LCC_SOURCE)/*.c)
+Q3LCC_OBJS   := $(subst $(Q3LCC_SOURCE)/,$(BUILD_DIR)/q3lcc/,$(Q3LCC_FILES:.c=.o))
+
+q3lcc.wasm: q3rcc.wasm q3cpp.wasm $(Q3LCC_FILES) $(Q3LCC_OBJS)
+	$(call DO_CLIEXE_LD,$@,$(Q3LCC_OBJS))
+
+$(BUILD_DIR)/q3lcc/%.o: $(Q3LCC_SOURCE)/%.c
+	$(DO_Q3LCC_CC)
+
+
+
+
+
+
+define DO_LBURG_CC
+	$(echo_cmd) "LBURG_CC $<"
+	$(Q)$(CC) -o $@ $(Q3LCC_CFLAGS) -c $<
+endef
+
+LBURG_FILES  := $(wildcard $(LBURG_SOURCE)/*.c)
+LBURG_OBJS  := $(subst $(LBURG_SOURCE)/,$(BUILD_DIR)/lburg/,$(LBURG_FILES:.c=.o))
+
+lburg.wasm: $(BUILD_DIRS) $(LBURG_FILES) $(LBURG_OBJS)
+	$(call DO_CLI_LD,$@,$(LBURG_OBJS))
+
+$(BUILD_DIR)/lburg/%.o: $(LBURG_SOURCE)/%.c
+	$(DO_LBURG_CC)
+
+$(BUILD_DIR)/q3rcc/dagcheck.c: lburg.wasm $(Q3RCC_SOURCE)/dagcheck.md
+	$(Q)node ./engine/wasm/bin/wasm-cli.js -- \
+			lburg.wasm $(Q3RCC_SOURCE)/dagcheck.md $@ 
+
+
+Q3RCC_CFLAGS := $(Q3LCC_CFLAGS) -I$(Q3RCC_SOURCE)
+
+define DO_Q3RCC_CC
+	$(echo_cmd) "Q3RCC_CC $<"
+	$(Q)$(CC) -o $@ $(Q3RCC_CFLAGS) -c $<
+endef
+
+
+Q3RCC_FILES  := $(filter-out %/dagcheck.c,$(wildcard $(Q3RCC_SOURCE)/*.c))
+DAGCHK_FILES := $(Q3RCC_SOURCE)/dagcheck.md \
+								$(BUILD_DIR)/q3rcc/dagcheck.c
+Q3RCC_OBJS   := $(subst $(Q3RCC_SOURCE)/,$(BUILD_DIR)/q3rcc/,$(Q3RCC_FILES:.c=.o)) \
+								$(BUILD_DIR)/q3rcc/dagcheck.o
+# WTF IS DAGCHECK.C?
+q3rcc.wasm: lburg.wasm $(BUILD_DIRS) $(DAGCHK_FILES) \
+						$(Q3RCC_FILES) $(Q3RCC_OBJS)
+	$(call DO_CLI_LD,$@,$(Q3RCC_OBJS))
+
+$(BUILD_DIR)/q3rcc/%.o: $(Q3RCC_SOURCE)/%.c
+	$(DO_Q3RCC_CC)
+
+$(BUILD_DIR)/q3rcc/dagcheck.o: \
+	$(BUILD_DIR)/q3rcc/dagcheck.c
+	$(DO_Q3RCC_CC)
+
+
+
+define DO_Q3CPP_CC
+	$(echo_cmd) "Q3CPP_CC $<"
+	$(Q)$(CC) -o $@ $(Q3RCC_CFLAGS) -c $<
+endef
+
+Q3CPP_FILES  := $(wildcard $(Q3CPP_SOURCE)/*.c)
+Q3CPP_OBJS   := $(subst $(Q3CPP_SOURCE)/,$(BUILD_DIR)/q3cpp/,$(Q3CPP_FILES:.c=.o))
+
+q3cpp.wasm: $(BUILD_DIRS) $(Q3CPP_FILES) $(Q3CPP_OBJS)
+	$(call DO_CLI_LD,$@,$(Q3CPP_OBJS))
+
+$(BUILD_DIR)/q3cpp/%.o: $(Q3CPP_SOURCE)/%.c
+	$(DO_Q3CPP_CC)
+

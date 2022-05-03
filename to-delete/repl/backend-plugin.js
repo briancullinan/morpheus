@@ -93,18 +93,6 @@ function doMessage(request, sender, reply) {
 }
 
 
-// SINK
-function _encodeRuns() {
-	return JSON.stringify(Object.keys(threads)
-		.map(function (runId) {
-			return [
-				runId[0] + '******' + runId[runId.length-1],
-				threads[runId].bubbleTime
-			]
-		}))
-}
-
-
 const THREAD_SAVE_TIME = 3 * 1000 // * 60
 
 
@@ -127,14 +115,9 @@ function pruneOldRuns() {
 }
 
 
-chrome.runtime.onMessage.addListener(function (request, sender, reply) {
-	// attach debugger
-	await attachDebugger(sender.tab.id)
-	doMessage(request, sender, reply)
-})
-
 
 function doInstall() {
+	debugger
 	self.clients.matchAll(/* search options */)
   .then( (clients) => {
 		if (clients && clients.length) {

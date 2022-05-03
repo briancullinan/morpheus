@@ -1,0 +1,31 @@
+<!-- prove the system works by create page -->
+
+<div id="editor">
+// after installing the plugin, DevTools can start
+// instructions: 
+// https://developer.chrome.com/docs/extensions/mv3/getstarted/#unpacked
+function createWindow() {
+  let title = documentTitle()
+  console.log(title)
+  let newWin = newWindow()
+  // should now have a window on the right ->
+  navigateTo('https://console.cloud.google.com/')
+  let host = newWin.location.host
+  if(host.includes('accounts.google.com')) {
+    enterLogin()
+  }
+  screenshot()
+}
+
+// @Before(_makeLibraryAccessor)
+function main() {
+  createWindow()
+}
+
+// TODO: 
+// enterPassword(url)
+// metaSearch(terms)
+// morpheusLab()
+
+
+</div>

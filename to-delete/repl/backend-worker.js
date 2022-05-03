@@ -105,28 +105,6 @@ function _encodeRuns() {
 }
 
 
-const THREAD_SAVE_TIME = 3 * 1000 // * 60
-
-
-function pruneOldRuns() {
-	// i just thought maybe a transpiler converted code to var which changes scope and
-	//   could make it vulnerable?
-	let runIds = Object.keys(threads)
-	for(let i = 0; i < runIds.length; i++) {
-		let senderId = threads[runIds[i]].senderId
-		if(threads[runIds[i]].ended
-			&& Date.now() - threads[runIds[i]].bubbleTime > THREAD_SAVE_TIME) {
-			delete threads[runIds[i]]
-			doStatus({ senderId: senderId }, false)
-		}
-	}
-	if(Object.keys(threads).length == 0) {
-		clearInterval(oldRunTimer)
-		oldRunTimer = null
-	}
-}
-
-
 self.onmessage = function (request) {
 	doMessage(self.postMessage, request.data)
 }
