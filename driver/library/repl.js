@@ -74,7 +74,7 @@ function onRun() {
 
 }
 
-function createEnvironment() {
+function createEnvironment(script) {
   let declarations = {
     // include our own API so we can use it from code elsewhere
     runBody: runBody,
@@ -85,7 +85,8 @@ function createEnvironment() {
   return {
     localDeclarations: [
       declarations
-    ]
+    ],
+		script: script,
   }
 }
 

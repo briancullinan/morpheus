@@ -107,7 +107,7 @@ async function runStatement(i, AST, runContext) {
 		} else
 		if(AST[i].type == 'UpdateExpression') {
 			// doAssign
-			return runUpdate(AST[i], runContext)
+			return await runUpdate(AST[i], runContext)
 		} else 
 
 

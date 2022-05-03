@@ -42,6 +42,7 @@ async function runCallStatements(runContext, functionName, parameterDefinition, 
 	let beforeLine = runContext.bubbleLine - 1 // -1 for wrapper function
 	//runContext.bubbleStack.push(functionName + ' . ' + beforeLine)
 
+
 	// THIS SHIT IS IMPORTANT. MAKE COMPLICATED SIMPLE.
 	// I MENTION THIS TO PEOPLE AND THEY HAVE NO IDEA
 	//   WHAT I MEAN. I LEARNED THIS IN MY FANCY 4 YR.
@@ -53,9 +54,7 @@ async function runCallStatements(runContext, functionName, parameterDefinition, 
 	//   HAPPENS. SYNTACTIC SUGAR. EVERY LANGUAGE SHOULD HAVE ATTRIBUTES
 	if(before) {
 		let beforeFunc
-		if(runContext.localFunctions[before]) {
-			beforeFunc = runContext.localFunctions[before]
-		} else if(runContext.localVariables[before] == 'function') {
+		if(runContext.localVariables[before] == 'function') {
 			beforeFunc = runContext.localVariables[before]
 		} else {
 			throw new Error('Attribute @Before not found: ' + before)
@@ -89,9 +88,7 @@ async function runCallStatements(runContext, functionName, parameterDefinition, 
 	//   OTHERWISE LEAVE IT UNMODIFIED
 	if(after) {
 		let afterFunc
-		if(runContext.localFunctions[after]) {
-			afterFunc = runContext.localFunctions[after]
-		} else if(runContext.localVariables[after] == 'function') {
+		if(runContext.localVariables[after] == 'function') {
 			afterFunc = runContext.localVariables[after]
 		} else {
 			throw new Error('Attribute @After not found: ' + after)
@@ -116,7 +113,7 @@ async function runCallStatements(runContext, functionName, parameterDefinition, 
 
 
 
-function runFunction(AST, runContext) {
+async function runFunction(AST, runContext) {
   let before
   let after
   let namePrefix = ''
@@ -165,15 +162,24 @@ function runFunction(AST, runContext) {
   }
   let funcName = namePrefix + (AST.id ? AST.id.name : functionCounter)
   ++functionCounter
-  let result = (runContext.localFunctions[funcName] 
-    = runCallStatements.bind(null, runContext, funcName, AST.params, before, after, AST.body))
+  let result = await runAssignment({
+    type: 'Identifier',
+    name: funcName,
+  }, {
+    type: 'Literal',
+    value: runCallStatements.bind(null, runContext,
+      funcName, AST.params, before, after, AST.body)
+  }, runContext)
   return result
 }
 
 
 
 async function getRemoteCall(calleeName, runContext) {
-  let calleeFunc = await runContext.localVariables.thisWindow
+  let calleeFunc = await runPrimitive({
+    type: 'Identifier',
+    name: 'thisWindow',
+  })
   // WEBDRIVER_API
   ._accessor(void 0, {
     // WOOHOO my first polyfill

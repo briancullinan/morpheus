@@ -1,13 +1,4 @@
 
-async function lookupVariable(variableName, runContext) {
-  for(let i = runContext.localDeclarations.length-1; i >= 0; i--) {
-    if(runContext.localDeclarations[i].hasOwnProperty(variableName)) {
-      return runContext.localDeclarations[i][variableName]
-    }
-  }
-  throw new Error('Variable not defined: ' + variableName)
-}
-
 
 async function runObject(AST, runContext) {
   let newObject = {}
@@ -31,8 +22,8 @@ async function runObject(AST, runContext) {
 async function runAssignment(left, right, runContext) {
 
   if(left.type == 'Literal') {
-	// cannot assign value to primitive type
-	throw new Error('Cannot override primitive.')
+		// cannot assign value to primitive type
+		throw new Error('Cannot override primitive.')
 	}
 
 	if (left.type == 'MemberExpression') {
@@ -68,7 +59,7 @@ async function runAssignment(left, right, runContext) {
 	// TODO: how does Chome roll this back? Primitives only?
 	
 	if(left.type == 'Identifier') {
-		if(typeof runContext.localFunctions[left.name] != 'undefined') {
+		if(runContext.localVariables[left.name] == 'function') {
 			throw new Error('Cannot override function: ' + left.name)
 		} else if (!runContext.localVariables.hasOwnProperty(left.name)) {
 			// TODO: LAZY, no var, only let

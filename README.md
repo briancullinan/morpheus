@@ -40,7 +40,8 @@ With a little Devil icon. A play on the demo, demon, and daemon.
 7) auto-exec on remote cloud for mobile testing
 8) \mvjoin and follow remote player splines
 9) \sync IndexedDB file-system with a Github Gist after CAS
-10) Firefox automation plugin
+10) Firefox automation plugin, Live Dev a wordpress plugin running 
+  HipHop WASM Wordpress in a web-worker, via localStorage access into GitHub cloud.
 
 
 ## Content-Security-Policy:

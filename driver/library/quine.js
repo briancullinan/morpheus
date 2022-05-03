@@ -312,12 +312,15 @@ function workerMessageResponseMiddleware() {
 			return sendMessage(lib)
 		} else if (typeof doRunFunction == 'undefined') {
 			let script = Array.from(FS.virtual['library/repl.js'].contents)
-				.map(function (c) { String.fromCharCode(c) }).join('')
+				.map(function (c) { return String.fromCharCode(c) }).join('')
 			try {
 				let AST = acorn.parse(
 					'(function () {\n' + script + '\nreturn doRun;})()\n'
 					, {ecmaVersion: 2020, locations: true, onComment: []})
-				doRunFunction = runStatement(0, [AST.body[0].expression.callee.body], {})
+				doRunFunction = runStatement(0, [AST.body[0].expression.callee.body], {
+					localVariables: [],
+					script: script,
+				})
 			} catch (e) {
 				console.log(e)
 			}

@@ -5,10 +5,11 @@ function runPrimitive(AST, runContext) {
 	} else 
 	if(AST.type == 'Identifier') {
 		if(runContext.localVariables.hasOwnProperty(AST.name)) {
-			return runContext.localVariables[AST.name]
-		} else
-		if(runContext.localFunctions.hasOwnProperty(AST.name)) {
-			return runContext.localFunctions[AST.name]
+			for(let i = runContext.localDeclarations.length-1; i >= 0; i--) {
+				if(runContext.localDeclarations[i].hasOwnProperty(variableName)) {
+					return runContext.localDeclarations[i][variableName]
+				}
+			}
 		} else {
 			throw new Error('Identifier not defined: ' + AST.name)
 		}
@@ -38,19 +39,14 @@ async function runUnary(AST, runContext) {
 		return !(await runStatement(0, [AST.argument], runContext))
 	} else
 	if(AST.operator == 'typeof') {
-		if(AST.argument.type == 'Identifier') {
-			return typeof (runContext.localFunctions[AST.argument.name] 
-					|| runContext.localVariables[AST.argument.name])
-		} else if (AST.argument.type == 'MemberExpression') {
-			let parent = await runStatement(0, [AST.argument.object], runContext)
-			if(await shouldBubbleOut(runContext)) {
-				return
-			}
-			if(AST.argument.property.type == 'Identifier') {
-				return typeof (parent[AST.argument.property.name])
+		try {
+			let result = await runStatement(0, [AST.argument], runContext)
+			return typeof result
+		} catch (up) {
+			if(up.message.includes('not defined')) {
+				return 'undefined'
 			} else {
-				let property = await runStatement(0, [AST.argument.property], runContext)
-				return typeof parent[property]
+				throw up
 			}
 		}
 	} else {
@@ -175,27 +171,32 @@ async function runBinary(AST, runContext) {
 }
 
 
-function runUpdate(AST, runContext) {
-	if(!AST.argument || AST.argument.type != 'Identifier') {
-		throw new Error(AST.type + ': Not implemented!')
-	}
-	if(!runContext.localVariables.hasOwnProperty(AST.argument.name)) {
-		throw new Error('Identifier not found: ' + AST.argument.name)
+async function runUpdate(AST, runContext) {
+	let argVal = await runStatement(0, [AST.argument], runContext)
+	if(await shouldBubbleOut(runContext)) {
+		return
 	}
 
-	let argVal = runContext.localVariables[AST.argument.name]
 	if(AST.operator == '--') {
+		await runAssignment(AST.argument, {
+      type: 'Literal',
+      value: --argVal
+    }, runContext)
 		if(AST.prefix) {
-			argVal = --runContext.localVariables[AST.argument.name]
+			return await runStatement(0, [AST.argument], runContext)
 		} else {
-			--runContext.localVariables[AST.argument.name]
+			return argVal
 		}
 	} else
 	if(AST.operator == '++') {
+		await runAssignment(AST.argument, {
+      type: 'Literal',
+      value: ++argVal
+    }, runContext)
 		if(AST.prefix) {
-			argVal = ++runContext.localVariables[AST.argument.name]
+			return await runStatement(0, [AST.argument], runContext)
 		} else {
-			++runContext.localVariables[AST.argument.name]
+			return argVal
 		}
 	} else {
 		throw new Error(AST.type + ': Not implemented!')
