@@ -236,6 +236,20 @@ function domMessageResponseMiddleware() {
 
 	window.addEventListener('load', function () {
 		window.addEventListener('message', onMessage, false)
+
+		// check for plugin or emitDownload
+		// maybe we don't have the plugin
+		let cancelDownload = setTimeout(emitDownload, 3000)
+		if(chrome && chrome.runtime) {
+			debugger
+			chrome.runtime.sendMessage(
+				EXTENSION_ID, EXTENSION_VERSION, 
+			function () {
+				clearTimeout(cancelDownload)
+			})
+		}
+
+		Sys_fork() // automatically start whatever service worker we have
 	})
 	
 	function onMessage(request) {
@@ -365,5 +379,35 @@ function githubMessageResponseMiddleware() {
 }
 
 
+function cliMessageResponseMiddleware() {
+	function sendMessage() {
+
+	}
+
+	function onMessage() {
+
+	}
+
+	// TODO: at least send signal
+
+	// TODO: STDIN REPL, this will be neat because when antlr is
+	//   added, I an instantly turn any language into a REPL 
+	//   similar to `node -e "code..."` or bash, but any language, even MATLAB
+	// Connecting R to fuse-fs would be weird. Or using MATLAB's interface
+	//   for validating 3D scenes, or picking something out demo-files?
+}
+
 // TODO: collabMessageResponseMiddleware() {}
+
+
+if(typeof module != 'undefined') {
+	module.exports = {
+		domMessageResponseMiddleware,
+		frontendMessageResponseMiddleware,
+		backendMessageResponseMiddleware,
+		workerMessageResponseMiddleware,
+		serviceMessageResponseMiddleware,
+		
+	}
+}
 

@@ -13,7 +13,7 @@ PLUGIN_FILES   := \
 	$(HTTP_SOURCE)/index.css \
 	$(HTTP_SOURCE)/redpill.png 
 
-plugin: engine morph.zip
+plugin: morph.zip
 	$(Q)cp driver/manifest.json $(BUILD_DIR)/plugin/manifest.json
 	$(Q)cp driver/rules.json $(BUILD_DIR)/plugin/rules.json
 	$(Q)cp $(HTTP_SOURCE)/index.html $(BUILD_DIR)/plugin/index.html
@@ -24,7 +24,7 @@ morph.zip: $(PLUGIN_BUILD_DIRS) backend.js frontend.js $(PLUGIN_FILES)
 	@:
 
 BACKEND_PLUGIN  := \
-	$(wildcard driver/eval/*.js) \
+	$(wildcard driver/library/eval/*.js) \
 	$(filter-out %/backend-worker.js,$(wildcard driver/repl/backend*.js)) \
 	driver/utils/acorn.js driver/utils/acorn-loose.js \
 	driver/utils/crypt.js driver/utils/jsencrypt.js
@@ -37,9 +37,6 @@ backend.js: $(BACKEND_PLUGIN)
 
 frontend.js: $(FRONTEND_PLUGIN)
 	$(Q)cat $(FRONTEND_PLUGIN) > $(BUILD_DIR)/plugin/frontend.js
-
-index: sys_worker.js morph.html
-	cp $(BUILD_DIR)/morph.html index.html
 
 build-tools: # q3map2.wasm # q3asm.wasm q3lcc.wasm 
 	@:

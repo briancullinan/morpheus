@@ -30,16 +30,15 @@ WORKER_FILES  := $(wildcard driver/eval/*.js)              \
 	$(BUILD_DIR)/jsdom.min.js driver/utils/remarkable.min.js \
 	$(BUILD_DIR)/morph.ded.js 
 
-sys_worker.js: dedicated $(WORKER_FILES) 
-	$(Q)cat $(WORKER_FILES) > $(BUILD_DIR)/sys_worker.js
+$(BUILD_DIR)/sys_worker.js: dedicated $(WORKER_FILES) 
+	$(Q)cat $(WORKER_FILES) > $@
 	node -e "require('./engine/wasm/bin/make').formatForVFS( \
-		'$(BUILD_DIR)/morph.ded.wasm', 'morph.wasm' )" \
-		>>  $(BUILD_DIR)/sys_worker.js
+		'$(BUILD_DIR)/morph.ded.wasm', 'morph.wasm' )" >> $@
 
 $(BUILD_DIR)/morph.ded.js: $(BUILD_DIR)/morph.ded.wasm
 	@:
 
-
+# TODO: move this to service_worker.js, lol, stupid chrome debugger
 dedicated: morph.ded.wasm morph.ded.opt # q3map2.wasm for MemoryMaps
 	@: 
 

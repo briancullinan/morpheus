@@ -28,18 +28,6 @@ function runBlock(start) {
 	}
 
 	document.body.classList.add('starting')
-	// TODO: this could probably go somewhere else
-	// maybe we don't have the plugin
-	if(!ACE.downloaded && document.body.className.includes('starting')) {
-		let cancelDownload = setTimeout(emitDownload, 3000)
-		if(chrome && chrome.runtime) {
-			chrome.runtime.sendMessage(
-				EXTENSION_ID, EXTENSION_VERSION, 
-			function () {
-				clearTimeout(cancelDownload)
-			})
-		}
-	}
 
 	if(start === -1) {
 		sendMessage({
@@ -244,6 +232,61 @@ function toggleOption(option) {
 			break
 		default:
 	}
+}
+
+// THIS IS ABOUT ALL THE BOILERPLATE I CAN TOLERATE TO BOOT A WASM FILE
+//   EMSCRIPTEN IS WHAT 10,000 LINES OF BOILERPLATE?
+
+function initEngine() {
+	initWasm({
+		SYS: SYS,
+		GL: GL,
+		EMGL: EMGL,
+		INPUT: INPUT,
+	})
+	let startArgs = getQueryCommands()
+	initProgram(startArgs)
+}
+
+
+
+// BECAUSE IT'S FUCKING PRETTIER, OKAY?
+function updateGlobalFunctions(GLOBAL) {
+
+	// assign everything to env because this __attribute(import) BS don't work
+	let startKeys = Object.keys(GLOBAL)
+	let startValues = Object.values(GLOBAL)
+	if(typeof window != 'undefined') {
+		for(let i = 0; i < startKeys.length; i++) {
+			ENV[startKeys[i]] =
+			window[startKeys[i]] = startValues[i] //.apply(ENV.exports)
+		}
+		Object.assign(ENV, GLOBAL)
+	} else if (typeof global != 'undefined') {
+		for(let i = 0; i < startKeys.length; i++) {
+			ENV[startKeys[i]] =
+			global[startKeys[i]] = startValues[i] //.apply(ENV.exports)
+		}
+		Object.assign(ENV, GLOBAL)
+	}
+
+}
+
+// write it non-async just in case wasm is support but not es6?
+function initWasm(bytes, env) {
+	if(isStreaming) {
+		return WebAssembly.instantiateStreaming(bytes, env)
+	} else {
+		return WebAssembly.instantiate(bytes, env)
+	}
+}
+
+function initDedicated() {
+	Sys_fork()
+		let startArgs = [
+		'+set', 'dedicated', '1'
+	].concat(getQueryCommands())
+	Sys_exec(stringToAddress('quake3e.ded.wasm'), stringsToMemory(startArgs))
 }
 
 

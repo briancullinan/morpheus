@@ -16,10 +16,9 @@ JSDOM_FILES   := \
 		$(wildcard $(JSDOM_RUNTIME)/*/*/*/*.js)
 JSDOM_OBJS    := $(subst $(JSDOM_RUNTIME)/,$(BUILD_DIR)/jsdom/,$(JSDOM_FILES))
 
-$(BUILD_DIR)/jsdom.min.js: $(JSDOM_BUILD_DIRS) $(JSDOM_FILES) $(JSDOM_OBJS)
+$(BUILD_DIR)/jsdom.min.js: $(JSDOM_FILES) $(JSDOM_OBJS) # $(JSDOM_BUILD_DIRS)
 	$(echo_cmd) "UGLIFY_LD $@: This may take a while."
 	$(Q)uglifyjs $(JSDOM_OBJS) -o $@ -c -m
-
 
 $(BUILD_DIR)/jsdom/%.js: $(JSDOM_RUNTIME)/%.js
 	$(echo_cmd) "JSDOM_CC $<"

@@ -1,3 +1,7 @@
+// TODO: can call all EMGL functions or re.* renderer2 export functions from scripts
+//   Maybe this is where the paralel frame buffering comes in, or treat the javascript
+//   like update calls and extrapolate.
+
 
 function __webgl_enable_WEBGL_draw_instanced_base_vertex_base_instance(ctx) {
   return !!(ctx.dibvbi = ctx.getExtension("WEBGL_draw_instanced_base_vertex_base_instance"));

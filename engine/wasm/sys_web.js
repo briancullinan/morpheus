@@ -241,63 +241,6 @@ function Sys_notify(ifile, path, fp) {
 	}
 }
 
-/*
-
-function alignUp(x, multiple) {
-	if (x % multiple > 0) {
-	x += multiple - x % multiple;
-	}
-	return x;
-}
-
-var _emscripten_get_now_is_monotonic = true;
-
-function _emscripten_get_now() {
-	return performance.now()
-}
-
-function emscripten_realloc_buffer(size) {
-	try {
-		Module.memory.grow(size - Module.memory.buffer.byteLength + 65535 >>> 16);
-		updateGlobalBufferAndViews(Module.memory.buffer);
-		return 1;
-	} catch (e) {
-		console.error("emscripten_realloc_buffer: Attempted to grow heap from " 
-			+ Module.memory.buffer.byteLength + " bytes to " 
-			+ size + " bytes, but got error: " + e);
-	}
-}
-
-function _emscripten_resize_heap(requestedSize) {
-	var oldSize = HEAPU8.length;
-	requestedSize = requestedSize >>> 0;
-	console.assert(requestedSize > oldSize);
-	var maxHeapSize = 2147483648;
-	if (requestedSize > maxHeapSize) {
-	err("Cannot enlarge memory, asked to go up to " + requestedSize + " bytes, but the limit is " + maxHeapSize + " bytes!");
-	return false;
-	}
-	for (var cutDown = 1; cutDown <= 4; cutDown *= 2) {
-	var overGrownHeapSize = oldSize * (1 + .2 / cutDown);
-	overGrownHeapSize = Math.min(overGrownHeapSize, requestedSize + 100663296);
-	var newSize = Math.min(maxHeapSize, alignUp(Math.max(requestedSize, overGrownHeapSize), 65536));
-	var t0 = Sys_Milliseconds();
-	var replacement = emscripten_realloc_buffer(newSize);
-	var t1 = Sys_Milliseconds();
-	console.log("Heap resize call from " + oldSize + " to " + newSize + " took " + (t1 - t0) + " msecs. Success: " + !!replacement);
-	if (replacement) {
-		return true;
-	}
-	}
-	err("Failed to grow the heap from " + oldSize + " bytes to " + newSize + " bytes, not enough memory!");
-	return false;
-}
-
-function _emscripten_get_heap_size() {
-	return HEAPU8.length;
-}
-*/
-
 
 function dynCall(ret, func, args) {
 	return Module.table.get(func).apply(null, args)

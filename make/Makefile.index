@@ -36,6 +36,9 @@ morph.html: $(INDEX_FILES) $(INDEX_OBJS)
 	node -e "require('./engine/wasm/bin/make').normalBootstrap( \
 		'$(BUILD_DIR)/morph.html', '$(BUILD_DIR)/morph.js')"
 
+index: morph.html $(BUILD_DIR)/sys_worker.js
+	cp $(BUILD_DIR)/morph.html index.html
+
 # LOL, kind of a funny solution, build these into service_worker.js to serve
 #   individual files from cache, just so that I can keep packaging my page
 #   but can also debug the code, chrome debugger refuses to load large files.
