@@ -9,6 +9,14 @@ Q3LCC_CFLAGS     := $(CLIENT_CFLAGS) \
 	-Wno-missing-braces \
 	-Wno-parentheses
 
+Q3LCC_BUILD_DIRS := \
+	$(BUILD_DIR).mkdir \
+	$(filter $(MAKECMDGOALS),clean) \
+	$(BUILD_DIR).mkdir/q3asm/ \
+	$(BUILD_DIR).mkdir/q3lcc/ \
+	$(BUILD_DIR).mkdir/q3rcc/ \
+	$(BUILD_DIR).mkdir/q3cpp/ \
+	$(BUILD_DIR).mkdir/lburg/ 
 
 
 
@@ -34,7 +42,7 @@ define DO_CLI_LD
 	$(Q)$(CC) -o $(BUILD_DIR)/$1 $2 $(WASI_LDFLAGS)
 endef
 
-q3asm.wasm: $(BUILD_DIRS) $(Q3ASM_FILES) $(Q3ASM_OBJS)
+q3asm.wasm: $(Q3LCC_BUILD_DIRS) $(Q3ASM_FILES) $(Q3ASM_OBJS)
 	$(call DO_CLI_LD,$@,$(Q3ASM_OBJS))
 
 $(BUILD_DIR)/q3asm/%.o: $(Q3ASM_SOURCE)/%.c
@@ -77,7 +85,7 @@ endef
 LBURG_FILES  := $(wildcard $(LBURG_SOURCE)/*.c)
 LBURG_OBJS  := $(subst $(LBURG_SOURCE)/,$(BUILD_DIR)/lburg/,$(LBURG_FILES:.c=.o))
 
-lburg.wasm: $(BUILD_DIRS) $(LBURG_FILES) $(LBURG_OBJS)
+lburg.wasm: $(Q3LCC_BUILD_DIRS) $(LBURG_FILES) $(LBURG_OBJS)
 	$(call DO_CLI_LD,$@,$(LBURG_OBJS))
 
 $(BUILD_DIR)/lburg/%.o: $(LBURG_SOURCE)/%.c
@@ -102,7 +110,7 @@ DAGCHK_FILES := $(Q3RCC_SOURCE)/dagcheck.md \
 Q3RCC_OBJS   := $(subst $(Q3RCC_SOURCE)/,$(BUILD_DIR)/q3rcc/,$(Q3RCC_FILES:.c=.o)) \
 								$(BUILD_DIR)/q3rcc/dagcheck.o
 # WTF IS DAGCHECK.C?
-q3rcc.wasm: lburg.wasm $(BUILD_DIRS) $(DAGCHK_FILES) \
+q3rcc.wasm: $(Q3LCC_BUILD_DIRS) lburg.wasm $(DAGCHK_FILES) \
 						$(Q3RCC_FILES) $(Q3RCC_OBJS)
 	$(call DO_CLI_LD,$@,$(Q3RCC_OBJS))
 
@@ -123,7 +131,7 @@ endef
 Q3CPP_FILES  := $(wildcard $(Q3CPP_SOURCE)/*.c)
 Q3CPP_OBJS   := $(subst $(Q3CPP_SOURCE)/,$(BUILD_DIR)/q3cpp/,$(Q3CPP_FILES:.c=.o))
 
-q3cpp.wasm: $(BUILD_DIRS) $(Q3CPP_FILES) $(Q3CPP_OBJS)
+q3cpp.wasm: $(Q3LCC_BUILD_DIRS) $(Q3CPP_FILES) $(Q3CPP_OBJS)
 	$(call DO_CLI_LD,$@,$(Q3CPP_OBJS))
 
 $(BUILD_DIR)/q3cpp/%.o: $(Q3CPP_SOURCE)/%.c

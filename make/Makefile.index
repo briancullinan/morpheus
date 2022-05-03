@@ -4,7 +4,6 @@ LIBRARY_FILES    := $(wildcard driver/library/*.js)
 
 # these will be included in the page
 FRONTEND_JS      :=                       \
-	$(filter-out %-plugin.js,$(wildcard driver/repl/frontend-*.js)) \
 	driver/utils/jsencrypt.js               \
 	driver/utils/crypt.js                   \
 	driver/utils/keymaster.js               \
@@ -32,12 +31,20 @@ endif
 
 morph.html: $(INDEX_FILES) $(INDEX_OBJS)
 	$(Q)cp -r -f $(HTTP_SOURCE)/index.html $(BUILD_DIR)/morph.html
-	node -e "require('./engine/wasm/bin/make').normalReplace( \
-		'$(BUILD_DIR)/morph.html', '$(HTTP_SOURCE)/index.css', \
-		'$(BUILD_DIR)/morph.js', 'engine/renderer2/bigchars.png', \
-		'$(BUILD_DIR)/morph.wasm', '$(LANDING_PAGE)', \
-		'$(BUILD_DIR)/sys_worker.js' )"
 	node -e "require('./engine/wasm/bin/make').normalEmbedAll( \
-		'$(BUILD_DIR)/morph.html', 'driver/library', 'driver/', 'lobby/')"
+		'$(BUILD_DIR)/morph.html', 'driver/library', 'driver/', 'library/')"
+	node -e "require('./engine/wasm/bin/make').normalBootstrap( \
+		'$(BUILD_DIR)/morph.html', '$(BUILD_DIR)/morph.js')"
+
+# LOL, kind of a funny solution, build these into service_worker.js to serve
+#   individual files from cache, just so that I can keep packaging my page
+#   but can also debug the code, chrome debugger refuses to load large files.
+#   they must not have seen guys talk making fun of microsoft's poor console
+#   rendering speed.
+
+#	node -e "require('./engine/wasm/bin/make').normalBase64( \
+#		'$(BUILD_DIR)/morph.html', '$(BUILD_DIR)/morph.wasm', 'morph.wasm')"
+#	node -e "require('./engine/wasm/bin/make').normalBase64( \
+#		'$(BUILD_DIR)/morph.html', '$(BUILD_DIR)/sys_worker.js', 'sys_worker.js')"
 #	node -e "require('./engine/wasm/bin/make').normalEmbedAll( \
 #		'$(BUILD_DIR)/morph.html', 'driver/cerebro', 'driver/', 'lobby/')"

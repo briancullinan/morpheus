@@ -24,7 +24,10 @@ Q3MAP2_CFLAGS = \
 Q3MAP2_LDFLAGS = $(WASI_LDFLAGS) \
 	$(WASI_SYSROOT)/libc++.a $(WASI_SYSROOT)/libc++abi.a 
 
-
+Q3MAP2_BUILD_DIRS := \
+	$(BUILD_DIR).mkdir \
+	$(filter $(MAKECMDGOALS),clean) \
+	$(BUILD_DIR).mkdir/q3map2/
 
 define DO_CLI_LD
 	$(echo_cmd) "WASM-LD $1"
@@ -39,7 +42,7 @@ endef
 Q3MAP2_FILES = $(wildcard $(Q3MAP2_SOURCE)/*.cpp)
 Q3MAP2_OBJS  = $(subst $(Q3MAP2_SOURCE)/,$(BUILD_DIR)/q3map2/,$(Q3MAP2_FILES:.cpp=.o))
 
-q3map2.wasm: $(BUILD_DIRS) $(Q3MAP2_FILES) $(Q3MAP2_OBJS)
+q3map2.wasm: $(Q3MAP2_BUILD_DIRS) $(Q3MAP2_FILES) $(Q3MAP2_OBJS)
 	$(call DO_CLI_LD,$@,$(Q3MAP2_OBJS))
 
 $(BUILD_DIR)/q3map2/%.o: $(Q3MAP2_SOURCE)/%.cpp

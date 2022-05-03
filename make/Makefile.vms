@@ -1,67 +1,4 @@
 
-
-.DEFAULT_GOAL      := release
-
-# echo_cmd is silent in verbose mode, makes sense
-ifeq ($(V),1)
-echo_cmd=@:
-Q=
-else
-echo_cmd=@echo
-Q=@
-endif
-
-ifndef BUILD_DIR
-BUILD_DIR := build/release-wasm-js
-endif
-ifeq ($(BUILD_DIR),)
-BUILD_DIR := build/release-wasm-js
-endif
-ifndef COMPILE_PLATFORM
-COMPILE_PLATFORM   := $(shell uname | sed -e 's/_.*//' | tr '[:upper:]' '[:lower:]' | sed -e 's/\//_/g')
-endif
-
-MKDIR              := mkdir -p
-LD                 := libs/$(COMPILE_PLATFORM)/wasi-sdk-14.0/bin/wasm-ld
-CC                 := libs/$(COMPILE_PLATFORM)/wasi-sdk-14.0/bin/clang
-CXX                := libs/$(COMPILE_PLATFORM)/wasi-sdk-14.0/bin/clang++
-
-
-WASI_INCLUDES    := \
-	-Ilibs/wasi-sysroot/include \
-	-I$(SDL_SOURCE)/include 
-
-BASE_CFLAGS        := \
-	$(CFLAGS) -Wall --target=wasm32 \
-	-Wimplicit -fstrict-aliasing \
-	-ftree-vectorize -fsigned-char -MMD \
-	-ffast-math -fno-short-enums  -fPIC \
-	-D_XOPEN_SOURCE=700 \
-	-D__EMSCRIPTEN__=1 \
-	-D__WASM__=1 \
-	-D__wasi__=1 \
-	-D__wasm32__=1 \
-	-D_WASI_EMULATED_SIGNAL \
-	-D_WASI_EMULATED_MMAN=1 \
-	-std=gnu11
-
-CLIENT_CFLAGS      := $(BASE_CFLAGS) \
-											$(WASI_INCLUDES)
-
-WASI_SYSROOT       := libs/wasi-sysroot/lib/wasm32-wasi
-WASI_LDFLAGS       := $(LDFLAGS) \
-	-Wl,--import-memory -Wl,--import-table \
-	-Wl,--export-dynamic -Wl,--error-limit=200 \
-	-Wl,--export=sprintf -Wl,--export=malloc  \
-	-Wl,--export=stderr -Wl,--export=stdout  \
-	-Wl,--export=errno --no-standard-libraries \
-	-Wl,--allow-undefined-file=engine/wasm/wasm.syms \
-	engine/wasm/wasi/libclang_rt.builtins-wasm32.a \
-	$(WASI_SYSROOT)/libc.a
-
-CLIENT_LDFLAGS     := $(WASI_LDFLAGS)
-	
-
 # WRITE THIS IN A WAY THAT THE FILE TREE
 #   CAN PARSE IT AND SHOW A SWEET LITTLE GRAPH
 #   OF COMMANDS THAT RUN FOR EACH FILE TO COMPILE.
@@ -80,57 +17,9 @@ ENGINE_SOURCE := engine/*
 BUILD_DIRS    := \
 	$(BUILD_DIR).mkdir \
 	$(filter $(MAKECMDGOALS),clean) \
-	$(BUILD_DIR).mkdir/q3asm/ \
-	$(BUILD_DIR).mkdir/q3lcc/ \
-	$(BUILD_DIR).mkdir/q3rcc/ \
-	$(BUILD_DIR).mkdir/q3cpp/ \
-	$(BUILD_DIR).mkdir/lburg/ \
 	$(BUILD_DIR).mkdir/uivm/ \
-
-
-define MKDIR_SH
-	@if [ ! -d "./$1" ]; \
-		then $(MKDIR) "./$1";fi;
-endef
-
-$(BUILD_DIR).mkdir/%/:
-	$(call MKDIR_SH,$(subst .mkdir,,$@))
-
-$(BUILD_DIR).mkdir/:
-	$(call MKDIR_SH,$(subst .mkdir,,$@))
-
-#D_DIRS  := $(addprefix $(BUILD_DIR)/,$(WORKDIRS))
-D_FILES := $(shell find $(BUILD_DIR)/** -name '*.d' 2>/dev/null)
-ifneq ($(strip $(D_FILES)),)
-include $(D_FILES)
-endif
-
-release: 
-	$(Q)$(MAKE) multigame engine \
-		plugin index build-tools deploy \
-		BUILD_DIR="build/release-wasm-js" \
-		CFLAGS="$(RELEASE_CFLAGS)" \
-		LDFLAGS="$(RELEASE_LDFLAGS)"
-
-debug: 
-	$(Q)$(MAKE) multigame engine \
-		plugin index build-tools deploy \
-		BUILD_DIR="build/debug-wasm-js" \
-		CFLAGS="$(DEBUG_CFLAGS)" \
-		LDFLAGS="$(DEBUG_LDFLAGS)"
-
-multigame: # q3asm.wasm q3lcc.wasm ui.qvm cgame.qvm qagame.qvm
-
-engine: morph.wasm morph.opt
-
-plugin: engine morph.zip
-
-index: morph.html
-
-build-tools: # q3map2.wasm q3asm.wasm q3lcc.wasm 
-
-deploy: engine plugin build-tools
-
+	$(BUILD_DIR).mkdir/cgvm/ \
+	$(BUILD_DIR).mkdir/qavm/ 
 
 
 WASM_ASM := $(Q)node ./engine/wasm/bin/wasm-cli.js -- \
@@ -168,41 +57,5 @@ $(BUILD_DIR)/uivm/%.asm: $(GAMEVM_SOURCE)/%.c
 	$(DO_UIVM_CC)
 
 
-
-
-
-define DO_ENGINE_LD
-	$(echo_cmd) "WASM-LD $1"
-	$(Q)$(CC) -o $(BUILD_DIR)/$1 $2 $(CLIENT_LDFLAGS)
-endef
-
-define DO_SAFE_MOVE
-	-$(Q)$(MOVE) $2 $2.bak 2> /dev/null
-	$(Q)$(MOVE) $1 $2 2> /dev/null
-	-$(Q)$(UNLINK) $2.bak 2> /dev/null
-endef
-
-define DO_ENGINE_OPT
-	$(echo_cmd) "OPT_CC $2"
-	$(Q)$(OPT) -Os --no-validation -o $1 $2
-	$(call DO_SAFE_MOVE,$1,$2)
-endef
-
-
-
-ENGINE_FILES  := $(wildcard $(ENGINE_SOURCE)/*.c)
-ENGINE_OBJS   := $(subst $(ENGINE_SOURCE)/,$(BUILD_DIR)/engine/,$(ENGINE_FILES:.c=.o))
-
-
-morph.wasm: $(BUILD_DIRS) $(ENGINE_FILES) $(ENGINE_OBJS)
-	$(call DO_ENGINE_LD,$@,)
-
-morph.opt: morph.wasm $(BUILD_DIR)/morph.wasm
-	$(call DO_ENGINE_OPT,$(BUILD_DIR)/morph.wasm,$(BUILD_DIR)/morph.opt)
-
-
-
-multigame: # q3asm.wasm q3lcc.wasm ui.qvm cgame.qvm qagame.qvm
-	@:
-
+multigame: # ui.qvm cgame.qvm qagame.qvm
 

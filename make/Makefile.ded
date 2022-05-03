@@ -1,4 +1,8 @@
 
+DED_BUILD_DIRS := \
+	$(BUILD_DIR).mkdir \
+	$(filter $(MAKECMDGOALS),clean) \
+	$(BUILD_DIR).mkdir/ded/ \
 
 
 DED_FILES    := $(wildcard $(ENGINE_SOURCE)/botlib/*.c) \
@@ -7,7 +11,7 @@ DED_FILES    := $(wildcard $(ENGINE_SOURCE)/botlib/*.c) \
 	$(filter-out %/sys_snd.c,$(wildcard $(ENGINE_SOURCE)/wasm/*.c))
 DED_OBJS     := $(addprefix $(BUILD_DIR)/ded/,$(notdir $(DED_FILES:.c=.o)))
 
-morph.ded.wasm: $(BUILD_DIRS) $(DED_FILES) $(DED_OBJS)
+morph.ded.wasm: $(DED_BUILD_DIRS) $(DED_FILES) $(DED_OBJS)
 	$(call DO_ENGINE_LD,$@,$(DED_OBJS))
 
 morph.ded.opt: morph.ded.wasm $(BUILD_DIR)/morph.ded.wasm
@@ -19,26 +23,25 @@ morph.ded.opt: morph.ded.wasm $(BUILD_DIR)/morph.ded.wasm
 #   I CAN USE A BLOB, OR CREATE SOME GENERIC IDBFS WORKER FOR BOTH SERVICE WORKER AND
 #   BACKGROUND WORKER THAT JUST LOADS WHATEVER LATEST .WASM DOWNLOADED FILE.
 
-WORKER_FILES  :=                                        \
-	$(wildcard driver/eval/*.js)                          \
+WORKER_FILES  := $(wildcard driver/eval/*.js)              \
 	$(filter-out %/backend-plugin.js,$(wildcard driver/repl/backend*.js)) \
-	driver/utils/acorn.js driver/utils/acorn-loose.js     \
-	driver/utils/crypt.js driver/utils/jsencrypt.js       \
-	$(BUILD_DIR)/morph.ded.js \
+	driver/utils/acorn.js driver/utils/acorn-loose.js        \
+	driver/utils/crypt.js driver/utils/jsencrypt.js          \
+	$(BUILD_DIR)/jsdom.min.js driver/utils/remarkable.min.js \
+	$(BUILD_DIR)/morph.ded.js 
 
-sys_worker.js: dedicated $(WORKER_FILES)
+sys_worker.js: dedicated $(WORKER_FILES) 
 	$(Q)cat $(WORKER_FILES) > $(BUILD_DIR)/sys_worker.js
+	node -e "require('./engine/wasm/bin/make').formatForVFS( \
+		'$(BUILD_DIR)/morph.ded.wasm', 'morph.wasm' )" \
+		>>  $(BUILD_DIR)/sys_worker.js
 
 $(BUILD_DIR)/morph.ded.js: $(BUILD_DIR)/morph.ded.wasm
-	node -e "require('./engine/wasm/bin/make').normalBase64( \
-		'$(BUILD_DIR)/morph.ded.js', '$(BUILD_DIR)/morph.ded.wasm', \
-		'morph.wasm' )"
+	@:
 
 
 dedicated: morph.ded.wasm morph.ded.opt # q3map2.wasm for MemoryMaps
 	@: 
-
-
 
 $(BUILD_DIR)/ded/%.o: $(ENGINE_SOURCE)/botlib/%.c
 	$(echo_cmd) "BOTLIB_CC $<"

@@ -22,75 +22,51 @@ window.preFS['${path}']='${file2Base64(resource)}';
   return output
 }
 
-// GODDAMNIT I HATE THIS REGEX JAVASCRIPT FEATURE, I JUST WANT ONE STRING
-//   REPLACEMENT THAT ISN'T EXACT FUCKING TEXT.
-
-function normalReplace(indexFile, cssFile, scriptFile, skinFile, wasmFile
-   // masterfile really?
-   , htmlBody, workerFile) {
-	const {readFileSync: rfs, writeFileSync: wfs} = require('fs');
-  let index = rfs(indexFile).toString('utf-8')
-  let replacements = [
-    // INTERESTING FOR CODE REVIEWS. PRE-PROGRAMMED SMELL TO PREVENT FUTURES SMELLS? LOL!
-    [/<canvas/, rfs(htmlBody) + '<canvas'],
-    [/<link[^>]*>/, '<style>'+rfs(cssFile)+'</style>'],
-    [/<script[^>]*>/, '<script>'+rfs(scriptFile)+'</script>'],
-    [/<img[^>]*>/, '<img title="gfx/2d/bigchars.png" src="data:image/png;base64,'
-      + rfs(skinFile, 'base64')+ '" />'],
-    [/<\/html>/, '<script async type="application/javascript">' 
-      + formatForVFS(wasmFile, path.basename(wasmFile)) + '</script></html>'],
-    [/<\/html>/, '<script async type="application/javascript">' 
-      + formatForVFS(workerFile, path.basename(workerFile)) + '</script></html>'],
-    [/quake3e\.wasm/ig, path.basename(wasmFile)],
-    [/quake3e\.ded\.wasm/ig, path.basename(wasmFile).replace('.js', '.ded.js')],
-  ]
-  for(let i = 0; i < replacements.length; i++) {
-    let matchString = index.match(replacements[i][0])
-    if(matchString && matchString.index) {
-      index = index.substring(0, matchString.index)
-        + replacements[i][1] + index.substring(matchString.index
-        + matchString[0].length, index.length)
-    } else if(matchString && matchString.length) {
-      index = index.replace(replacements[i][0], replacements[i][1])
-    } else {
-      throw new Error('Unmatched normal expression: ' + replacements[i][0])
-    }
-  }
-  wfs(indexFile, index)
-
-}
-
 function normalEmbedAll(indexFile, directory, pathMatch, pathReplace) {
-	const {
-    readFileSync: rfs, 
-    writeFileSync: wfs,
+	const { 
     readdirSync: rds,
+    statSync: sts,
   } = require('fs')
-  let index = rfs(indexFile).toString('utf-8')
-  let scripts = rds(directory)
-    .map(f => path.join(directory, f)) // TODO: BUILD SUB-DIRS
+  let scripts = rds(directory).map(f => path.join(directory, f)) // TODO: BUILD SUB-DIRS
   // INTERESTING LEAF, KEEP THE SAME CODE BECAUSE IT'S PRETTY SIMPLE, LEFT VARIABLE NAMES THE SAME
   //   SOMETHING FOR CODE REVIEWS, LOTS OF NEW VARIABLE NAMES, OR REOCCURING VARIABLE NAMES?
   // GOD, CAN SOURCETREE NOT REFRESH CONSTANTLY IN THE BACKGROUND? ONCE WHEN I SWITCH TO THE WINDOW
   //   MAYBE ONCE AGAIN IF IT THINKS A BUILD SCRIPT WAS RUNNING? WONDER IF GITKRAKEN DOES THIS,
   //   I ALREADY HAVE PROBLEMS WITH GITKRAKEN SHOWING THE CORRECT CODE. NO ONE CARES.
   for(let i = 0; i < scripts.length; i++) {
-    let replacements = [/<\/html>/, '<script async type="application/javascript">' 
-      + formatForVFS(scripts[i], scripts[i].replace(pathMatch, pathReplace)) + '</script></html>']
-    let matchString = index.match(replacements[0])
-    index = index.substring(0, matchString.index)
-      + replacements[1] + index.substring(matchString.index
-      + matchString[0].length, index.length)
+    if(sts(scripts[i]).isDirectory()) {
+      normalEmbedAll(indexFile, scripts[i], pathMatch, pathReplace)
+    } else {
+      normalReplace(indexFile, formatForVFS(scripts[i], scripts[i].replace(pathMatch, pathReplace)))
+    }
   }
-  wfs(indexFile, index)
 }
 
+function normalBase64(indexFile, embedFile, pathInVFS) {
+  normalReplace(indexFile, formatForVFS(embedFile, pathInVFS))
+}
 
-function normalBase64(writeFile, embedFile, pathInVFS) {
-	const {
+function normalBootstrap(indexFile, embedFile) {
+  const { readFileSync: rfs } = require('fs')
+  let jsFile = rfs(embedFile).toString('utf-8')
+  normalReplace(indexFile, jsFile)
+}
+
+// I SUPPOSE IN A WAY THIS SINGLE REPLACEMENT IS WHAT I ASKED FOR
+//   THIS IS BASICALLY THE SAME THING ANGULAR DOES
+function normalReplace(indexFile, embedString) {
+  const { 
+    readFileSync: rfs, 
     writeFileSync: wfs,
   } = require('fs')
-  wfs(writeFile, formatForVFS(embedFile, pathInVFS))
+  let index = rfs(indexFile).toString('utf-8')
+  let replacements = [/<\/html>/, '<script async type="application/javascript">' 
+    + embedString + '</script></html>']
+  let matchString = index.match(replacements[0])
+  index = index.substring(0, matchString.index)
+    + replacements[1] + index.substring(matchString.index
+    + matchString[0].length, index.length)
+  wfs(indexFile, index)
 }
 
 
@@ -98,5 +74,6 @@ module.exports = {
   formatForVFS,
   normalReplace,
   normalEmbedAll,
-  normalBase64
+  normalBase64,
+  normalBootstrap
 }

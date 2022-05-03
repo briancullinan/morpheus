@@ -1,4 +1,19 @@
 
+ENGINE_BUILD_DIRS := \
+	$(BUILD_DIR).mkdir \
+	$(filter $(MAKECMDGOALS),clean) \
+	$(BUILD_DIR).mkdir/engine/ \
+	$(BUILD_DIR).mkdir/engine/glsl/ \
+	$(BUILD_DIR).mkdir/sdl/ \
+	$(BUILD_DIR).mkdir/sdl/audio/ \
+	$(BUILD_DIR).mkdir/sdl/audio/emscripten/ \
+	$(BUILD_DIR).mkdir/sdl/atomic/ \
+	$(BUILD_DIR).mkdir/sdl/events/ \
+	$(BUILD_DIR).mkdir/sdl/thread/ \
+	$(BUILD_DIR).mkdir/sdl/thread/generic/ \
+	$(BUILD_DIR).mkdir/sdl/timer/ \
+	$(BUILD_DIR).mkdir/sdl/timer/unix/
+
 define DO_ENGINE_LD
 	$(echo_cmd) "WASM-LD $1"
 	$(Q)$(CC) -o $(BUILD_DIR)/$1 $2 $(CLIENT_LDFLAGS)
@@ -40,7 +55,7 @@ SDL_NEEDED     := \
 	thread/generic/SDL_systhread.o 
 SDL_OBJS       := $(addprefix $(BUILD_DIR)/sdl/,$(SDL_NEEDED))
 
-morph.wasm: $(BUILD_DIRS) $(ENGINE_FILES) $(ENGINE_OBJS) $(SDL_OBJS)
+morph.wasm: $(ENGINE_BUILD_DIRS) $(ENGINE_FILES) $(ENGINE_OBJS) $(SDL_OBJS)
 	$(call DO_ENGINE_LD,$@,$(ENGINE_OBJS) $(SDL_OBJS))
 
 morph.opt: morph.wasm $(BUILD_DIR)/morph.wasm

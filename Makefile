@@ -80,27 +80,7 @@ Q3MAP2_SOURCE  := libs/quake3/q3map2
 # LAYOUT BUILD_DIRS UPFRONT
 BUILD_DIRS     := \
 	$(BUILD_DIR).mkdir \
-	$(filter $(MAKECMDGOALS),clean) \
-	$(BUILD_DIR).mkdir/q3asm/ \
-	$(BUILD_DIR).mkdir/q3lcc/ \
-	$(BUILD_DIR).mkdir/q3rcc/ \
-	$(BUILD_DIR).mkdir/q3cpp/ \
-	$(BUILD_DIR).mkdir/lburg/ \
-	$(BUILD_DIR).mkdir/uivm/ \
-	$(BUILD_DIR).mkdir/plugin/ \
-	$(BUILD_DIR).mkdir/engine/ \
-	$(BUILD_DIR).mkdir/ded/ \
-	$(BUILD_DIR).mkdir/engine/glsl/ \
-	$(BUILD_DIR).mkdir/sdl/ \
-	$(BUILD_DIR).mkdir/q3map2/ \
-	$(BUILD_DIR).mkdir/sdl/audio/ \
-	$(BUILD_DIR).mkdir/sdl/audio/emscripten/ \
-	$(BUILD_DIR).mkdir/sdl/atomic/ \
-	$(BUILD_DIR).mkdir/sdl/events/ \
-	$(BUILD_DIR).mkdir/sdl/thread/ \
-	$(BUILD_DIR).mkdir/sdl/thread/generic/ \
-	$(BUILD_DIR).mkdir/sdl/timer/ \
-	$(BUILD_DIR).mkdir/sdl/timer/unix/ \
+	$(filter $(MAKECMDGOALS),clean) 
 
 
 
@@ -137,7 +117,17 @@ debug:
 
 
 
-
+include make/Makefile.antlr
+include make/Makefile.ded
+include make/Makefile.engine
+include make/Makefile.index
+include make/Makefile.jsdom
+include make/Makefile.local
+include make/Makefile.platform
+include make/Makefile.plugin
+include make/Makefile.q3lcc
+include make/Makefile.q3map2
+include make/Makefile.vms
 
 
 

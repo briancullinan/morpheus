@@ -1,3 +1,28 @@
 
+# WEIRD I CAN'T FIND THIS PRE-BUILT FOR BROWSER
+#   WAIT, JSDOM IN A WEB-WORKER? WTF? IS THIS GUY UP TO?
+# COALESCENCE. LIKE THE BORG >:Z
+
+JSDOM_BUILD_DIRS := \
+	$(BUILD_DIR).mkdir \
+	$(filter $(MAKECMDGOALS),clean) \
+	$(BUILD_DIR).mkdir/jsdom/ \
+
+JSDOM_RUNTIME := node_modules/jsdom/lib
+JSDOM_FILES   := \
+		$(wildcard $(JSDOM_RUNTIME)/*.js) \
+		$(wildcard $(JSDOM_RUNTIME)/*/*.js) \
+		$(wildcard $(JSDOM_RUNTIME)/*/*/*.js) \
+		$(wildcard $(JSDOM_RUNTIME)/*/*/*/*.js)
+JSDOM_OBJS    := $(subst $(JSDOM_RUNTIME)/,$(BUILD_DIR)/jsdom/,$(JSDOM_FILES))
+
+$(BUILD_DIR)/jsdom.min.js: $(JSDOM_BUILD_DIRS) $(JSDOM_FILES) $(JSDOM_OBJS)
+	$(echo_cmd) "UGLIFY_LD $@: This may take a while."
+	$(Q)uglifyjs $(JSDOM_OBJS) -o $@ -c -m
 
 
+$(BUILD_DIR)/jsdom/%.js: $(JSDOM_RUNTIME)/%.js
+	$(echo_cmd) "JSDOM_CC $<"
+	$(Q)babel --plugins \
+			@babel/plugin-transform-modules-umd \
+			$< --out-file $@

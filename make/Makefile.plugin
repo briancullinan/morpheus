@@ -1,4 +1,9 @@
 
+PLUGIN_BUILD_DIRS := \
+	$(BUILD_DIR).mkdir \
+	$(filter $(MAKECMDGOALS),clean) \
+	$(BUILD_DIR).mkdir/plugin/ \
+
 PLUGIN_FILES   := \
 	driver/manifest.json \
 	driver/rules.json \
@@ -15,7 +20,7 @@ plugin: engine morph.zip
 	$(Q)cp $(HTTP_SOURCE)/redpill.png $(BUILD_DIR)/plugin/redpill.png
 	@:
 
-morph.zip: backend.js frontend.js $(PLUGIN_FILES)
+morph.zip: $(PLUGIN_BUILD_DIRS) backend.js frontend.js $(PLUGIN_FILES)
 	@:
 
 BACKEND_PLUGIN  := \
@@ -24,7 +29,6 @@ BACKEND_PLUGIN  := \
 	driver/utils/acorn.js driver/utils/acorn-loose.js \
 	driver/utils/crypt.js driver/utils/jsencrypt.js
 FRONTEND_PLUGIN := \
-	driver/repl/frontend-plugin.js \
 	driver/utils/jsencrypt.js driver/utils/crypt.js \
 	driver/utils/keymaster.js
 
