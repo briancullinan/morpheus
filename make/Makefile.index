@@ -35,6 +35,12 @@ morph.html: $(INDEX_FILES) $(INDEX_OBJS)
 		'$(BUILD_DIR)/morph.html', 'driver/library', 'driver/', 'library/')"
 	node -e "require('./engine/wasm/bin/make').normalBootstrap( \
 		'$(BUILD_DIR)/morph.html', '$(BUILD_DIR)/morph.js')"
+	node -e "require('./engine/wasm/bin/make').normalReplace( \
+		'$(BUILD_DIR)/morph.html', require('./driver/library/quine.js') \
+		.domMessageResponseMiddleware + '\ndomMessageResponseMiddleware();');"
+# basically, the above line is there until I can write a simple make/prolog parser
+#   like this stupid failing dry-run.txt file I keep seeing, or add some other
+#   obvious build process to the browser, so game files can be recompiled live.
 
 index: morph.html $(BUILD_DIR)/sys_worker.js
 	cp $(BUILD_DIR)/morph.html index.html

@@ -1,3 +1,10 @@
+// TODO: eventually move all of this into library and quine.js
+//   could compile imagemagick to a webworker and include 
+//   this in cache generation during dev workflow
+//   i.e. add photopea to the IDE and update shaders in map as you draw
+//   I think Unreal does this, so I must not be very creative to do it 
+//   with less code? Life is nothing more than a weird POC.
+
 const fs = require('fs');
 const path = require('path');
 const GAME_DIRECTORY = 'multigame'

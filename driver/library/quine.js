@@ -210,7 +210,7 @@ function backendMessageResponseMiddleware() {
 // chrome extension debugger io
 function debuggerMessageResponseMiddleware() {
 	function sendCommand() {
-		response = await chrome.debugger.sendCommand({
+		response = chrome.debugger.sendCommand({
 			tabId: senderId
 		}, 'Runtime.evaluate', {
 			expression: expression
