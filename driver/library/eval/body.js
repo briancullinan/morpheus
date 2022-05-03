@@ -54,9 +54,11 @@ async function runStatement(i, AST, runContext) {
 				runContext.bubbleAST = AST
 				// normally we'd skip and let it run async
 				//   but doStatus() also does @Delay()
-				let doSleep = runContext.bubbleFile == '<eval>'
-						&& (!AST[i].callee || AST[i].callee.name != 'sleep')
-				await doStatus(doSleep)
+				if(typeof doStatus != 'undefined') { // BOOTSTRAP CODE?
+					let doSleep = runContext.bubbleFile == '<eval>'
+					&& (!AST[i].callee || AST[i].callee.name != 'sleep')
+					await doStatus(doSleep)
+				}
 			}
 		}
 
@@ -141,7 +143,7 @@ async function runStatement(i, AST, runContext) {
 		} else
 		if(AST[i].type == 'VariableDeclarator') {
 			// doAssign
-			return await runVariable(AST[i], runContext)
+			return await runAssignment(AST[i].id, AST[i].init, runContext)
 		} else 
 
 
@@ -210,7 +212,14 @@ async function runStatement(i, AST, runContext) {
 				result = await runStatement(0, [AST[i].block], runContext)
 			} catch (e) {
 				if(AST[i].handler) {
-					runContext.localVariables[AST[i].handler.params.name] = e
+					// same as runCall param assignment
+					await runAssignment({
+						type: 'Identifier',
+						name: AST[i].handler.params.name
+					}, {
+						type: 'Literal',
+						value: e
+					}, runContext)
 				}
 			} finally {
 				if(AST[i].finally) {
@@ -230,7 +239,7 @@ async function runStatement(i, AST, runContext) {
 				result.push(await runStatement(0, [AST[i].elements[j]], runContext))
 			}
 			return result
-		}
+		} else 
 
 
 		{
@@ -239,6 +248,7 @@ async function runStatement(i, AST, runContext) {
 		}
 
 	} catch (e) {
+		debugger
 		doError(e, runContext)
 		return
 	}
@@ -259,7 +269,6 @@ async function runBody(AST, runContext) {
 	// TODO: restore outer scope when context was created
 	// doesn't need to be fast, because async DevTools calls, are not fast
 	// replace with current context
-
 
 	// any time a setTimer is use the callStack will be reset
 	//   which means error messaging must intercept here not to

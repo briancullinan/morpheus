@@ -1,8 +1,4 @@
 
-// this was for a web-worker setup
-if(typeof global != 'undefined' && typeof global.window == 'undefined') {
-	global.window = {}
-}
 
 
 function getQueryCommands() {

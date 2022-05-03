@@ -23,5 +23,9 @@ $(BUILD_DIR)/jsdom.min.js: $(JSDOM_FILES) $(JSDOM_OBJS) # $(JSDOM_BUILD_DIRS)
 $(BUILD_DIR)/jsdom/%.js: $(JSDOM_RUNTIME)/%.js
 	$(echo_cmd) "JSDOM_CC $<"
 	$(Q)babel --plugins \
-			@babel/plugin-transform-modules-umd \
+			@babel/plugin-transform-modules-umd,@babel/plugin-transform-modules-amd \
 			$< --out-file $@
+
+# to run in nodejs
+#	@babel/plugin-transform-modules-commonjs
+# ,@babel/transform-es2015-modules-amd

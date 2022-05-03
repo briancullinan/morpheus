@@ -10,7 +10,6 @@ Q3RCC_SOURCE  := libs/q3lcc/src
 LBURG_SOURCE  := libs/q3lcc/lburg
 Q3CPP_SOURCE  := libs/q3lcc/cpp
 Q3LCC_SOURCE  := libs/q3lcc/etc
-ENGINE_SOURCE := engine/*
 
 
 # LAYOUT BUILD_DIRS UPFRONT

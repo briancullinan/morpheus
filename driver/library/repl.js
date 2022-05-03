@@ -34,14 +34,14 @@ function doRun(script) {
   let AST
   try {
 		AST = acorn.parse(
-			'(function () {\n' + request.script + '\n})()\n'
+			'(function () {\n' + script + '\n})()\n'
 			, {ecmaVersion: 2020, locations: true, onComment: []})
 	} catch (e) {
 		// return parser errors right away
     doError(e)
 		return
 	}
-  ctx.body = AST.body[0].expression.callee.body.body
+  ctx.body = AST.body[0].expression.callee.body
   ctx.bubbleTime = Date.now()
   console.log('script:', script)
   let result
@@ -108,7 +108,7 @@ function createRunContext(env) {
 		// TODO: allow moving cursor to any symbol using address of symbol in AST
 		// OR: WAIT IN STILLRUNNING() FOR UNPAUSE
 	})
-	return runContext
+	return env
 }
 
 
@@ -204,11 +204,39 @@ function onAccessor(request) {
 	}
 	// INTERESTING, REALIZING THIS IS THE ONLY ABSTRACTION REPL CAN
 	//   DO BY ITSELF, WINDOW.LOCATION LOOKUPS ARE CONTEXT DEPENDENT
-	if(request.accessor.startsWith('exports.')) {
+	if(typeof request.accessor != 'undefined'
+		&& request.accessor.startsWith('exports.')) {
 		return doLibraryLookup(request.accessor.split('.')[1])
 	}
 }
 
+
+function doLibraryLookup(functionName) {
+	let libraryFiles = Object.keys(FS.virtual)
+		.filter(function (p) { return p.includes('/library/') })
+	for(let i = 0; i < libraryFiles.length; i++) {
+		let libraryCode = Array.from(FS.virtual[libraryFiles[i]].contents)
+			.map(function (c) { return String.fromCharCode(c) })
+			.join('')
+		// TODO: make these tokens instead of function for cross language support
+		if(libraryCode.includes('function ' + functionName)) {
+			return {
+				library: libraryCode,
+				name: libraryFiles[i],
+				// TODO: a hash value?
+			}
+		} else {
+			let currentSession = window.ace.getValue()
+			if (currentSession.includes('function ' + functionName)) {
+				return {
+					library: currentSession,
+					name: '<eval>',
+					// TODO: a hash value?
+				}
+			}
+		}
+	}
+}
 
 
 // SINK
@@ -271,6 +299,14 @@ async function doStatus(doSleep) {
 		} else {
 			debugger
 		}
+	}
+}
+
+ // BOOTSTRAP CODE?
+if(typeof module != 'undefined') {
+	module.exports = {
+		onAccessor,
+		doLibraryLookup,
 	}
 }
 

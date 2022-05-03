@@ -50,12 +50,12 @@ async function runCallStatements(runContext, functionName, parameterDefinition, 
 	//   THIS IS BASICALLY HOW IT WORKS INTERNALLY, USES
 	//   INTROSPECTION TO READ ATTRIBUTES FROM THE PARSE
 	//   THEN CALLS THE FUNCTIONS BEFORE THE ACTUAL CALL
-	//   HAPPENS. SYNTACTIC SUGAR.
+	//   HAPPENS. SYNTACTIC SUGAR. EVERY LANGUAGE SHOULD HAVE ATTRIBUTES
 	if(before) {
 		let beforeFunc
 		if(runContext.localFunctions[before]) {
 			beforeFunc = runContext.localFunctions[before]
-		} else if(typeof runContext.localVariables[before] == 'function') {
+		} else if(runContext.localVariables[before] == 'function') {
 			beforeFunc = runContext.localVariables[before]
 		} else {
 			throw new Error('Attribute @Before not found: ' + before)
@@ -71,7 +71,14 @@ async function runCallStatements(runContext, functionName, parameterDefinition, 
 		if(l == callArgs.length) {
 			continue;
 		}
-		runContext.localVariables[parameterDefinition[l].name] = callArgs[l]
+    // fuck-arounds?
+    await runAssignment({
+      type: 'Identifier',
+      name: parameterDefinition[l].name
+    }, {
+      type: 'Literal',
+      value: callArgs[l]
+    }, runContext)
 	}
 
 	// run new command context
@@ -84,7 +91,7 @@ async function runCallStatements(runContext, functionName, parameterDefinition, 
 		let afterFunc
 		if(runContext.localFunctions[after]) {
 			afterFunc = runContext.localFunctions[after]
-		} else if(typeof runContext.localVariables[after] == 'function') {
+		} else if(runContext.localVariables[after] == 'function') {
 			afterFunc = runContext.localVariables[after]
 		} else {
 			throw new Error('Attribute @After not found: ' + after)
@@ -150,7 +157,7 @@ function runFunction(AST, runContext) {
   }
   if(AST.id) {
     // don't add namePrefix!
-    if(typeof runContext.localVariables[AST.id.name] != 'undefined') {
+    if(runContext.localVariables.hasOwnProperty(AST.id.name)) {
       throw new Error('Variable already declared! ' + AST.id.name)
     }
   } else {
@@ -237,7 +244,14 @@ async function runCall(AST, runContext) {
     throw new Error('Call stack exceeded!')
   }
 
-  runContext.localVariables.arguments = params
+  await runAssignment({
+    type: 'Identifier',
+    name: 'arguments'
+  }, {
+    type: 'Literal',
+    value: params
+  }, runContext)
+  // TODO: __func__, __line__, __file__ for debugging fun
 
   try {
     let result;

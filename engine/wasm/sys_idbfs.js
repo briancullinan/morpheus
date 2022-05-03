@@ -218,3 +218,11 @@ function readPreFS() {
 
 }
 
+
+if(typeof module != 'undefined') {
+  module.exports = {
+    readPreFS,
+    _base64ToArrayBuffer,
+    
+  }
+}

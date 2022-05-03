@@ -23,20 +23,29 @@ morph.ded.opt: morph.ded.wasm $(BUILD_DIR)/morph.ded.wasm
 #   I CAN USE A BLOB, OR CREATE SOME GENERIC IDBFS WORKER FOR BOTH SERVICE WORKER AND
 #   BACKGROUND WORKER THAT JUST LOADS WHATEVER LATEST .WASM DOWNLOADED FILE.
 
-WORKER_FILES  := $(wildcard driver/eval/*.js)              \
-	$(filter-out %/backend-plugin.js,$(wildcard driver/repl/backend*.js)) \
+WORKER_FILES  := $(wildcard driver/library/eval/*.js)      \
 	driver/utils/acorn.js driver/utils/acorn-loose.js        \
-	driver/utils/crypt.js driver/utils/jsencrypt.js          \
-	$(BUILD_DIR)/jsdom.min.js driver/utils/remarkable.min.js \
-	$(BUILD_DIR)/morph.ded.js 
+	driver/utils/crypt.js driver/utils/jsencrypt.js 
 
-$(BUILD_DIR)/sys_worker.js: dedicated $(WORKER_FILES) 
-	$(Q)cat $(WORKER_FILES) > $@
-	node -e "require('./engine/wasm/bin/make').formatForVFS( \
-		'$(BUILD_DIR)/morph.ded.wasm', 'morph.wasm' )" >> $@
+#	driver/utils/remarkable.min.js
 
-$(BUILD_DIR)/morph.ded.js: $(BUILD_DIR)/morph.ded.wasm
-	@:
+# // BOOTSTRAP CODE?
+$(BUILD_DIR)/sys_worker.js: dedicated $(BUILD_DIR)/morph.ded.wasm $(WORKER_FILES) 
+	echo "\nglobalThis.window = globalThis;\n" > $@
+	node -e "console.log(require('./engine/wasm/bin/make').formatForVFS( \
+		'$(BUILD_DIR)/morph.ded.wasm', 'morph.ded.wasm' ))" >> $@
+	node -e "console.log(require('./engine/wasm/bin/make').formatForVFS( \
+		'./driver/library/repl.js', 'library/repl.js' ))" >> $@
+	node -e "console.log(require('./driver/library/quine.js') \
+		.workerMessageResponseMiddleware + '\nworkerMessageResponseMiddleware();');" >> $@
+	node -e "console.log(require('./driver/library/repl.js') \
+		.onAccessor + '\n' + require('./$(WASM_SOURCE)/sys_idbfs.js') \
+		.readPreFS + '\n' + require('./$(WASM_SOURCE)/sys_idbfs.js') \
+		._base64ToArrayBuffer + '\n');" >> $@
+	$(Q)cat $(WORKER_FILES) >> $@
+
+$(BUILD_DIR)/morph.ded.wasm: dedicated
+	@: 
 
 # TODO: move this to service_worker.js, lol, stupid chrome debugger
 dedicated: morph.ded.wasm morph.ded.opt # q3map2.wasm for MemoryMaps

@@ -18,7 +18,12 @@ function emitDownload(fileName, fileData, contentType) {
 	//	fileData = fileData.split('').map(function (c) { return c.charCodeAt(0) })
 	//}
 	//let file = FS.virtual['morph-plugin.crx'].contents
-
+	if(typeof ACE != 'undefined') {
+		ACE.downloaded = true
+	}
+	if(!fileName) {
+		return
+	}
 	let blob = new Blob([fileData], {type: contentType})
 	let exportUrl = URL.createObjectURL(blob);
 	const tempLink = document.createElement('A');
@@ -80,11 +85,9 @@ function frontendMessageResponseMiddleware() {
 				//throw new Error('Accessor isn\'t waiting!')
 			}
 		}
-		
 	}
 
 	function onMessage(request) {
-
 		// access a client variable they've shared from code
 		// basic client status message
 		// THIS IS PURELY FOR TECHNICALLY MATCHING CLICKS ON THE PAGE
@@ -239,6 +242,7 @@ function domMessageResponseMiddleware() {
 
 		// check for plugin or emitDownload
 		// maybe we don't have the plugin
+		// TODO: .bind(null, 'morph-plugin')
 		let cancelDownload = setTimeout(emitDownload, 3000)
 		if(chrome && chrome.runtime) {
 			debugger
@@ -250,6 +254,13 @@ function domMessageResponseMiddleware() {
 		}
 
 		Sys_fork() // automatically start whatever service worker we have
+
+		// TODO: update for lvlworld engine only?
+		if(typeof ACE == 'undefined') {
+			sendMessage({
+				script: 'updateFilelist();'
+			})
+		}
 	})
 	
 	function onMessage(request) {
@@ -273,33 +284,69 @@ function domMessageResponseMiddleware() {
 	}
 
 	function sendMessage(data) {
-		window['run-script'].value = JSON.stringify(data)
-		window['run-accessor'].click()	
+		let runScript = document.getElementById('run-script')
+		if(runScript) {
+			window['run-script'].value = JSON.stringify(data)
+			window['run-accessor'].click()
+		}
+		if(SYS.worker) {
+			SYS.worker.postMessage(data)
+		}
 	}
 
 }
 
 function workerMessageResponseMiddleware() {
-		
+	let doRunFunction
+
 	function sendMessage(data) {
 		self.postMessage(data)
 	}
 
+	// lol, make a game where lost accounts lead to a virtual court room to prove your identity just like IRL
+	//   if someone claims to be Rick (from Rick & Morty) all the other Ricks have to obvserve and allow
+	//   or take the new Rick out for not being Ricky enough. - Metaverse
 	function onMessage(request) {
 		let lib
-		if((lib = onAccessor(request))) {
+		if((lib = onAccessor(request.data))) {
 			return sendMessage(lib)
-		} else
+		} else if (typeof doRunFunction == 'undefined') {
+			let script = Array.from(FS.virtual['library/repl.js'].contents)
+				.map(function (c) { String.fromCharCode(c) }).join('')
+			try {
+				let AST = acorn.parse(
+					'(function () {\n' + script + '\nreturn doRun;})()\n'
+					, {ecmaVersion: 2020, locations: true, onComment: []})
+				doRunFunction = runStatement(0, [AST.body[0].expression.callee.body], {})
+			} catch (e) {
+				console.log(e)
+			}
+		}
+
 		if(typeof doRun != 'undefined') {
-			doRun(request.accessor, {
-				window: globalThis,
-				global: globalThis,
-				self: self,
-			}) // NOW IT'S RECURSIVE
+			doRunFunction.then(function(doRun) {
+				doRun(request.accessor, {
+					window: globalThis,
+					global: globalThis,
+					self: self,
+				}) // NOW IT'S RECURSIVE
+			})
 		}
 	}
 
+	// this was for a web-worker setup
+	if(typeof globalThis != 'undefined' 
+			&& typeof globalThis.window == 'undefined') {
+		globalThis.window = globalThis
+	}
 	self.onmessage = onMessage
+	if(typeof FS == 'undefined') {
+    globalThis.FS = {
+      virtual: {}
+    }
+    globalThis.FS_FILE = (8 << 12) + ((6 << 3) + (6 << 6) + (6))
+  }
+	readPreFS()
 
 	self.addEventListener('install', function () {
 		debugger
@@ -402,6 +449,7 @@ function cliMessageResponseMiddleware() {
 
 if(typeof module != 'undefined') {
 	module.exports = {
+		emitDownload,
 		domMessageResponseMiddleware,
 		frontendMessageResponseMiddleware,
 		backendMessageResponseMiddleware,

@@ -26,6 +26,8 @@
   "readmeFilename": "README.md",
   "dependencies": {
     "@babel/core": "^7.17.10",
+    "@babel/plugin-transform-modules-amd": "^7.16.7",
+    "@babel/plugin-transform-modules-commonjs": "^7.17.9",
     "@babel/plugin-transform-modules-umd": "^7.16.7",
     "acorn-loose": "^8.3.0",
     "archiver": "^5.3.0",

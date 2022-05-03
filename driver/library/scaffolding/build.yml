@@ -1,0 +1,14 @@
+# just a template for quine to push out to github to make it
+#   communicate in real time, lol
+# how funny will it be to pause in a Makefile, pick out a different
+#   VM on Github to build another component, and Github won't know any different
+# It's all just CI to them, but I could use this system to Live code a Dockerfile
+#   no more of this BS override the start command to run bash, I need to actually
+#   pause an edit a bash script as it is running. - LLVM 
+#   (by way of ANTLR and attaching stdio) I can interpret a bash script and use existing
+#   Github support systems like the Court Jester. Make them dance.
+# I should be able to map XVNC sessions into OpenGL shaders and make a real
+#   looking virtual Cerebro with lots of streams displaying all at once.
+#   How can I watch 1000 instagrammies at the same time?
+
+

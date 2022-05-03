@@ -9,14 +9,16 @@ FRONTEND_JS      :=                       \
 	driver/utils/keymaster.js               \
 	$(wildcard engine/wasm/http/ace/*.js)   \
 	engine/wasm/http/nipplejs.js            \
-	$(wildcard engine/wasm/sys_*.js)
+	$(wildcard engine/wasm/sys_*.js) 
 FRONTEND_EMBEDS  :=                       \
 	$(HTTP_SOURCE)/index.html               \
 	$(HTTP_SOURCE)/index.css                \
 	engine/renderer2/bigchars.png 
 
-INDEX_FILES    := morph.wasm $(FRONTEND_EMBEDS) $(FRONTEND_JS)
-INDEX_OBJS     := $(BUILD_DIR)/morph.wasm $(BUILD_DIR)/morph.js
+INDEX_FILES    := \
+	$(FRONTEND_EMBEDS) $(FRONTEND_JS) \
+	$(BUILD_DIR)/sys_worker.js
+INDEX_OBJS     := $(BUILD_DIR)/morph.js
 
 ifdef USE_UGLIFY
 
@@ -32,17 +34,21 @@ endif
 morph.html: $(INDEX_FILES) $(INDEX_OBJS)
 	$(Q)cp -r -f $(HTTP_SOURCE)/index.html $(BUILD_DIR)/morph.html
 	node -e "require('./engine/wasm/bin/make').normalEmbedAll( \
-		'$(BUILD_DIR)/morph.html', 'driver/library', 'driver/', 'library/')"
+		'$(BUILD_DIR)/morph.html', 'driver/library', 'driver/library/', 'library/')"
 	node -e "require('./engine/wasm/bin/make').normalBootstrap( \
 		'$(BUILD_DIR)/morph.html', '$(BUILD_DIR)/morph.js')"
 	node -e "require('./engine/wasm/bin/make').normalReplace( \
-		'$(BUILD_DIR)/morph.html', require('./driver/library/quine.js') \
+		'$(BUILD_DIR)/morph.html', '\n' + require('./driver/library/quine.js') \
+		.emitDownload + '\n\n' + require('./driver/library/quine.js') \
 		.domMessageResponseMiddleware + '\ndomMessageResponseMiddleware();');"
+	node -e "require('./engine/wasm/bin/make').normalBase64( \
+		'$(BUILD_DIR)/morph.html', '$(BUILD_DIR)/sys_worker.js', 'sys_worker.js')"
+
 # basically, the above line is there until I can write a simple make/prolog parser
 #   like this stupid failing dry-run.txt file I keep seeing, or add some other
 #   obvious build process to the browser, so game files can be recompiled live.
 
-index: morph.html $(BUILD_DIR)/sys_worker.js
+index: morph.html  # morph.wasm 
 	cp $(BUILD_DIR)/morph.html index.html
 
 # LOL, kind of a funny solution, build these into service_worker.js to serve
@@ -53,7 +59,5 @@ index: morph.html $(BUILD_DIR)/sys_worker.js
 
 #	node -e "require('./engine/wasm/bin/make').normalBase64( \
 #		'$(BUILD_DIR)/morph.html', '$(BUILD_DIR)/morph.wasm', 'morph.wasm')"
-#	node -e "require('./engine/wasm/bin/make').normalBase64( \
-#		'$(BUILD_DIR)/morph.html', '$(BUILD_DIR)/sys_worker.js', 'sys_worker.js')"
 #	node -e "require('./engine/wasm/bin/make').normalEmbedAll( \
 #		'$(BUILD_DIR)/morph.html', 'driver/cerebro', 'driver/', 'lobby/')"

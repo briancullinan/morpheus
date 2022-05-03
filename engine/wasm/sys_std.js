@@ -277,6 +277,9 @@ function Sys_fork() {
 	) {
 		return
 	}
+	if(typeof FS.virtual['sys_worker.js'] == 'undefined') {
+		readPreFS()
+	}
 	const workerData = Array.from(FS.virtual['sys_worker.js'].contents)
 		.map(function (c) { return String.fromCharCode(c) }).join('')
 	const blob = new Blob([workerData], {type: 'application/javascript'})

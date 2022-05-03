@@ -102,15 +102,15 @@ include $(D_FILES)
 endif
 
 release: 
-	$(Q)$(MAKE) V=$(V) multigame engine \
-		plugin index build-tools deploy \
+	$(Q)$(MAKE) V=$(V) multigame \
+		plugin index build-tools \
 		BUILD_DIR="build/release-wasm-js" \
 		CFLAGS="$(RELEASE_CFLAGS)" \
 		LDFLAGS="$(RELEASE_LDFLAGS)"
 
 debug: 
-	$(Q)$(MAKE) V=$(V) multigame engine \
-		plugin index build-tools deploy \
+	$(Q)$(MAKE) V=$(V) multigame \
+		plugin index build-tools \
 		BUILD_DIR="build/debug-wasm-js" \
 		CFLAGS="$(DEBUG_CFLAGS)" \
 		LDFLAGS="$(DEBUG_LDFLAGS)"

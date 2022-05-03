@@ -1,33 +1,11 @@
-async function runVariable(AST, runContext) {
-  if(typeof runContext.localFunctions[AST.id.name] != 'undefined') {
-    throw new Error('Function already declared! ' + AST.id.name)
-  }
-  if(!AST.id || AST.id.type != 'Identifier') {
-    throw new Error(AST.type + ': Not implemented!')
-  }
-  // update client with variable informations
-  // KEEP THE SAME BEFORE AND AFTER!
-  let beforeLine = runContext.bubbleLine - 1
-  let bubbleColumn = runContext.bubbleColumn
-  // TODO: add late binding, don't eval until it's accessed
-  // TODO: late binding will be needed for observables / change notify
-  //   and converting between language features like type interefencing JS -> C#
-  //   late binding can trace the type back through the tree to where it was assigned.
 
-  // WOW! IMAGINE THAT! SHOW VARIABLES BEFORE AND AFTER ASSIGNMENT! GOOGLE CHROME DEBUGGER!
-  let result 
-  if(!AST.init) {
-    // TODO: error variable used because initialized
-    result = (runContext.localVariables[AST.id.name] = void 0)
-  } else {
-    result = await runStatement(0, [AST.init], runContext)
-    // TODO: ^^ intentionally leak here for reporting, global error handling overriding?
-    runContext.localVariables[AST.id.name] = result
-    if(await shouldBubbleOut(runContext)) { // bubble up
-      return
+async function lookupVariable(variableName, runContext) {
+  for(let i = runContext.localDeclarations.length-1; i >= 0; i--) {
+    if(runContext.localDeclarations[i].hasOwnProperty(variableName)) {
+      return runContext.localDeclarations[i][variableName]
     }
   }
-  return result
+  throw new Error('Variable not defined: ' + variableName)
 }
 
 
@@ -102,13 +80,15 @@ async function runAssignment(left, right, runContext) {
 			if(await shouldBubbleOut(runContext)) {
 				return
 			}
-			runContext.localVariables[left.name] = result
+      runContext.localDeclarations[runContext.localDeclarations-1][left.name] = result
+      runContext.localVariables[left.name] = typeof result
 			return result
 		}
 	} else {
 		throw new Error('AssignmentExpression: Not implemented!')
 	}
 }
+
 
 async function runMember(AST, runContext) {
   if(!AST.property) {
@@ -151,3 +131,5 @@ async function runMember(AST, runContext) {
     return parent[property]
   }
 }
+
+
