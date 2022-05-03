@@ -158,6 +158,7 @@ function backendMessageResponseMiddleware() {
 	// ASYNC AND AWAIT IS DUMB IN JAVASCRIPT, THERE'S ONLY 1 THREAD
 	//   this entry basically converts all calls to async
 	function sendMessage(data) {
+		debugger
 		return new Promise(function (resolve) {
 			chrome.tabs.sendMessage(currentContext.senderId,
 					data,	onMessage.bind(this, resolve))
@@ -202,7 +203,6 @@ function backendMessageResponseMiddleware() {
 
 	let threads = {}
 
-	// TODO: combine with _accessor
 	chrome.runtime.onMessage.addListener(function (request, sender, reply) {
 		onMessage(reply, request)
 	})
@@ -306,8 +306,19 @@ function workerMessageResponseMiddleware() {
 	// lol, make a game where lost accounts lead to a virtual court room to prove your identity just like IRL
 	//   if someone claims to be Rick (from Rick & Morty) all the other Ricks have to obvserve and allow
 	//   or take the new Rick out for not being Ricky enough. - Metaverse
-	function onMessage(request) {
+	async function onMessage(request) {
 		let lib
+		let runContext = {
+			bubbleStack: [['inline func 0', 'library/repl.js', 0]],
+			localVariables: {
+				module: 'object',
+				Object: 'function',
+			},
+			localDeclarations: [{
+				module: WEBDRIVER_API,
+				Object: Object,
+			}],
+		}
 		if((lib = onAccessor(request.data))) {
 			return sendMessage(lib)
 		} else if (typeof doRunFunction == 'undefined') {
@@ -317,23 +328,34 @@ function workerMessageResponseMiddleware() {
 				let AST = acorn.parse(
 					'(function () {\n' + script + '\nreturn doRun;})()\n'
 					, {ecmaVersion: 2020, locations: true, onComment: []})
-				doRunFunction = runStatement(0, [AST.body[0].expression.callee.body], {
-					localVariables: [],
-					script: script,
-				})
+				runContext.script = script
+				doRunFunction = await runStatement(0, 
+						[AST.body[0].expression.callee.body], runContext)
+				runContext.returned = false
+				delete runContext.bubbleReturn
 			} catch (e) {
 				console.log(e)
 			}
 		}
 
-		if(typeof doRun != 'undefined') {
-			doRunFunction.then(function(doRun) {
-				doRun(request.accessor, {
-					window: globalThis,
-					global: globalThis,
-					self: self,
-				}) // NOW IT'S RECURSIVE
-			})
+		// TODO: inject REPL async interface for _setTimeout, etc.
+		Object.assign(globalThis, runContext.localDeclarations[0])
+		runContext.localDeclarations[0] = globalThis
+		runContext.localVariables = await getLocals(runContext)
+		runContext.returned = false
+		delete runContext.bubbleReturn
+		if(typeof doRunFunction != 'undefined') {
+			runContext.bubbleStack[0][1] = runContext.bubbleFile = '<eval>'
+			try {
+				let result = await doRunFunction(request.data.script, runContext) // NOW IT'S RECURSIVE
+				//sendMessage({
+				//	result: result
+				//})
+				runContext.returned = false
+				return result
+			} catch (e) {
+				console.error(e)
+			}
 		}
 	}
 

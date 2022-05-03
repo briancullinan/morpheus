@@ -45,7 +45,12 @@ async function runAssignment(left, right, runContext) {
 			}
 		}
 
-		let result = await runStatement(0, [right], runContext)
+		let result
+		if(right) {
+			result = await runStatement(0, [right], runContext)
+		} else {
+			result = void 0
+		}
 		// LEAK ASSIGNMENT FOR GLOBAL DEBUGGING?
 		if(await shouldBubbleOut(runContext)) {
 			return
@@ -63,16 +68,22 @@ async function runAssignment(left, right, runContext) {
 			throw new Error('Cannot override function: ' + left.name)
 		} else if (!runContext.localVariables.hasOwnProperty(left.name)) {
 			// TODO: LAZY, no var, only let
+			debugger
 			throw new Error('Variable not defined: ' + left.name)
 		} else {
 			// WOW! IMAGINE THAT! SHOW VARIABLES BEFORE AND AFTER ASSIGNMENT! GOOGLE CHROME DEBUGGER!
-			let result = await runStatement(0, [right], runContext)
-			// LEAK ASSIGNMENT FOR GLOBAL DEBUGGING?
+			let result
+			if(right) {
+				result = await runStatement(0, [right], runContext)
+			} else {
+				result = void 0
+			}
+				// LEAK ASSIGNMENT FOR GLOBAL DEBUGGING?
 			if(await shouldBubbleOut(runContext)) {
 				return
 			}
-      runContext.localDeclarations[runContext.localDeclarations-1][left.name] = result
-      runContext.localVariables[left.name] = typeof result
+			runContext.localDeclarations[runContext.localDeclarations.length-1][left.name] = result
+			runContext.localVariables[left.name] = typeof result
 			return result
 		}
 	} else {
@@ -98,7 +109,10 @@ async function runMember(AST, runContext) {
     } else {
       property = AST.property.name
     }
+	} else if (AST.property.computed) {
+		property = await runStatement(0, [AST.property], runContext)
   } else {
+		debugger
     throw new Error('MemberExpression: Not implemented!')
   }
 

@@ -6,8 +6,8 @@ function runPrimitive(AST, runContext) {
 	if(AST.type == 'Identifier') {
 		if(runContext.localVariables.hasOwnProperty(AST.name)) {
 			for(let i = runContext.localDeclarations.length-1; i >= 0; i--) {
-				if(runContext.localDeclarations[i].hasOwnProperty(variableName)) {
-					return runContext.localDeclarations[i][variableName]
+				if(runContext.localDeclarations[i].hasOwnProperty(AST.name)) {
+					return runContext.localDeclarations[i][AST.name]
 				}
 			}
 		} else {
@@ -49,7 +49,11 @@ async function runUnary(AST, runContext) {
 				throw up
 			}
 		}
+	} else
+	if(AST.operator == '-') {
+		return -(await runStatement(0, [AST.argument], runContext))
 	} else {
+		debugger
 		throw new Error(AST.type + ': Not implemented!')
 	}
 }

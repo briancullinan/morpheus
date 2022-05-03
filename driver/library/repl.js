@@ -26,9 +26,11 @@ function doProperty() {
 
 }
 
+let oldRunTimer
 
 // starts a thread
 function doRun(script) {
+	console.log(script)
   let env = createEnvironment(script)
   let ctx = createRunContext(env)
   let AST
@@ -94,9 +96,8 @@ function createEnvironment(script) {
 function createRunContext(env) {
 	Object.assign(env, {
 		timers: {},
-		bubbleStack: [],
+		bubbleStack: [['inline func 0', '<eval>', 0]],
 		bubbleLine: -1,
-		bubbleFile: '<eval>',
 		bubbleColumn: 0,
 		localVariables: getLocals(env),
 		asyncRunners: 0,
@@ -121,6 +122,10 @@ function getLocals(ctx) {
     let localVariables = Object.keys(localCtx)
     for(let i = 0; i < localVariables.length; i++) {
       obj[localVariables[i]] = typeof localCtx[localVariables[i]]
+    }
+    let localProperties = Object.getOwnPropertyNames(localCtx)
+    for(let i = 0; i < localProperties.length; i++) {
+      obj[localProperties[i]] = typeof localCtx[localProperties[i]]
     }
     return obj
   }, {})
@@ -171,6 +176,7 @@ function onError(error) {
 function doAccessor(member) { // shouldn't need senderId with DI
 	let memberName = member.object.name + '.' + member.property.name
 	// YOU SEE? THIS IS WHY I REWRITE STUFF
+	console.log(memberName)
 	let response = sendMessage({
 		accessor: memberName
 	})
@@ -308,6 +314,7 @@ if(typeof module != 'undefined') {
 	module.exports = {
 		onAccessor,
 		doLibraryLookup,
+		doAccessor,
 	}
 }
 

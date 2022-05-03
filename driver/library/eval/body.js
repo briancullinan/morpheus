@@ -37,7 +37,14 @@ async function shouldBubbleOut(runContext) {
 		})
 	}
 	// THESE ARE TOGGLED AT DIFFERENT TIMES TO CONTROL EVALUATOR FLOW.
-	if(runContext.ended || runContext.broken || runContext.returned) {
+	if(runContext.ended) {
+		console.error('context ended')
+		return true
+	} else if (runContext.broken) {
+		console.log('context broken')
+		return true
+	} else if (runContext.returned) {
+		console.log('context returned', runContext)
 		return true
 	}
 	return false
@@ -47,6 +54,7 @@ async function runStatement(i, AST, runContext) {
 	try {
     currentContext = runContext
 		if(AST[i] && AST[i].loc) {
+			runContext.bubbleFile = runContext.bubbleStack[runContext.bubbleStack.length-1][1]
 			runContext.bubbleColumn = AST[i].loc.start.column
 			if(runContext.bubbleLine != AST[i].loc.start.line) {
 				runContext.bubbleTime = Date.now()
@@ -54,12 +62,17 @@ async function runStatement(i, AST, runContext) {
 				runContext.bubbleAST = AST
 				// normally we'd skip and let it run async
 				//   but doStatus() also does @Delay()
-				if(typeof doStatus != 'undefined') { // BOOTSTRAP CODE?
+				if(typeof doStatus != 'undefined'
+					&& runContext.bubbleFile != 'library/repl.js'
+				) { // BOOTSTRAP CODE?
+					debugger
 					let doSleep = runContext.bubbleFile == '<eval>'
 					&& (!AST[i].callee || AST[i].callee.name != 'sleep')
 					await doStatus(doSleep)
 				}
 			}
+		} else if (!AST[i]) {
+			debugger
 		}
 
 		// moved this here so we get the line number of the latest statement
@@ -143,6 +156,7 @@ async function runStatement(i, AST, runContext) {
 		} else
 		if(AST[i].type == 'VariableDeclarator') {
 			// doAssign
+			runContext.localVariables[AST[i].id.name] = 'undefined'
 			return await runAssignment(AST[i].id, AST[i].init, runContext)
 		} else 
 
@@ -213,6 +227,7 @@ async function runStatement(i, AST, runContext) {
 			} catch (e) {
 				if(AST[i].handler) {
 					// same as runCall param assignment
+					runContext.localVariables[AST[i].handler.params.name] = 'undefined'
 					await runAssignment({
 						type: 'Identifier',
 						name: AST[i].handler.params.name
@@ -227,7 +242,7 @@ async function runStatement(i, AST, runContext) {
 				} else {
 					if(runContext.bubbleReturn !== result) {
 						console.log('WARNING: not bubbling correctly: ' 
-							+ runContext.bubbleStack[runContext.bubbleStack.length - 1])
+							+ runContext.bubbleStack[runContext.bubbleStack.length - 1][0])
 					}
 					return result
 				}
