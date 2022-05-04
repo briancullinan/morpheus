@@ -40,85 +40,88 @@ async function runCallStatements(runContext, functionName, filename, parameterDe
 	let startVars = Object.assign({}, runContext.localVariables)
 
 	let beforeLine = runContext.bubbleLine - 1 // -1 for wrapper function
-	//runContext.bubbleStack.push(functionName + ' . ' + beforeLine)
+	if(runContext.bubbleStack.length == 0) {
+		console.error('Call stack corrupted')
+	}
 	runContext.bubbleStack.push([functionName, filename, beforeLine])
-
-
-	// THIS SHIT IS IMPORTANT. MAKE COMPLICATED SIMPLE.
-	// I MENTION THIS TO PEOPLE AND THEY HAVE NO IDEA
-	//   WHAT I MEAN. I LEARNED THIS IN MY FANCY 4 YR.
-	// https://en.wikipedia.org/wiki/Aspect-oriented_programming
-	//   C# DOES THIS AUTOMATICALLY AND PEOPLE LOVE IT
-	//   THIS IS BASICALLY HOW IT WORKS INTERNALLY, USES
-	//   INTROSPECTION TO READ ATTRIBUTES FROM THE PARSE
-	//   THEN CALLS THE FUNCTIONS BEFORE THE ACTUAL CALL
-	//   HAPPENS. SYNTACTIC SUGAR. EVERY LANGUAGE SHOULD HAVE ATTRIBUTES
-	if(before) {
-		let beforeFunc
-		if(runContext.localVariables[before] == 'function') {
-			beforeFunc = runContext.localVariables[before]
-		} else {
-			throw new Error('Attribute @Before not found: ' + before)
+	let result
+	try {
+		
+		// THIS SHIT IS IMPORTANT. MAKE COMPLICATED SIMPLE.
+		// I MENTION THIS TO PEOPLE AND THEY HAVE NO IDEA
+		//   WHAT I MEAN. I LEARNED THIS IN MY FANCY 4 YR.
+		// https://en.wikipedia.org/wiki/Aspect-oriented_programming
+		//   C# DOES THIS AUTOMATICALLY AND PEOPLE LOVE IT
+		//   THIS IS BASICALLY HOW IT WORKS INTERNALLY, USES
+		//   INTROSPECTION TO READ ATTRIBUTES FROM THE PARSE
+		//   THEN CALLS THE FUNCTIONS BEFORE THE ACTUAL CALL
+		//   HAPPENS. SYNTACTIC SUGAR. EVERY LANGUAGE SHOULD HAVE ATTRIBUTES
+		if(before) {
+			let beforeFunc
+			if(runContext.localVariables[before] == 'function') {
+				beforeFunc = runContext.localVariables[before]
+			} else {
+				throw new Error('Attribute @Before not found: ' + before)
+			}
+			// allow users to modify function arguments? SURE!
+			let r = await beforeFunc(callArgs, runContext)
 		}
-		// allow users to modify function arguments? SURE!
-		let r = await beforeFunc(callArgs, runContext)
-	}
-	if(await shouldBubbleOut(runContext)) {
-		return
-	}
-
-	for(let l = 0; l < parameterDefinition.length; l++) {
-		if(parameterDefinition[l].type != 'Identifier') {
-			throw new Error('FunctionDeclaration: Not implemented!')
-		}
-		if(l == callArgs.length) {
-			continue;
-		}
-		// fuck-arounds?
-		if(typeof runContext.localVariables == 'undefined') {
-			debugger
-		}
-		runContext.localVariables[parameterDefinition[l].name] = 'undefined'
-		await runAssignment({
-			type: 'Identifier',
-			name: parameterDefinition[l].name
-		}, {
-			type: 'Literal',
-			value: callArgs[l]
-		}, runContext)
 		if(await shouldBubbleOut(runContext)) {
 			return
 		}
-	}
 
-	// run new command context
-	let result = await runStatement(0, [body], runContext)
+		for(let l = 0; l < parameterDefinition.length; l++) {
+			if(parameterDefinition[l].type != 'Identifier') {
+				throw new Error('FunctionDeclaration: Not implemented!')
+			}
+			if(l == callArgs.length) {
+				continue;
+			}
+			// fuck-arounds?
+			if(typeof runContext.localVariables == 'undefined') {
+				debugger
+			}
+			runContext.localVariables[parameterDefinition[l].name] = 'undefined'
+			await runAssignment({
+				type: 'Identifier',
+				name: parameterDefinition[l].name
+			}, {
+				type: 'Literal',
+				value: callArgs[l]
+			}, runContext)
+			if(await shouldBubbleOut(runContext)) {
+				return
+			}
+		}
 
-	// TODO: SOMETHING ABOUT IF AN ASPECT HAS AN EXCPLICIT RETURN 
-	//   STATEMENT THEN OVERRIDE THE RETURN VALUE WITH BEFORE
-	//   OTHERWISE LEAVE IT UNMODIFIED
-	if(after) {
-		let afterFunc
-		if(runContext.localVariables[after] == 'function') {
-			afterFunc = runContext.localVariables[after]
-		} else {
-			throw new Error('Attribute @After not found: ' + after)
+		// run new command context
+		result = await runStatement(0, [body], runContext)
+
+		// TODO: SOMETHING ABOUT IF AN ASPECT HAS AN EXCPLICIT RETURN 
+		//   STATEMENT THEN OVERRIDE THE RETURN VALUE WITH BEFORE
+		//   OTHERWISE LEAVE IT UNMODIFIED
+		if(after) {
+			let afterFunc
+			if(runContext.localVariables[after] == 'function') {
+				afterFunc = runContext.localVariables[after]
+			} else {
+				throw new Error('Attribute @After not found: ' + after)
+			}
+			result = await afterFunc(result, runContext)
 		}
-		result = await afterFunc(result, runContext)
-	}
-	runContext.bubbleMember = null
-	runContext.bubbleProperty = ''
-	if(runContext.returned) {
-		runContext.returned = false
-		if(result !== runContext.bubbleReturn) {
-			console.log('WARNING: not bubbling correctly: ' + functionName)
+		runContext.bubbleMember = null
+		runContext.bubbleProperty = ''
+		if(runContext.returned) {
+			runContext.returned = false
+			if(result !== runContext.bubbleReturn) {
+				console.log('WARNING: not bubbling correctly: ' + functionName)
+			}
+			result = runContext.bubbleReturn
+			delete runContext.bubbleReturn
 		}
-		result = runContext.bubbleReturn
-		delete runContext.bubbleReturn
-	}
-	if(await shouldBubbleOut(runContext)) {
-		return
-	}
+		if(await shouldBubbleOut(runContext)) {
+			return
+		}
 
 	//Object.assign(runContext.localVariables, startVars) // reset references
 	// TODO: LEAKY SCOPE, remove unnamed variables from previous scope
@@ -128,9 +131,14 @@ async function runCallStatements(runContext, functionName, filename, parameterDe
 	//   This would help languages with leaky scopes by purpose, LUA, PROLOG?
 	//   This would fix scoping around parameter definitions
 	// TODO: search the contexts stack for the variable
-
-
-	//runContext.bubbleStack.pop()
+	} catch (e) {
+		throw e
+	} finally {
+		runContext.bubbleStack.pop()
+		if(runContext.bubbleStack.length == 0) {
+			console.error('Call stack corrupted')
+		}
+	}
 
 	return result
 }
@@ -254,6 +262,7 @@ async function runCall(AST, runContext) {
 	}
 
 	if(!calleeFunc) {
+		debugger
 		throw new Error('Function not defined: ' + AST.callee.name)
 	}
 
@@ -262,7 +271,14 @@ async function runCall(AST, runContext) {
 	if(calleeFunc.interpreted) {
 		// interpreted runCallStatements will add to stack at next layer
 	} else {
-		runContext.bubbleStack.push([functionName, calleeFunc.filename, beforeLine])
+		if(runContext.bubbleStack.length == 0) {
+			console.error('Call stack corrupted')
+		}	
+		runContext.bubbleStack.push([
+			functionName, 
+			calleeFunc.filename || '[ native code ]', 
+			beforeLine
+		])
 	}
 	if(runContext.bubbleStack.length > MAX_CALL) {
 		throw new Error('Call stack exceeded!')
@@ -332,9 +348,17 @@ async function runCall(AST, runContext) {
 		return result
 
 	} catch (e) {
-		doError(e, runContext)
+		console.log(e)
+		await doError(e, runContext)
+		runContext.ended = true
+		return
 	} finally {
-		runContext.bubbleStack.pop()
+		if(!calleeFunc.interpreted) {
+			runContext.bubbleStack.pop()
+			if(runContext.bubbleStack.length == 0) {
+				console.error('Call stack corrupted')
+			}
+		}
 	}
 
 }

@@ -11,6 +11,9 @@ function runPrimitive(AST, runContext) {
 				}
 			}
 		} else {
+			if(AST.name == 'console') {
+				debugger
+			}
 			throw new Error('Identifier not defined: ' + AST.name)
 		}
 	} else {

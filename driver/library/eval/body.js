@@ -38,13 +38,10 @@ async function shouldBubbleOut(runContext) {
 	}
 	// THESE ARE TOGGLED AT DIFFERENT TIMES TO CONTROL EVALUATOR FLOW.
 	if(runContext.ended) {
-		console.error('context ended')
 		return true
 	} else if (runContext.broken) {
-		console.log('context broken')
 		return true
 	} else if (runContext.returned) {
-		console.log('context returned', runContext)
 		return true
 	}
 	return false
@@ -54,6 +51,7 @@ async function runStatement(i, AST, runContext) {
 	try {
     currentContext = runContext
 		if(AST[i] && AST[i].loc) {
+			console.assert(runContext.bubbleStack.length)
 			runContext.bubbleFile = runContext.bubbleStack[runContext.bubbleStack.length-1][1]
 			runContext.bubbleColumn = AST[i].loc.start.column
 			if(runContext.bubbleLine != AST[i].loc.start.line) {
@@ -65,7 +63,6 @@ async function runStatement(i, AST, runContext) {
 				if(typeof doStatus != 'undefined'
 					&& runContext.bubbleFile != 'library/repl.js'
 				) { // BOOTSTRAP CODE?
-					debugger
 					let doSleep = runContext.bubbleFile == '<eval>'
 					&& (!AST[i].callee || AST[i].callee.name != 'sleep')
 					await doStatus(doSleep)
@@ -78,6 +75,7 @@ async function runStatement(i, AST, runContext) {
 		// moved this here so we get the line number of the latest statement
 		//   ONLY PAUSE ON <EVAL> CALLS
 		if(await shouldBubbleOut(runContext)) {
+			debugger
 			throw new Error('context ended!')
 		}
 	
@@ -263,8 +261,9 @@ async function runStatement(i, AST, runContext) {
 		}
 
 	} catch (e) {
-		debugger
-		doError(e, runContext)
+		console.log(e)
+		await doError(e, runContext)
+		runContext.ended = true
 		return
 	}
 }
@@ -272,6 +271,7 @@ async function runStatement(i, AST, runContext) {
 // find and run main
 async function runBody(AST, runContext) {
 	if(await shouldBubbleOut(runContext)) {
+		debugger
 		throw new Error('context ended!')
 	}
 
@@ -302,7 +302,10 @@ async function runBody(AST, runContext) {
 		//runContext.localVariables = startVars
 		return result.pop()
 	} catch (e) {
-		doError(e, runContext)
+		console.log(e)
+		await doError(e, runContext)
+		runContext.ended = true
+		return
 	}
 }
 

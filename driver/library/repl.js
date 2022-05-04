@@ -29,23 +29,23 @@ function doProperty() {
 let oldRunTimer
 
 // starts a thread
-function doRun(script) {
-	console.log(script)
-  let env = createEnvironment(script)
+function doRun(runContext) {
+  let env = createEnvironment(runContext)
   let ctx = createRunContext(env)
   let AST
   try {
 		AST = acorn.parse(
-			'(function () {\n' + script + '\n})()\n'
+			'(function () {\n' + runContext.script + '\n})()\n'
 			, {ecmaVersion: 2020, locations: true, onComment: []})
 	} catch (e) {
 		// return parser errors right away
     doError(e)
+		runContext.ended = true
 		return
 	}
   ctx.body = AST.body[0].expression.callee.body
   ctx.bubbleTime = Date.now()
-  console.log('script:', script)
+  console.log('script:', runContext.script)
   let result
   try {
 		if(!oldRunTimer) {
@@ -54,6 +54,7 @@ function doRun(script) {
     result = runBody(ctx.body, ctx)
   } catch (e) {
     doError(e)
+		runContext.ended = true
     return
   }
   if(ctx.ended) {
@@ -76,27 +77,29 @@ function onRun() {
 
 }
 
-function createEnvironment(script) {
+function createEnvironment(runContext) {
   let declarations = {
     // include our own API so we can use it from code elsewhere
     runBody: runBody,
     doRun: doRun,
     doConsole: doConsole,
     doProperty: doProperty,
+		createEnvironment: createEnvironment,
+		createRunContext: createRunContext,
+		// OMG, if I copy this context theres all kinds of weird things I can do to the process
   }
-  return {
-    localDeclarations: [
-      declarations
-    ],
-		script: script,
-  }
+	if(typeof runContext.localDeclarations == 'undefined') {
+		runContext.localDeclarations = []
+	}
+	runContext.localDeclarations.push(declarations)
+	return runContext
 }
 
 
 function createRunContext(env) {
 	Object.assign(env, {
 		timers: {},
-		bubbleStack: [['inline func 0', '<eval>', 0]],
+		//bubbleStack: [['inline func 0', '<eval>', 0]],
 		bubbleLine: -1,
 		bubbleColumn: 0,
 		localVariables: getLocals(env),
@@ -114,28 +117,10 @@ function createRunContext(env) {
 }
 
 
-function getLocals(ctx) {
-  if(typeof ctx.localDeclarations == 'undefined') {
-    return {}
-  }
-  return ctx.localDeclarations.reduce(function (obj, localCtx) {
-    let localVariables = Object.keys(localCtx)
-    for(let i = 0; i < localVariables.length; i++) {
-      obj[localVariables[i]] = typeof localCtx[localVariables[i]]
-    }
-    let localProperties = Object.getOwnPropertyNames(localCtx)
-    for(let i = 0; i < localProperties.length; i++) {
-      obj[localProperties[i]] = typeof localCtx[localProperties[i]]
-    }
-    return obj
-  }, {})
-}
-
 function doError(err) {
 	try {
-		currentContext.ended = true
 		console.log('line: ' + (currentContext.bubbleLine - 1), err)
-		sendMessage(currentContext.senderId, { 
+		sendMessage({ 
 			error: err.message + '',
 			// always subtract 1 because code is wrapping in a 1-line function above
 			line: currentContext.bubbleLine - 1,
@@ -181,6 +166,7 @@ function doAccessor(member) { // shouldn't need senderId with DI
 		accessor: memberName
 	})
 	if (!response || typeof response.fail != 'undefined') {
+		debugger
 		throw new Error('Member access error: ' + memberName)
 	}
 	if(typeof response.library != 'undefined') {
@@ -309,12 +295,89 @@ async function doStatus(doSleep) {
 	}
 }
 
+function getLocals(ctx) {
+	if(typeof ctx.localDeclarations == 'undefined') {
+		return {}
+	}
+	return ctx.localDeclarations.reduce(function (obj, localCtx) {
+		let localVariables = Object.keys(localCtx)
+		for(let i = 0; i < localVariables.length; i++) {
+			obj[localVariables[i]] = typeof localCtx[localVariables[i]]
+		}
+		let localProperties = Object.getOwnPropertyNames(localCtx)
+		for(let i = 0; i < localProperties.length; i++) {
+			obj[localProperties[i]] = typeof localCtx[localProperties[i]]
+		}
+		return obj
+	}, {})
+}
+
+
+async function doBootstrap(script, globalContext) {
+	let bootstrapRunContext = {
+		senderId: 0, // always comes from frontend?
+		bubbleStack: [['inline func 0', 'library/repl.js', 0]],
+		localVariables: {
+			module: 'object',
+			Object: 'function',
+			console: 'object',
+		},
+		localDeclarations: [{
+			module: WEBDRIVER_API,
+			Object: Object,
+			console: console,
+		}],
+	}
+	bootstrapRunContext.localDeclarations[0].currentContext = bootstrapRunContext
+	bootstrapRunContext.localVariables.currentContext = 'object'
+
+	let replLibrary = Array.from(FS.virtual['library/repl.js'].contents)
+			.map(function (c) { return String.fromCharCode(c) }).join('')
+	try {
+		let AST = acorn.parse(
+			'(function () {\n' + replLibrary + '\nreturn doRun;})()\n'
+			, {ecmaVersion: 2020, locations: true, onComment: []})
+		bootstrapRunContext.script = replLibrary
+		await runStatement(0, 
+				[AST.body[0].expression.callee.body], bootstrapRunContext)
+		bootstrapRunContext.returned = false
+		delete bootstrapRunContext.bubbleReturn
+		Object.assign(globalContext, bootstrapRunContext.localDeclarations[0])
+	} catch (e) {
+		console.log(e)
+	}
+
+	bootstrapRunContext.localDeclarations.unshift(globalContext)
+	bootstrapRunContext.localVariables = await getLocals(bootstrapRunContext)
+	bootstrapRunContext.returned = false
+	delete bootstrapRunContext.bubbleReturn
+	if(typeof doRun != 'undefined') {
+		bootstrapRunContext.bubbleStack[0][1] 
+				= bootstrapRunContext.bubbleFile = '<eval>'
+		try {
+			bootstrapRunContext.script = script
+			let result = await doRun(bootstrapRunContext) // NOW IT'S RECURSIVE
+			//sendMessage({
+			//	result: result
+			//})
+			bootstrapRunContext.returned = false
+			return result
+		} catch (e) {
+			console.error(e)
+		}
+	} else {
+		throw new Error('Bootstrap failed!')
+	}
+}
+
+
  // BOOTSTRAP CODE?
-if(typeof module != 'undefined') {
+ if(typeof module != 'undefined') {
 	module.exports = {
 		onAccessor,
 		doLibraryLookup,
 		doAccessor,
+		doBootstrap,
 	}
 }
 

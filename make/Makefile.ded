@@ -39,7 +39,7 @@ $(BUILD_DIR)/sys_worker.js: dedicated $(BUILD_DIR)/morph.ded.wasm $(WORKER_FILES
 	node -e "console.log(require('./driver/library/quine.js') \
 		.workerMessageResponseMiddleware + '\nworkerMessageResponseMiddleware();');" >> $@
 	node -e "console.log(require('./driver/library/repl.js') \
-		.onAccessor + '\n' + require('./$(WASM_SOURCE)/sys_idbfs.js') \
+		.doBootstrap + '\n' + require('./$(WASM_SOURCE)/sys_idbfs.js') \
 		.readPreFS + '\n' + require('./$(WASM_SOURCE)/sys_idbfs.js') \
 		._base64ToArrayBuffer + '\n');" >> $@
 	$(Q)cat $(WORKER_FILES) >> $@

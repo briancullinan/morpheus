@@ -129,6 +129,7 @@ async function runMember(AST, runContext) {
 
   if(!parent || (!parent.hasOwnProperty(property)
     && !parent[property])) {
+		debugger
     throw new Error('Member access error: ' + property)
   } else {
     runContext.bubbleMember = parent

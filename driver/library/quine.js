@@ -239,7 +239,8 @@ function domMessageResponseMiddleware() {
 
 	window.addEventListener('load', function () {
 		window.addEventListener('message', onMessage, false)
-
+		window.onMessage = onMessage
+		window.sendMessage = sendMessage
 		// check for plugin or emitDownload
 		// maybe we don't have the plugin
 		// TODO: .bind(null, 'morph-plugin')
@@ -253,6 +254,7 @@ function domMessageResponseMiddleware() {
 			})
 		}
 
+		// sys_worker
 		Sys_fork() // automatically start whatever service worker we have
 
 		// TODO: update for lvlworld engine only?
@@ -264,6 +266,7 @@ function domMessageResponseMiddleware() {
 	})
 	
 	function onMessage(request) {
+		debugger
 		// WHAT IF URLS WERE XPATHS TO FUNCTIONS? AND ROUTING TABLES WHERE JUST FUNCTIONS?
 		if(typeof request.accessor != 'undefined') {
 			let lib 
@@ -300,6 +303,7 @@ function workerMessageResponseMiddleware() {
 	let doRunFunction
 
 	function sendMessage(data) {
+		debugger
 		self.postMessage(data)
 	}
 
@@ -307,56 +311,22 @@ function workerMessageResponseMiddleware() {
 	//   if someone claims to be Rick (from Rick & Morty) all the other Ricks have to obvserve and allow
 	//   or take the new Rick out for not being Ricky enough. - Metaverse
 	async function onMessage(request) {
+
 		let lib
-		let runContext = {
-			bubbleStack: [['inline func 0', 'library/repl.js', 0]],
-			localVariables: {
-				module: 'object',
-				Object: 'function',
-			},
-			localDeclarations: [{
-				module: WEBDRIVER_API,
-				Object: Object,
-			}],
-		}
-		if((lib = onAccessor(request.data))) {
+		if(request.data 
+			&& typeof onAccessor != 'undefined'
+			&& typeof request.data.accessor != 'undefined'
+			&& (lib = onAccessor(request.data))) {
 			return sendMessage(lib)
-		} else if (typeof doRunFunction == 'undefined') {
-			let script = Array.from(FS.virtual['library/repl.js'].contents)
-				.map(function (c) { return String.fromCharCode(c) }).join('')
-			try {
-				let AST = acorn.parse(
-					'(function () {\n' + script + '\nreturn doRun;})()\n'
-					, {ecmaVersion: 2020, locations: true, onComment: []})
-				runContext.script = script
-				doRunFunction = await runStatement(0, 
-						[AST.body[0].expression.callee.body], runContext)
-				runContext.returned = false
-				delete runContext.bubbleReturn
-			} catch (e) {
-				console.log(e)
-			}
+		} else
+		if (request.data
+			&& typeof request.data.script != 'undefined') {
+			return await doBootstrap(request.data.script, 
+					Object.assign(globalThis, { sendMessage: sendMessage }))
+		} else {
+			throw new Error('Unknown command: ', request)
 		}
 
-		// TODO: inject REPL async interface for _setTimeout, etc.
-		Object.assign(globalThis, runContext.localDeclarations[0])
-		runContext.localDeclarations[0] = globalThis
-		runContext.localVariables = await getLocals(runContext)
-		runContext.returned = false
-		delete runContext.bubbleReturn
-		if(typeof doRunFunction != 'undefined') {
-			runContext.bubbleStack[0][1] = runContext.bubbleFile = '<eval>'
-			try {
-				let result = await doRunFunction(request.data.script, runContext) // NOW IT'S RECURSIVE
-				//sendMessage({
-				//	result: result
-				//})
-				runContext.returned = false
-				return result
-			} catch (e) {
-				console.error(e)
-			}
-		}
 	}
 
 	// this was for a web-worker setup
