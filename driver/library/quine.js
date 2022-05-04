@@ -447,11 +447,29 @@ function domMessageResponseMiddleware() {
 		// TODO: update for lvlworld engine only?
 		if(typeof ACE == 'undefined') {
 			sendMessage({
-				script: 'updateFilelist("Instructions");'
+				script: 'loadDocumentation();\nupdateFilelist("Instructions");\n'
 			})
 		}
 	})
 	
+}
+
+
+function sharedMessageResponseMiddleware() {
+	/*
+	onchange = function() {
+  myWorker.port.postMessage([squareNumber.value,squareNumber.value]);
+  console.log('Message posted to worker');
+}
+onconnect = function(e) {
+  var port = e.ports[0];
+
+  port.onmessage = function(e) {
+    var workerResult = 'Result: ' + (e.data[0] * e.data[1]);
+    port.postMessage(workerResult);
+  }
+}
+*/
 }
 
 
@@ -513,6 +531,13 @@ function workerMessageResponseMiddleware() {
 
 	}
 
+	if(typeof FS == 'undefined') {
+    globalThis.FS = {
+      virtual: {}
+    }
+    globalThis.FS_FILE = (8 << 12) + ((6 << 3) + (6 << 6) + (6))
+  }
+	readPreFS()
 
 	// this was for a web-worker setup
 	if(typeof globalThis != 'undefined' 
@@ -522,13 +547,6 @@ function workerMessageResponseMiddleware() {
 	self.onmessage = async function (request) {
 		let result = await decryptResponseIfSession(request.data)
 	}
-	if(typeof FS == 'undefined') {
-    globalThis.FS = {
-      virtual: {}
-    }
-    globalThis.FS_FILE = (8 << 12) + ((6 << 3) + (6 << 6) + (6))
-  }
-	readPreFS()
 
 	self.addEventListener('install', function () {
 		debugger

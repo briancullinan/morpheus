@@ -194,13 +194,14 @@ function _base64ToArrayBuffer(base64) {
 	return bytes;
 }
 
+// I JUST REALIZED WHY CHROME DEBUGGER WILL PERPUTUALLY HAVE A HARDER
+//   AND HARD TIME WITH WEB APPS LIKE THIS. I SCREWED UP IT'S ABILITY TO OPTIMIZE GRAPH.
 
 function readPreFS() {
 	// TODO: offline download so it saves binary to IndexedDB
 	if(typeof window.preFS == 'undefined') {
-		return
+		throw new Error('No preFS, must load in correct order!')
 	}
-
 	let preloadedPaths = Object.keys(window.preFS)
 	for(let i = 0; i < preloadedPaths.length; i++) {
 		if(preloadedPaths[i].endsWith('_timestamp')) {

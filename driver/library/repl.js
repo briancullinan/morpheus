@@ -79,6 +79,9 @@ function createEnvironment(runContext) {
 	if(typeof runContext.localDeclarations == 'undefined') {
 		runContext.localDeclarations = []
 	}
+	if(typeof runContext.localDeclarations == 'undefined') {
+		debugger
+	}
 	runContext.localDeclarations.push(declarations)
 	return runContext
 }
@@ -147,6 +150,11 @@ function onError(error) {
 //   into other pages
 async function doAccessor(response) { // shouldn't need senderId with DI
 	
+	if (!response || typeof response.fail != 'undefined') {
+		console.log(response)
+		throw new Error('Member access error: ', response)
+	} else 
+
 	if(typeof response.object != 'undefined') {
 		let memberName = response.object.name + '.' + response.property.name
 		let memberAccess = await sendMessage({
@@ -154,10 +162,6 @@ async function doAccessor(response) { // shouldn't need senderId with DI
 		})
 		return doAccessor(memberAccess)
 		// TODO: return doAccessor(memberAccess) ? convert string func to RPC
-	} else 
-	if (!response || typeof response.fail != 'undefined') {
-		console.log(response)
-		throw new Error('Member access error: ', response)
 	} else 
 
 	// INTERESTING, REALIZING THIS IS THE ONLY ABSTRACTION REPL CAN
@@ -168,7 +172,25 @@ async function doAccessor(response) { // shouldn't need senderId with DI
 	} else
 
 	if(typeof response.library != 'undefined') {
-		return await doRun(response.library)
+		try {
+			let AST = acorn.parse(
+				'(function () {\n' + response.library + '\nreturn doRun;})()\n'
+				, {ecmaVersion: 2020, locations: true, onComment: []})
+			currentContext.script = response.library
+			await runStatement(0, 
+					[AST.body[0].expression.callee.body], currentContext)
+					currentContext.returned = false
+			delete currentContext.bubbleReturn
+			let result = await runPrimitive({
+				type: 'Identifier',
+				name: response.name,
+			}, currentContext)
+			currentContext.returned = false
+			return result
+		} catch (up) {
+			console.log(up)
+			throw up
+		}
 	} else
 	if(typeof response.function != 'undefined') {
 		if(response.value) {
@@ -211,7 +233,7 @@ async function doAccessor(response) { // shouldn't need senderId with DI
 
 function doLibraryLookup(functionName) {
 	let libraryFiles = Object.keys(FS.virtual)
-		.filter(function (p) { return p.includes('/library/') })
+		.filter(function (p) { return p.startsWith('library/') })
 	for(let i = 0; i < libraryFiles.length; i++) {
 		let libraryCode = Array.from(FS.virtual[libraryFiles[i]].contents)
 			.map(function (c) { return String.fromCharCode(c) })
@@ -219,11 +241,13 @@ function doLibraryLookup(functionName) {
 		// TODO: make these tokens instead of function for cross language support
 		if(libraryCode.includes('function ' + functionName)) {
 			return {
+				// TODO: responseId
 				library: libraryCode,
-				name: libraryFiles[i],
-				// TODO: a hash value?
+				name: functionName,
+				file: libraryFiles[i],
+				// TODO: a hash value? code signing?
 			}
-		} else {
+		} /* else {
 			let currentSession = window.ace.getValue()
 			if (currentSession.includes('function ' + functionName)) {
 				return {
@@ -232,9 +256,8 @@ function doLibraryLookup(functionName) {
 					// TODO: a hash value?
 				}
 			}
-		}
+		} */ // CODE REVIEW, this is why we need different contexts, for Live editing
 	}
-
 }
 
 
@@ -414,7 +437,6 @@ async function doBootstrap(script, globalContext) {
 
 
 async function onFrontend(replyFunction, request) {
-	console.log('request: ', request)
 	if(request.status) {
 	} else
 

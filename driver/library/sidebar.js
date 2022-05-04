@@ -98,14 +98,6 @@ function cookieList() {
 }
 
 
-const FILE_WIDGETS = [
-	['Local Storage', listFiles, renderFile],
-	['Call Stack', callStack, renderFunc],
-	['Cookies', cookieList, renderCookie],
-	['Threads', threadPool, renderThread],
-	['Interactions', interactionsList, renderInteractions],
-]
-
 
 function renderInteractions(link, item, path) {
 	let dialogs = document.getElementsByClassName('dialog')
@@ -460,6 +452,15 @@ function renderFilelist() {
 	}
 	ACE.filesmoved = false
 }
+
+
+const FILE_WIDGETS = [
+	['Local Storage', listFiles, renderFile],
+	['Call Stack', callStack, renderFunc],
+	['Cookies', cookieList, renderCookie],
+	['Threads', threadPool, renderThread],
+	['Interactions', interactionsList, renderInteractions],
+];
 
 
 /*

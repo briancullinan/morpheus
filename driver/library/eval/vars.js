@@ -112,9 +112,14 @@ async function runMember(AST, runContext) {
 		debugger
     throw new Error('MemberExpression: Not implemented!')
   }
+  if(await shouldBubbleOut(runContext)) {
+		debugger
+    return // bubble up
+  }
 
   let parent = await runStatement(0, [AST.object], runContext)
   if(await shouldBubbleOut(runContext)) {
+		debugger
     return // bubble up
   }
 

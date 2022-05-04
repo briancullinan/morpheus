@@ -14,6 +14,7 @@ ENGINE_BUILD_DIRS := \
 	$(BUILD_DIR).mkdir/sdl/timer/ \
 	$(BUILD_DIR).mkdir/sdl/timer/unix/
 
+
 define DO_ENGINE_LD
 	$(echo_cmd) "WASM-LD $1"
 	$(Q)$(CC) -o $(BUILD_DIR)/$1 $2 $(CLIENT_LDFLAGS)

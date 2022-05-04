@@ -42,6 +42,23 @@ function normalEmbedAll(indexFile, directory, pathMatch, pathReplace) {
   }
 }
 
+function normalFormatAll(indexFile, directory, pathMatch, pathReplace) {
+	const { 
+    readdirSync: rds,
+    appendFileSync: afs,
+    statSync: sts,
+  } = require('fs')
+  let scripts = rds(directory).map(f => path.join(directory, f))
+  for(let i = 0; i < scripts.length; i++) {
+    if(sts(scripts[i]).isDirectory()) {
+      normalFormatAll(indexFile, scripts[i], pathMatch, pathReplace)
+    } else {
+      let embed = formatForVFS(scripts[i], scripts[i].replace(pathMatch, pathReplace))
+      afs(indexFile, embed);
+    }
+  }
+}
+
 function normalBase64(indexFile, embedFile, pathInVFS) {
   normalReplace(indexFile, formatForVFS(embedFile, pathInVFS))
 }
@@ -75,5 +92,6 @@ module.exports = {
   normalReplace,
   normalEmbedAll,
   normalBase64,
-  normalBootstrap
+  normalBootstrap,
+  normalFormatAll,
 }

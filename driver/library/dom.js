@@ -17,7 +17,20 @@ const FLASH_DURATION = 700.0
 
 // TODO: add eye-dropper element selector here
 
-
+function loadDocumentation() {
+	let docs = []
+	let libraryFiles = Object.keys(FS.virtual)
+	// doesn't work with promises
+	// .filter(function (p) { return p.startsWith('library/') })
+	for(let i = 0; i < libraryFiles.length; i++) {
+		if(libraryFiles[i].startsWith('library/')
+			&& libraryFiles[i].endsWith('.md')) {
+			docs.push(libraryFiles[i])
+		}
+	}
+	console.log(docs)
+	return docs
+}
 
 function runBlock(start) {
 	if(document.body.className.includes('running')
