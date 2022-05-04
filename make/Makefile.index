@@ -7,6 +7,7 @@ FRONTEND_JS      :=                       \
 	driver/utils/jsencrypt.js               \
 	driver/utils/crypt.js                   \
 	driver/utils/keymaster.js               \
+	driver/library/sidebar.js               \
 	$(wildcard engine/wasm/http/ace/*.js)   \
 	engine/wasm/http/nipplejs.js            \
 	$(wildcard engine/wasm/sys_*.js) 
@@ -18,26 +19,27 @@ FRONTEND_EMBEDS  :=                       \
 INDEX_FILES    := \
 	$(FRONTEND_EMBEDS) $(FRONTEND_JS) \
 	$(BUILD_DIR)/sys_worker.js
-INDEX_OBJS     := $(BUILD_DIR)/morph.js
 
 ifdef USE_UGLIFY
 
 
+#	driver/library/iso.js                   \
 
 else
 
-$(BUILD_DIR)/morph.js: $(FRONTEND_JS)
-	$(Q)cat $(FRONTEND_JS) > $@
+
 
 endif
 
-morph.html: $(INDEX_FILES) $(INDEX_OBJS)
+morph.html: $(INDEX_FILES)
 	$(Q)cp -r -f $(HTTP_SOURCE)/index.html $(BUILD_DIR)/morph.html
+	cat $(FRONTEND_JS) > $(BUILD_DIR)/morph.js
 	node -e "require('./engine/wasm/bin/make').normalBootstrap( \
 		'$(BUILD_DIR)/morph.html', '$(BUILD_DIR)/morph.js')"
 	node -e "require('./engine/wasm/bin/make').normalReplace( \
-		'$(BUILD_DIR)/morph.html',  \
-		'\n' + require('./driver/library/quine.js').emitDownload + '\n' \
+		'$(BUILD_DIR)/morph.html', '\n'  \
+		+ require('./driver/library/quine.js').emitDownload + '\n' \
+		+ require('./driver/library/repl.js').onFrontend + '\n' \
 		+ require('./driver/library/quine.js').installAsyncTriggerMiddleware + '\n' \
 		+ require('./driver/library/quine.js').encryptedAccessorResponseMiddleware + '\n' \
 		+ require('./driver/library/quine.js').domMessageResponseMiddleware + '\n' \

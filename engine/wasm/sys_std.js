@@ -286,7 +286,11 @@ function Sys_fork() {
 	SYS.worker = new Worker(URL.createObjectURL(blob))
 	// TODO something with signals API
 	SYS.worker.addEventListener('message', function (event) {
-    onMessage(SYS.worker.postMessage, event.data)
+    onFrontend(function (response) {
+			setTimeout(function () {
+				SYS.worker.postMessage(response)
+			}, 100)
+		}, event.data)
   })
 
 }

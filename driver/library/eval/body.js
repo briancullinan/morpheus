@@ -279,8 +279,10 @@ async function runStatement(i, AST, runContext) {
 
 	} catch (e) {
 		console.log(e)
-		await doError(e, runContext)
-		runContext.ended = true
+		if(runContext.bubbleStack[runContext.bubbleStack.length-1][1] != 'library/repl.js') {
+			await doError(e, runContext)
+			runContext.ended = true
+		}
 		return
 	}
 }

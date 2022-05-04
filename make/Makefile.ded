@@ -25,15 +25,14 @@ morph.ded.opt: morph.ded.wasm $(BUILD_DIR)/morph.ded.wasm
 
 WORKER_FILES  := $(wildcard driver/library/eval/*.js)      \
 	driver/utils/acorn.js driver/utils/acorn-loose.js        \
-	driver/utils/crypt.js driver/utils/jsencrypt.js 
+	driver/utils/crypt.js driver/utils/jsencrypt.js \
+	driver/library/repl.js
 
 #	driver/utils/remarkable.min.js
 
 # // BOOTSTRAP CODE?
 $(BUILD_DIR)/sys_worker.js: dedicated $(BUILD_DIR)/morph.ded.wasm $(WORKER_FILES) 
 	echo "\nglobalThis.window = globalThis;\n" > $@
-	node -e "console.log(require('./engine/wasm/bin/make').formatForVFS( \
-		'./driver/library/repl.js', 'library/repl.js' ))" >> $@
 	node -e "console.log( \
 		require('./driver/library/repl.js').doBootstrap + '\n' \
 		+ require('./$(WASM_SOURCE)/sys_idbfs.js').readPreFS + '\n' \
@@ -47,6 +46,9 @@ $(BUILD_DIR)/sys_worker.js: dedicated $(BUILD_DIR)/morph.ded.wasm $(WORKER_FILES
 	$(Q)cat $(WORKER_FILES) >> $@
 #	node -e "console.log(require('./engine/wasm/bin/make').formatForVFS( \
 #		'$(BUILD_DIR)/morph.ded.wasm', 'morph.ded.wasm' ))" >> $@
+# TOO DIFFICULT TO DEBUG REPL LIKE THIS
+#	node -e "console.log(require('./engine/wasm/bin/make').formatForVFS( \
+#		'./driver/library/repl.js', 'library/repl.js' ))" >> $@
 
 $(BUILD_DIR)/morph.ded.wasm:
 	@: 

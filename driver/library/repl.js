@@ -58,19 +58,6 @@ function doRun(runContext) {
 		runContext.ended = true
     return
   }
-  if(ctx.ended) {
-		sendMessage({
-			stopped: result + ''
-		})
-	} else if (ctx.async) {
-		sendMessage({ 
-			async: getThreads()
-		})
-	} else {
-		sendMessage({ 
-			result: result + ''
-		})
-	}
 	return result
 }
 
@@ -120,7 +107,6 @@ function createRunContext(env) {
 
 function doError(err) {
 	try {
-		console.log('line: ' + (currentContext.bubbleLine - 1), err)
 		sendMessage({ 
 			error: err.message + '',
 			// always subtract 1 because code is wrapping in a 1-line function above
@@ -159,38 +145,54 @@ function onError(error) {
 // access info from another remote, or another context
 //   used to lookup library functions, inject scripts 
 //   into other pages
-function doAccessor(member) { // shouldn't need senderId with DI
-	let memberName = member.object.name + '.' + member.property.name
-	// YOU SEE? THIS IS WHY I REWRITE STUFF
-	console.log(memberName)
-	let response = sendMessage({
-		accessor: memberName
-	})
+async function doAccessor(response) { // shouldn't need senderId with DI
+	
+	if(typeof response.object != 'undefined') {
+		let memberName = response.object.name + '.' + response.property.name
+		let memberAccess = await sendMessage({
+			accessor: memberName
+		})
+		return doAccessor(memberAccess)
+		// TODO: return doAccessor(memberAccess) ? convert string func to RPC
+	} else 
 	if (!response || typeof response.fail != 'undefined') {
-		throw new Error('Member access error: ' + memberName)
-	} else
-
+		console.log(response)
+		throw new Error('Member access error: ', response)
+	} else 
 
 	// INTERESTING, REALIZING THIS IS THE ONLY ABSTRACTION REPL CAN
 	//   DO BY ITSELF, WINDOW.LOCATION LOOKUPS ARE CONTEXT DEPENDENT
-	if(typeof request.accessor != 'undefined'
+	if(typeof response.accessor != 'undefined'
 		&& request.accessor.startsWith('exports.')) {
-		return doLibraryLookup(request.accessor.split('.')[1])
+		return await doLibraryLookup(request.accessor.split('.')[1])
 	} else
 
 	if(typeof response.library != 'undefined') {
-		return doRun(response.library)
+		return await doRun(response.library)
 	} else
 	if(typeof response.function != 'undefined') {
-		// TODO: add paramerters
-		debugger
-		return doAccessor.bind(this, member)
+		if(response.value) {
+			return response.value
+		} else {
+			response.value = (async function (request, ...params) {
+				// TODO: add paramerters
+				let result = await sendMessage({
+					script: request.name + '();'
+				})
+				return result
+			}).bind(this, response)
+			return response
+		}
 	} else
 	if(typeof response.json != 'undefined') {
 		return JSON.parse(response.json) // window.location, not volatile objects
 	} else
-	if(typeof response.value != 'undefined') {
+	if(typeof response.value != 'undefined'
+		|| typeof response.type != 'undefined') {
 		return response.value // primitive types
+	} else {
+		debugger
+		throw new Error('Unknown command: ', response)
 	}
 
 	// TODO: establish standard jupyter-meta-kernel connection
@@ -202,7 +204,9 @@ function doAccessor(member) { // shouldn't need senderId with DI
 	// TODO: any system-level/process-level service monitoring, call-out
 
 
+
 }
+
 
 
 function doLibraryLookup(functionName) {
@@ -230,7 +234,9 @@ function doLibraryLookup(functionName) {
 			}
 		}
 	}
+
 }
+
 
 
 let threads = {}
@@ -355,20 +361,22 @@ async function doBootstrap(script, globalContext) {
 	bootstrapRunContext.localDeclarations[0].currentContext = bootstrapRunContext
 	bootstrapRunContext.localVariables.currentContext = 'object'
 
-	let replLibrary = Array.from(FS.virtual['library/repl.js'].contents)
+	if(typeof doRun == 'undefined') {
+		let replLibrary = Array.from(FS.virtual['library/repl.js'].contents)
 			.map(function (c) { return String.fromCharCode(c) }).join('')
-	try {
-		let AST = acorn.parse(
-			'(function () {\n' + replLibrary + '\nreturn doRun;})()\n'
-			, {ecmaVersion: 2020, locations: true, onComment: []})
-		bootstrapRunContext.script = replLibrary
-		await runStatement(0, 
-				[AST.body[0].expression.callee.body], bootstrapRunContext)
-		bootstrapRunContext.returned = false
-		delete bootstrapRunContext.bubbleReturn
-		Object.assign(globalContext, bootstrapRunContext.localDeclarations[0])
-	} catch (e) {
-		console.log(e)
+		try {
+			let AST = acorn.parse(
+				'(function () {\n' + replLibrary + '\nreturn doRun;})()\n'
+				, {ecmaVersion: 2020, locations: true, onComment: []})
+			bootstrapRunContext.script = replLibrary
+			await runStatement(0, 
+					[AST.body[0].expression.callee.body], bootstrapRunContext)
+			bootstrapRunContext.returned = false
+			delete bootstrapRunContext.bubbleReturn
+			Object.assign(globalContext, bootstrapRunContext.localDeclarations[0])
+		} catch (e) {
+			console.log(e)
+		}
 	}
 
 	bootstrapRunContext.localDeclarations.unshift(globalContext)
@@ -381,9 +389,19 @@ async function doBootstrap(script, globalContext) {
 			bootstrapRunContext.bubbleFile = '<eval>'
 			bootstrapRunContext.bubbleStack.push(['inline func 0', '<eval>', 0])
 			let result = await doRun(bootstrapRunContext) // NOW IT'S RECURSIVE
-			//sendMessage({
-			//	result: result
-			//})
+			if(bootstrapRunContext.ended) {
+				sendMessage({
+					stopped: result + ''
+				})
+			} else if (bootstrapRunContext.async) {
+				sendMessage({ 
+					async: getThreads()
+				})
+			} else {
+				sendMessage({ 
+					result: result + ''
+				})
+			}
 			bootstrapRunContext.returned = false
 			return result
 		} catch (e) {
@@ -395,12 +413,93 @@ async function doBootstrap(script, globalContext) {
 }
 
 
+async function onFrontend(replyFunction, request) {
+	console.log('request: ', request)
+	if(request.status) {
+	} else
+
+	if(typeof request.script != 'undefined') {
+		setTimeout(function () {
+		// repl dom stuff? probably not
+		try {
+			let value = JSON.stringify(eval(request.script))
+			if(typeof window[name] == 'function') {
+				value = window[name] + ''
+			}
+			let type = typeof window[name]
+			let result = {
+				responseId: request.responseId,
+				type: type,
+				name: name
+			}
+			result[type] = value
+			return replyFunction(result)
+		} catch (e) {
+			replyFunction({
+				responseId: request.responseId,
+				fail: e.message,
+			})
+		}
+		}, 200)
+	} else
+
+	if(typeof request.accessor != 'undefined'
+			&& typeof onAccessor != 'undefined') {
+		// TODO: incase we need REPL on frontend because of CSP
+		let lib = onAccessor(request)
+		return replyFunction(lib)
+	} else
+
+	// WHAT IF URLS WERE XPATHS TO FUNCTIONS? AND ROUTING TABLES WHERE JUST FUNCTIONS?
+	if(typeof request.accessor != 'undefined'
+			&& request.accessor.startsWith('exports.')) {
+		// TODO: re-forward back to the backend accessor because
+		//   worker shares a local storage, this is what
+		//   I meant by "ask language server". No matter if
+		//   a request comes from more or engine or worker
+		//   or plugin, it all leads back to my code in IDBFS
+		// TODO: need to include installAsync here also, but only
+		//   for worker interface because plugin is event/reply based
+		//if(replyFunction === SYS.worker.postMessage) {
+		let name = request.accessor.split('.')[1]
+		let value = JSON.stringify(window[name])
+		if(typeof window[name] == 'function') {
+			value = window[name] + ''
+		}
+		let type = typeof window[name]
+		let result = {
+			responseId: request.responseId,
+			type: type,
+			name: name
+		}
+		result[type] = value
+		return replyFunction(result)
+	} else 
+
+
+	if(typeof doDialog != 'undefined'
+			&& typeof request.accessor != 'undefined') { // REPL?
+		let dialog = doDialog(request, replyFunction)
+		return dialog
+	}
+
+	if(typeof doRun != 'undefined') {
+		doRun(request.accessor || request.script, {
+			window: window,
+			ACE: ACE,
+		}) // NOW IT'S RECURSIVE
+	}
+}
+
+
  // BOOTSTRAP CODE?
  if(typeof module != 'undefined') {
 	module.exports = {
-		doLibraryLookup,
 		doAccessor,
 		doBootstrap,
+		doLibraryLookup,
+		onFrontend,
+		
 	}
 }
 

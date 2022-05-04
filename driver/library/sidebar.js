@@ -18,9 +18,6 @@
 
 
 
-
-
-// let ACE = {}
 function anyParentsCollapsed(segments) {
 	if(!ACE.filescollapsed) {
 		return
@@ -155,6 +152,10 @@ function threadPool() {
 
 
 function updateFilelist(filepath) {
+	if(typeof ACE == 'undefined') {
+		window.ACE = {}
+
+	}
 	if(!ACE.fileList) {
 		ACE.fileList = document.getElementById('file-list')
 	}

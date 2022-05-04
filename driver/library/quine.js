@@ -6,6 +6,9 @@
 // convert makefile to jupyter notebook for storage in collab / download.
 //   does jupyter support encryption?
 
+// CODE REVIEW: I'VE COMBINED DEPENDENCY INJECTION FROM MY MAKEFILE
+//   WITH EXPRESS STYLE MIDDLEWARES FOR FEATURE SPECIFICS.
+
 // THIS IS KIND OF FUNNY, FOR CODE REVEIW, I TOOK THIS CLIENT FUNCTION
 //   AND MAKE IT WORK REMOTELY IN ANY WINDOW SO BOTH CLIENT AND SCRIPT
 //   CAN CALL IT. MULTISOURCE FUNCTIONS AS CODE-LEAVES? FORCE DEPENDENCY 
@@ -59,7 +62,11 @@ function installAsyncTriggerMiddleware(onMessage, sendMessage) {
 	// for services with a callback like email marketing
 	//   or zapier
 
-	let awaitingResponse = {}
+	// BECAUSE THIS IS CALLED MULTIPLE TIMES BUT I WAS TREATING THIS LIKE STATIC
+	//let awaitingResponse = {}
+	if(typeof awaitingResponse == 'undefined') {
+		globalThis.awaitingResponse = {}
+	}
 
 	// TODO: move this to auth
 	function getRunId(length) {
@@ -87,32 +94,36 @@ function installAsyncTriggerMiddleware(onMessage, sendMessage) {
 		//   BACK UP WITH THE RIGHT PROCESS, THIS IS NOT A SECURITY THING.
 		let responseEventId = getRunId(20)
 		// return function
-		awaitingResponse[responseEventId] = (function (responseTimer) {
+		return new Promise(function (resolve) {
+			let responseTimer = setTimeout(function () {
+				resolve()
+				delete awaitingResponse[responseEventId]
+			}, 3000)
+
 			if(typeof request == 'object' && request) {
 				request.responseId = responseEventId
 			}
 
-			sendMessage(request)
-
-			return function (response) {
+			awaitingResponse[responseEventId] = 
+			function (response) {
 				clearTimeout(responseTimer)
-				// runId automatically appended to upload
-				onMessage(response, sendMessage) // ROUND AND ROUND WE GO
+				resolve(response)
 				delete awaitingResponse[responseEventId]
+				// ROUND AND ROUND WE GO
 			}
-		})(setTimeout(function () {
-			awaitingResponse[responseEventId]()
-			delete awaitingResponse[responseEventId]
-		}, 3000))
+
+			sendMessage(request)
+			return awaitingResponse[responseEventId]
+		}).then(onMessage)
 	}
 
 	function forwardResponseById(responseData) {
 		if(responseData && responseData.responseId
 			&& awaitingResponse.hasOwnProperty(responseData.responseId)) {
-			awaitingResponse[responseData.responseId](responseData)
-			delete awaitingResponse[responseData.responseId]
-			return
-		}
+				return awaitingResponse[responseData.responseId](responseData)
+		} /* else {
+			throw new Error('Message received with no responseId.')
+		} */ // must fail in script
 		return onMessage(responseData)
 
 	}
@@ -132,11 +143,11 @@ function installEncryptedAsyncMiddleware(onMessage, sendMessage) {
 
 	let {
 		encryptResults,
-	} = encryptedAccessorResponseMiddleware(void 0, sendMessage)
+	} = encryptedAccessorResponseMiddleware(decryptResponseIfSession, sendMessage)
 
 	let {
 		awaitOrTimeout,
-	} = installAsyncTriggerMiddleware(void 0, sendMessage)
+	} = installAsyncTriggerMiddleware(onMessage, sendMessage)
 
 	let {
 		awaitOrTimeout: encryptedAwait,
@@ -145,7 +156,7 @@ function installEncryptedAsyncMiddleware(onMessage, sendMessage) {
 
 	let {
 		decryptResponse,
-	} = encryptedAccessorResponseMiddleware(forwardResponseById, void 0)
+	} = encryptedAccessorResponseMiddleware(forwardResponseById, encryptResultsIfSession)
 
 	function encryptResultsIfSession (request) {
 		if(request.responseId) {
@@ -166,8 +177,6 @@ function installEncryptedAsyncMiddleware(onMessage, sendMessage) {
 		return forwardResponseById(response)
 	}
 
-
-	
 	return {
 		encryptResultsIfSession,
 		decryptResponseIfSession,
@@ -405,47 +414,6 @@ function debuggerMessageResponseMiddleware() {
 //   MY OWN FRONTEND PLUGIN IN THE CONTEXT OF THE PAGE.
 function domMessageResponseMiddleware() {
 
-	function onMessage(replyFunction, request) {
-		if(!request.status) {
-			debugger
-		}
-		// WHAT IF URLS WERE XPATHS TO FUNCTIONS? AND ROUTING TABLES WHERE JUST FUNCTIONS?
-		if(typeof request.accessor != 'undefined') {
-			let lib 
-			let dialog
-			if(typeof onAccessor == 'undefined') {
-				// TODO: re-forward back to the backend accessor because
-				//   worker shares a local storage, this is what
-				//   I meant by "ask language server". No matter if
-				//   a request comes from more or engine or worker
-				//   or plugin, it all leads back to my code in IDBFS
-				// TODO: need to include installAsync here also, but only
-				//   for worker interface because plugin is event/reply based
-				//if(replyFunction === SYS.worker.postMessage) {
-				if(request.accessor.startsWith('exports.')) {
-
-				} else {
-
-
-				}
-				//}
-			} else
-			if((lib = onAccessor(request))) {
-				return replyFunction(lib)
-			} else
-			if(typeof doDialog != 'undefined'
-				&& (dialog = doDialog(request, replyFunction))) { // REPL?
-				return dialog
-			} else
-			if(typeof doRun != 'undefined') {
-				doRun(request.accessor, {
-					window: window,
-					ACE: ACE,
-				}) // NOW IT'S RECURSIVE
-			}
-		}
-	}
-
 	function sendMessage(data) {
 		let runScript = document.getElementById('run-script')
 		if(runScript) {
@@ -459,15 +427,13 @@ function domMessageResponseMiddleware() {
 
 	window.addEventListener('load', function () {
 		window.addEventListener('message', 
-			onMessage.bind(this, sendMessage), false)
-		window.onMessage = onMessage
+				onFrontend.bind(this, sendMessage), false)
 		window.sendMessage = sendMessage
 		// check for plugin or emitDownload
 		// maybe we don't have the plugin
 		// TODO: .bind(null, 'morph-plugin')
 		let cancelDownload = setTimeout(emitDownload, 3000)
 		if(chrome && chrome.runtime) {
-			debugger
 			chrome.runtime.sendMessage(
 				EXTENSION_ID, EXTENSION_VERSION, 
 			function () {
@@ -481,7 +447,7 @@ function domMessageResponseMiddleware() {
 		// TODO: update for lvlworld engine only?
 		if(typeof ACE == 'undefined') {
 			sendMessage({
-				script: 'updateFilelist();'
+				script: 'updateFilelist("Instructions");'
 			})
 		}
 	})
@@ -498,54 +464,63 @@ function domMessageResponseMiddleware() {
 
 function workerMessageResponseMiddleware() {
 
+	let {
+		encryptResultsIfSession,
+		decryptResponseIfSession,
+	} = installEncryptedAsyncMiddleware(onMessage, self.postMessage) 
+
 	function sendMessage(data) {
 		if(data.accessor
 			&& data.accessor.includes('exports.')) {
-			debugger
+			// TODO: shortcut the frontend FS.virtual
+			//   for now and just provide whatever is saved in IDBFS
+			// will need RPC to save code storage, will provide it in
+			//   cloud build so needs to be generic through accessors.
+			let lib = doLibraryLookup(data.accessor.split('.')[1])
+			if(lib) {
+				return lib
+			}
 		}
-		self.postMessage(data)
+		console.log(data)
+		let asyncResult = encryptResultsIfSession(data)
+		console.assert(asyncResult.constructor === Promise) //  === Promise
+		return Promise.resolve(asyncResult)
 	}
 
 	// lol, make a game where lost accounts lead to a virtual court room to prove your identity just like IRL
 	//   if someone claims to be Rick (from Rick & Morty) all the other Ricks have to obvserve and allow
 	//   or take the new Rick out for not being Ricky enough. - Metaverse
-	async function onMessage(request) {
+	function onMessage(request) {
 		let lib
 		if(!request) {
-			debugger
-			throw new Error('Unknown command: ', request)
+			return
 		}
 		if(typeof onAccessor != 'undefined'
 			&& typeof request.accessor != 'undefined'
 			// on the backend we choose to do everything in the same place
-			&& (lib = doAccessor(request.data))) {
-			return await encryptResultsIfSession(lib)
+			&& (lib = doAccessor(request))) {
+			return sendMessage(lib)
 		} else
 		if (typeof request.script != 'undefined') {
-			return await doBootstrap(request.script, 
+			return doBootstrap(request.script, 
 					Object.assign(globalThis, { 
-						sendMessage: encryptResultsIfSession
+						sendMessage: sendMessage,
+						//doLibraryLookup: doLibraryLookup,
 					}))
 		} else {
-			throw new Error('Unknown command: ', request)
+			return doAccessor(request)
 		}
 
 	}
 
-
-	let {
-		encryptResultsIfSession,
-		decryptResponseIfSession,
-		// CODE REVIEW, EXTRA COMMENTS?
-	} = installEncryptedAsyncMiddleware(onMessage, sendMessage) // self.postMessage) 
 
 	// this was for a web-worker setup
 	if(typeof globalThis != 'undefined' 
 			&& typeof globalThis.window == 'undefined') {
 		globalThis.window = globalThis
 	}
-	self.onmessage = function (request) {
-		decryptResponseIfSession(request.data)
+	self.onmessage = async function (request) {
+		let result = await decryptResponseIfSession(request.data)
 	}
 	if(typeof FS == 'undefined') {
     globalThis.FS = {
@@ -650,6 +625,17 @@ function cliMessageResponseMiddleware() {
 	// Connecting R to fuse-fs would be weird. Or using MATLAB's interface
 	//   for validating 3D scenes, or picking something out demo-files?
 }
+
+
+function discordMessageResponseMiddleware() {
+	// very important for exporting to proxy server
+}
+
+
+function socialMessageResponseMiddleware() {
+	// various connections to social networking interfaces through one contiguous interface
+}
+
 
 // TODO: collabMessageResponseMiddleware() {}
 
