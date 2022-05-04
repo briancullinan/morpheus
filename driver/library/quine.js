@@ -53,6 +53,8 @@ function emitPlugin() {
 }
 
 
+// CODE REVIEW, NOW THESE BECOME THE ONLY REPETATIVE STUFF I HAVE TO
+//   INCLUDE IN EVERY CONTEXT INSTEAD OF A HUGE LIBRARY OF CODE.
 function installAsyncTriggerMiddleware(onMessage, sendMessage) {
 	// for services with a callback like email marketing
 	//   or zapier
@@ -69,6 +71,7 @@ function installAsyncTriggerMiddleware(onMessage, sendMessage) {
 		return btoa(output.join(''));
 	}
 	
+	// FOR CALLING REPEAT TIMES BUT PROTECTING RUNID SCOPE
 	function generateRunId() {
 		let runId = getRunId(20)
 		return function (request) {
@@ -77,26 +80,14 @@ function installAsyncTriggerMiddleware(onMessage, sendMessage) {
 		}
 	}
 
-	function forwardResponseById(responseData) {
-		if(responseData && responseData.responseId
-			&& awaitingResponse.hasOwnProperty(responseData.responseId)) {
-			awaitingResponse[responseData.responseId](responseData)
-			delete awaitingResponse[responseData.responseId]
-			return
-		}
-		return onMessage(responseData)
-
-	}
-
-
 	function awaitOrTimeout(request) {
 		// access a client variable they've shared from code
 		// basic client status message
 		// THIS IS PURELY FOR TECHNICALLY MATCHING CLICKS ON THE PAGE
 		//   BACK UP WITH THE RIGHT PROCESS, THIS IS NOT A SECURITY THING.
 		let responseEventId = getRunId(20)
-		awaitingResponse[responseEventId] = 
-		(function (responseTimer) {
+		// return function
+		awaitingResponse[responseEventId] = (function (responseTimer) {
 			if(typeof request == 'object' && request) {
 				request.responseId = responseEventId
 			}
@@ -115,9 +106,150 @@ function installAsyncTriggerMiddleware(onMessage, sendMessage) {
 		}, 3000))
 	}
 
+	function forwardResponseById(responseData) {
+		if(responseData && responseData.responseId
+			&& awaitingResponse.hasOwnProperty(responseData.responseId)) {
+			awaitingResponse[responseData.responseId](responseData)
+			delete awaitingResponse[responseData.responseId]
+			return
+		}
+		return onMessage(responseData)
+
+	}
+
+
 	return {
 		awaitOrTimeout,
 		forwardResponseById,
+	}
+}
+
+
+// TODO: extrapolate complexity in the client sending the first request
+//   without any session or response ids established and the server returning
+//   the first session id to use for encryption
+function installEncryptedAsyncMiddleware(onMessage, sendMessage) {
+
+	let {
+		encryptResults,
+	} = encryptedAccessorResponseMiddleware(void 0, sendMessage)
+
+	let {
+		awaitOrTimeout,
+	} = installAsyncTriggerMiddleware(void 0, sendMessage)
+
+	let {
+		awaitOrTimeout: encryptedAwait,
+		forwardResponseById,
+	} = installAsyncTriggerMiddleware(onMessage, encryptResults)
+
+	let {
+		decryptResponse,
+	} = encryptedAccessorResponseMiddleware(forwardResponseById, void 0)
+
+	function encryptResultsIfSession (request) {
+		if(request.responseId) {
+			return encryptedAwait(request)
+		}
+		return awaitOrTimeout(request)
+	}
+
+	function decryptResponseIfSession (response) {
+		// TODO: generate a new session for every runId?
+
+		// prevent recursion
+		if(response.responseId && response.type == 'encrypted') {
+			// CODE REVIEW? using middleware pattern for logic isolation? seperation of concerns? 
+			// TODO: now can remove these checks from encrypt/decrypt to make more generalized
+			return decryptResponse(response)
+		}
+		return forwardResponseById(response)
+	}
+
+
+	
+	return {
+		encryptResultsIfSession,
+		decryptResponseIfSession,
+	}
+}
+
+
+// install encrypted middleware in all the communications
+//   passed through here, this is simply to prevent and sniffy/
+//   logging plugins from saving some data to disk accidentally.
+// this is not meant to stop authorities.
+function encryptedAccessorResponseMiddleware(onMessage, sendMessage) {
+
+	// accessors on all ends will expect their results to be symmetrically
+	//   key encrypted by a pregenerated session id. In the case of plugin
+	//   front end, the encryption happens between client page and backend.
+	let _temporarySessionEncryptor
+	// code review, mark private visually with an _
+	let _generateSessionEncryptor = function (sess) {
+		_temporarySessionEncryptor = function (data) {
+			return crypt(sess, data)
+		}
+	}
+	let _generateResponseDecryptor = function (sess) {
+		return function (data) {
+			data.value = JSON.parse(decrypt(sess, data))
+			// prevent recursion
+			data.type == typeof result
+			return data
+		}
+	}
+	let _responseDecryptors = {}
+
+	// for code reviews, always try to decrease the number of sinks.
+	function encryptResults(response) {
+		if(response && response.result
+			// TODO: this plays on client, do we need multiple?
+			//   I'd think not since clients (browsers, only allow like 3 connections at a time)
+			// so even if they could all proxy out, only so many controls can proxy back in.
+				&& typeof _temporarySessionEncryptor != 'undefined') {
+			let encrypted = _temporarySessionEncryptor(JSON.stringify(response.result))
+			return sendMessage({
+				responseId: response.responseId,
+				result: { type: 'encrypted', value: encrypted }
+			})
+		} else {
+
+		}
+		// TODO: master password detection
+		return sendMessage(response)
+	}
+
+
+	function decryptResponse(results) {
+		// sessionId is sent at a different time from the results.
+		// sessionId is sent to client for use as the encryption key,
+		//   generated by the server. A plugin could sniff the sessionId
+		//   ealier and then decrypt the next form results.
+		// SINK, encrypt form data directly to remote page, or directly to backend
+		//   in case of system password collection, this gurantees the data gets to 
+		//   the right page, hopefully without being logged or stolen. So it is doubly
+		//   encrypted on disk by the master password. Once a password is entered, replace
+		//   the generation function with doubly encryption.
+		// this is a result to client end after sending an initial script request
+		_generateSessionEncryptor(results.sessionId)
+			_responseDecryptors[results.responseId] 
+					= _generateResponseDecryptor(results.sessionId)
+		// TODO: master password detection
+		// if(request.accessor.includes("_password"))
+		if(results && results.type && results.type == 'encrypted'
+			&& typeof _responseDecryptors[result.responseId] != 'undefined'
+		) {
+			/* await */ return onMessage(_responseDecryptors[result.responseId](results.value))
+		} else {
+			throw new Error('There can be only one.')
+		}
+	}
+
+
+	return {
+		encryptResults,
+		decryptResponse,
 	}
 }
 
@@ -282,13 +414,21 @@ function domMessageResponseMiddleware() {
 			let lib 
 			let dialog
 			if(typeof onAccessor == 'undefined') {
-				// TODO: reforward back to the backend accessor because
+				// TODO: re-forward back to the backend accessor because
 				//   worker shares a local storage, this is what
 				//   I meant by "ask language server". No matter if
 				//   a request comes from more or engine or worker
 				//   or plugin, it all leads back to my code in IDBFS
 				// TODO: need to include installAsync here also, but only
 				//   for worker interface because plugin is event/reply based
+				//if(replyFunction === SYS.worker.postMessage) {
+				if(request.accessor.startsWith('exports.')) {
+
+				} else {
+
+
+				}
+				//}
 			} else
 			if((lib = onAccessor(request))) {
 				return replyFunction(lib)
@@ -361,7 +501,7 @@ function workerMessageResponseMiddleware() {
 	function sendMessage(data) {
 		if(data.accessor
 			&& data.accessor.includes('exports.')) {
-			
+			debugger
 		}
 		self.postMessage(data)
 	}
@@ -370,7 +510,6 @@ function workerMessageResponseMiddleware() {
 	//   if someone claims to be Rick (from Rick & Morty) all the other Ricks have to obvserve and allow
 	//   or take the new Rick out for not being Ricky enough. - Metaverse
 	async function onMessage(request) {
-
 		let lib
 		if(!request) {
 			debugger
@@ -378,23 +517,27 @@ function workerMessageResponseMiddleware() {
 		}
 		if(typeof onAccessor != 'undefined'
 			&& typeof request.accessor != 'undefined'
-			&& (lib = onAccessor(request.data))) {
-			return awaitOrTimeout(lib)
+			// on the backend we choose to do everything in the same place
+			&& (lib = doAccessor(request.data))) {
+			return await encryptResultsIfSession(lib)
 		} else
 		if (typeof request.script != 'undefined') {
 			return await doBootstrap(request.script, 
 					Object.assign(globalThis, { 
-						sendMessage: awaitOrTimeout 
+						sendMessage: encryptResultsIfSession
 					}))
 		} else {
+			throw new Error('Unknown command: ', request)
 		}
 
 	}
 
+
 	let {
-		awaitOrTimeout,
-		forwardResponseById,
-	} = installAsyncTriggerMiddleware(onMessage, sendMessage)
+		encryptResultsIfSession,
+		decryptResponseIfSession,
+		// CODE REVIEW, EXTRA COMMENTS?
+	} = installEncryptedAsyncMiddleware(onMessage, sendMessage) // self.postMessage) 
 
 	// this was for a web-worker setup
 	if(typeof globalThis != 'undefined' 
@@ -402,7 +545,7 @@ function workerMessageResponseMiddleware() {
 		globalThis.window = globalThis
 	}
 	self.onmessage = function (request) {
-		forwardResponseById(request.data)
+		decryptResponseIfSession(request.data)
 	}
 	if(typeof FS == 'undefined') {
     globalThis.FS = {
@@ -520,6 +663,9 @@ if(typeof module != 'undefined') {
 		workerMessageResponseMiddleware,
 		serviceMessageResponseMiddleware,
 		installAsyncTriggerMiddleware,
+		encryptedAccessorResponseMiddleware,
+		installEncryptedAsyncMiddleware,
+
 	}
 }
 

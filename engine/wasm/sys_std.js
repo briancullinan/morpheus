@@ -275,7 +275,7 @@ function Sys_fork() {
 		|| typeof window.preFS['sys_worker.js'] == 'undefined'
 	//	|| !document.body.classList.contains('paused')
 	) {
-		return
+		throw new Error('Could not load worker.')
 	}
 	if(typeof FS.virtual['sys_worker.js'] == 'undefined') {
 		readPreFS()

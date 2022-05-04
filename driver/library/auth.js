@@ -6,9 +6,6 @@ let temporaryEncrypter
 let temporaryUser
 
 
-// TODO: MAKE MORE GENERALIZED? SINCE ENCRYPTION IN INCLUDED BY DEFAULT?
-
-
 // THIS IS THE KITCHEN SINK. AND ANYWHERE THAT USES "CRYPT(" AND "TEMPORARYENCRYPTOR("
 
 async function doMorpheusPass(required) {
@@ -43,7 +40,7 @@ async function doMorpheusPass(required) {
 	previousContext.returned = false // because fuck-arounds above, ^
 	// should never happen if lib is working \/
 	if(await shouldBubbleOut(passwordContext) 
-		|| !response || !response.formData) {
+		|| !response) {
 		// silently fail, until we get back to library script
 		previousContext.paused = false
 		return
@@ -66,7 +63,7 @@ async function doMorpheusPass(required) {
 			return decrypt(morpheusForm.pass, data)
 		}
 	// decrypt with the current runId incase of extra snoopy/loggy plugins
-	})(JSON.parse(decrypt(sessionId, response.result.formData)))
+	})(JSON.parse(response))
 
 	temporaryEncrypter = (function (morpheusForm) {
 		return async function (data) {
@@ -78,7 +75,7 @@ async function doMorpheusPass(required) {
 			return crypt(morpheusForm.pass, data)
 		}
 	// decrypt with the current runId incase of extra snoopy/loggy plugins
-	})(JSON.parse(decrypt(sessionId, response.result.formData)))
+	})(JSON.parse(formData))
 
 	// STORE THE USERNAME, SO WE DON'T HAVE TO KEEP TYPING IT
 	//   THE HASH USERNAME b****n@g****m AND THE PASSWORD ARE

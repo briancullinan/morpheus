@@ -110,16 +110,6 @@ function doAccessor(request, reply) {
 	) {
 		//debugger
 	}
-	// SINK, encrypt form data directly to remote page, or directly to backend
-	//   in case of system password collection, this gurantees the data gets to 
-	//   the right page, hopefully without being logged or stolen.
-	if(request.sessionId) {
-		(function (sess) {
-			temporarySessionEncryptor = function (data) {
-				return crypt(sess, data)
-			}
-		})(request.sessionId)
-	}
 	switch(request.accessor) {
 		case '_morpheusKey':
 			ACE.dropFile = doDialog(request, ACE.dropFile, reply)

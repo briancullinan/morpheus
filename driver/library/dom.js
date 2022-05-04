@@ -52,7 +52,7 @@ function runBlock(start) {
 function collectForm(dialog) {
 	let responseId = dialog.getAttribute('aria-id')
 	let formResults = {}
-	
+	debugger
 	return formResults
 }
 
@@ -62,10 +62,9 @@ function doSendForm(reply, dialog, event) {
 	let responseId = dialog.getAttribute('aria-id')
 	if(event.target && event.target.tagName == 'BUTTON') {
 		// SINK!
-		let encrypted = temporarySessionEncryptor(JSON.stringify(formResults))
 		return reply({
 			responseId: responseId,
-			result: { type: 'string', value: encrypted }
+			result: formResults
 		})
 	} else
 	if(event.target === dialog

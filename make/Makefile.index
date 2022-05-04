@@ -33,16 +33,20 @@ endif
 
 morph.html: $(INDEX_FILES) $(INDEX_OBJS)
 	$(Q)cp -r -f $(HTTP_SOURCE)/index.html $(BUILD_DIR)/morph.html
-	node -e "require('./engine/wasm/bin/make').normalEmbedAll( \
-		'$(BUILD_DIR)/morph.html', 'driver/library', 'driver/library/', 'library/')"
 	node -e "require('./engine/wasm/bin/make').normalBootstrap( \
 		'$(BUILD_DIR)/morph.html', '$(BUILD_DIR)/morph.js')"
 	node -e "require('./engine/wasm/bin/make').normalReplace( \
-		'$(BUILD_DIR)/morph.html', '\n' + require('./driver/library/quine.js') \
-		.emitDownload + '\n\n' + require('./driver/library/quine.js') \
-		.domMessageResponseMiddleware + '\ndomMessageResponseMiddleware();');"
+		'$(BUILD_DIR)/morph.html',  \
+		'\n' + require('./driver/library/quine.js').emitDownload + '\n' \
+		+ require('./driver/library/quine.js').installAsyncTriggerMiddleware + '\n' \
+		+ require('./driver/library/quine.js').encryptedAccessorResponseMiddleware + '\n' \
+		+ require('./driver/library/quine.js').domMessageResponseMiddleware + '\n' \
+		+ require('./driver/library/quine.js').installEncryptedAsyncMiddleware \
+		+ '\ndomMessageResponseMiddleware();\n' );"
 	node -e "require('./engine/wasm/bin/make').normalBase64( \
 		'$(BUILD_DIR)/morph.html', '$(BUILD_DIR)/sys_worker.js', 'sys_worker.js')"
+#	node -e "require('./engine/wasm/bin/make').normalEmbedAll( \
+#		'$(BUILD_DIR)/morph.html', 'driver/library', 'driver/library/', 'library/')"
 
 # basically, the above line is there until I can write a simple make/prolog parser
 #   like this stupid failing dry-run.txt file I keep seeing, or add some other

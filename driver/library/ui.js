@@ -77,11 +77,10 @@ function doDialog(request, reply) {
   request.action = function () {
     // SINK!
     let formResults = collectForm(dialog)
-    let encrypted = temporarySessionEncryptor(JSON.stringify(formResults))
     hideDialog(dialog)
     return reply({
       responseId: responseId,
-      result: { type: 'string', value: encrypted }
+      result: formResults
     })
   }
   showDialog(dialog, request)

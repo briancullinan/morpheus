@@ -33,20 +33,22 @@ WORKER_FILES  := $(wildcard driver/library/eval/*.js)      \
 $(BUILD_DIR)/sys_worker.js: dedicated $(BUILD_DIR)/morph.ded.wasm $(WORKER_FILES) 
 	echo "\nglobalThis.window = globalThis;\n" > $@
 	node -e "console.log(require('./engine/wasm/bin/make').formatForVFS( \
-		'$(BUILD_DIR)/morph.ded.wasm', 'morph.ded.wasm' ))" >> $@
-	node -e "console.log(require('./engine/wasm/bin/make').formatForVFS( \
 		'./driver/library/repl.js', 'library/repl.js' ))" >> $@
-	node -e "console.log(require('./driver/library/repl.js') \
-		.doBootstrap + '\n' + require('./$(WASM_SOURCE)/sys_idbfs.js') \
-		.readPreFS + '\n' + require('./$(WASM_SOURCE)/sys_idbfs.js') \
-		._base64ToArrayBuffer + '\n' + require('./driver/library/quine.js') \
-		.workerMessageResponseMiddleware + \
-		'\nworkerMessageResponseMiddleware();' + \
-		require('./driver/library/quine.js') \
-		.installAsyncTriggerMiddleware);" >> $@
+	node -e "console.log( \
+		require('./driver/library/repl.js').doBootstrap + '\n' \
+		+ require('./$(WASM_SOURCE)/sys_idbfs.js').readPreFS + '\n' \
+		+ require('./$(WASM_SOURCE)/sys_idbfs.js')._base64ToArrayBuffer + '\n' \
+		+ require('./driver/library/quine.js').installAsyncTriggerMiddleware + '\n' \
+		+ require('./driver/library/quine.js').encryptedAccessorResponseMiddleware + '\n' \
+		+ require('./driver/library/quine.js').workerMessageResponseMiddleware + '\n'  \
+		+ require('./driver/library/quine.js').installAsyncTriggerMiddleware + '\n'  \
+		+ require('./driver/library/quine.js').installEncryptedAsyncMiddleware \
+		+ '\nworkerMessageResponseMiddleware();\n' );" >> $@
 	$(Q)cat $(WORKER_FILES) >> $@
+#	node -e "console.log(require('./engine/wasm/bin/make').formatForVFS( \
+#		'$(BUILD_DIR)/morph.ded.wasm', 'morph.ded.wasm' ))" >> $@
 
-$(BUILD_DIR)/morph.ded.wasm: dedicated
+$(BUILD_DIR)/morph.ded.wasm:
 	@: 
 
 # TODO: move this to service_worker.js, lol, stupid chrome debugger

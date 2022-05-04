@@ -168,12 +168,22 @@ function doAccessor(member) { // shouldn't need senderId with DI
 	})
 	if (!response || typeof response.fail != 'undefined') {
 		throw new Error('Member access error: ' + memberName)
-	}
+	} else
+
+
+	// INTERESTING, REALIZING THIS IS THE ONLY ABSTRACTION REPL CAN
+	//   DO BY ITSELF, WINDOW.LOCATION LOOKUPS ARE CONTEXT DEPENDENT
+	if(typeof request.accessor != 'undefined'
+		&& request.accessor.startsWith('exports.')) {
+		return doLibraryLookup(request.accessor.split('.')[1])
+	} else
+
 	if(typeof response.library != 'undefined') {
 		return doRun(response.library)
 	} else
 	if(typeof response.function != 'undefined') {
 		// TODO: add paramerters
+		debugger
 		return doAccessor.bind(this, member)
 	} else
 	if(typeof response.json != 'undefined') {
@@ -182,25 +192,16 @@ function doAccessor(member) { // shouldn't need senderId with DI
 	if(typeof response.value != 'undefined') {
 		return response.value // primitive types
 	}
-}
+
+	// TODO: establish standard jupyter-meta-kernel connection
+	
+
+	// TODO: pre-configure proxy-networking like the engine does, frontend
 
 
-let temporarySessionEncryptor
+	// TODO: any system-level/process-level service monitoring, call-out
 
-function onAccessor(request) {
-	if(request.sessionId) {
-		(function (sess) {
-			temporarySessionEncryptor = function (data) {
-				return crypt(sess, data)
-			}
-		})(request.sessionId)
-	}
-	// INTERESTING, REALIZING THIS IS THE ONLY ABSTRACTION REPL CAN
-	//   DO BY ITSELF, WINDOW.LOCATION LOOKUPS ARE CONTEXT DEPENDENT
-	if(typeof request.accessor != 'undefined'
-		&& request.accessor.startsWith('exports.')) {
-		return doLibraryLookup(request.accessor.split('.')[1])
-	}
+
 }
 
 
@@ -397,7 +398,6 @@ async function doBootstrap(script, globalContext) {
  // BOOTSTRAP CODE?
  if(typeof module != 'undefined') {
 	module.exports = {
-		onAccessor,
 		doLibraryLookup,
 		doAccessor,
 		doBootstrap,
