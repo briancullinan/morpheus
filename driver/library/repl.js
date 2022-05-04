@@ -319,7 +319,6 @@ function getLocals(ctx) {
 		while(parentObject.constructor !== Object
 			&& parentObject.constructor !== Array) {
 			let localProperties = Object.getOwnPropertyNames(parentObject)
-			console.log(localProperties)
 			for(let j = 0; j < localProperties.length; j++) {
 				result[localProperties[j]] = typeof localCtx[localProperties[j]]
 			}

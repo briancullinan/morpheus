@@ -53,16 +53,22 @@ function emitPlugin() {
 }
 
 
-// plugin message response code for frontend worker chrome extension
-function frontendMessageResponseMiddleware() {
+function installAsyncTriggerMiddleware(onMessage, sendMessage) {
+	// for services with a callback like email marketing
+	//   or zapier
 
+	let awaitingResponse = {}
 
-	// for pausing the right script
-	let lastRunId = function (request) {
-		return request
+	// TODO: move this to auth
+	function getRunId(length) {
+		let output = []
+		let uint8array = crypto.getRandomValues(new Uint8Array(length))
+		for (var i = 0; i < uint8array.length; i++) {
+			output.push(String.fromCharCode(uint8array[i]));
+		}
+		return btoa(output.join(''));
 	}
-
-	// replaced by this function below after the first run
+	
 	function generateRunId() {
 		let runId = getRunId(20)
 		return function (request) {
@@ -71,23 +77,19 @@ function frontendMessageResponseMiddleware() {
 		}
 	}
 
-	function sendMessage() {
-		let runScriptTextarea = document.getElementById('run-script')
-		if(runScriptTextarea.value.length < 1) {
+	function forwardResponseById(responseData) {
+		if(responseData && responseData.responseId
+			&& awaitingResponse.hasOwnProperty(responseData.responseId)) {
+			awaitingResponse[responseData.responseId](responseData)
+			delete awaitingResponse[responseData.responseId]
 			return
 		}
-		let responseData = JSON.parse(runScriptTextarea.value)
-		if(responseData && responseData.responseId) {
-			if(awaitingResponse.hasOwnProperty(responseData.responseId)) {
-				awaitingResponse[responseData.responseId](responseData)
-				delete awaitingResponse[responseData.responseId]
-			} else {
-				//throw new Error('Accessor isn\'t waiting!')
-			}
-		}
+		return onMessage(responseData)
+
 	}
 
-	function onMessage(request) {
+
+	function awaitOrTimeout(request) {
 		// access a client variable they've shared from code
 		// basic client status message
 		// THIS IS PURELY FOR TECHNICALLY MATCHING CLICKS ON THE PAGE
@@ -98,20 +100,54 @@ function frontendMessageResponseMiddleware() {
 			if(typeof request == 'object' && request) {
 				request.responseId = responseEventId
 			}
-			// PASSTHROUGH TO DOM
-			window.postMessage(request)
+
+			sendMessage(request)
+
 			return function (response) {
 				clearTimeout(responseTimer)
 				// runId automatically appended to upload
-				chrome.runtime.sendMessage(
-						lastRunId(response), 
-						window.postMessage) // ROUND AND ROUND WE GO
+				onMessage(response, sendMessage) // ROUND AND ROUND WE GO
 				delete awaitingResponse[responseEventId]
 			}
 		})(setTimeout(function () {
 			awaitingResponse[responseEventId]()
 			delete awaitingResponse[responseEventId]
 		}, 3000))
+	}
+
+	return {
+		awaitOrTimeout,
+		forwardResponseById,
+	}
+}
+
+
+// plugin message response code for frontend worker chrome extension
+function frontendMessageResponseMiddleware() {
+
+
+
+	// replaced by this function below after the first run
+
+	// for pausing the right script
+	let lastRunId = function (request) {
+		return request
+	}
+
+
+	function sendMessage() {
+		let runScriptTextarea = document.getElementById('run-script')
+		if(runScriptTextarea.value.length < 1) {
+			return
+		}
+		forwardResponseById(JSON.parse(runScriptTextarea.value))
+	}
+
+	function onMessage(request) {
+			// PASSTHROUGH TO DOM
+			window.postMessage(request)
+
+			chrome.runtime.sendMessage
 		
 	}
 
@@ -237,8 +273,53 @@ function debuggerMessageResponseMiddleware() {
 //   MY OWN FRONTEND PLUGIN IN THE CONTEXT OF THE PAGE.
 function domMessageResponseMiddleware() {
 
+	function onMessage(replyFunction, request) {
+		if(!request.status) {
+			debugger
+		}
+		// WHAT IF URLS WERE XPATHS TO FUNCTIONS? AND ROUTING TABLES WHERE JUST FUNCTIONS?
+		if(typeof request.accessor != 'undefined') {
+			let lib 
+			let dialog
+			if(typeof onAccessor == 'undefined') {
+				// TODO: reforward back to the backend accessor because
+				//   worker shares a local storage, this is what
+				//   I meant by "ask language server". No matter if
+				//   a request comes from more or engine or worker
+				//   or plugin, it all leads back to my code in IDBFS
+				// TODO: need to include installAsync here also, but only
+				//   for worker interface because plugin is event/reply based
+			} else
+			if((lib = onAccessor(request))) {
+				return replyFunction(lib)
+			} else
+			if(typeof doDialog != 'undefined'
+				&& (dialog = doDialog(request, replyFunction))) { // REPL?
+				return dialog
+			} else
+			if(typeof doRun != 'undefined') {
+				doRun(request.accessor, {
+					window: window,
+					ACE: ACE,
+				}) // NOW IT'S RECURSIVE
+			}
+		}
+	}
+
+	function sendMessage(data) {
+		let runScript = document.getElementById('run-script')
+		if(runScript) {
+			window['run-script'].value = JSON.stringify(data)
+			window['run-accessor'].click()
+		}
+		if(SYS.worker) {
+			SYS.worker.postMessage(data)
+		}
+	}
+
 	window.addEventListener('load', function () {
-		window.addEventListener('message', onMessage, false)
+		window.addEventListener('message', 
+			onMessage.bind(this, sendMessage), false)
 		window.onMessage = onMessage
 		window.sendMessage = sendMessage
 		// check for plugin or emitDownload
@@ -265,38 +346,6 @@ function domMessageResponseMiddleware() {
 		}
 	})
 	
-	function onMessage(request) {
-		debugger
-		// WHAT IF URLS WERE XPATHS TO FUNCTIONS? AND ROUTING TABLES WHERE JUST FUNCTIONS?
-		if(typeof request.accessor != 'undefined') {
-			let lib 
-			let dialog = doDialog(request, sendMessage)
-			if(dialog) { // REPL?
-				return dialog
-			} else
-			if((lib = onAccessor(request))) {
-				return sendMessage(lib)
-			} else
-			if(typeof doRun != 'undefined') {
-				doRun(request.accessor, {
-					window: window,
-					ACE: ACE,
-				}) // NOW IT'S RECURSIVE
-			}
-		}
-	}
-
-	function sendMessage(data) {
-		let runScript = document.getElementById('run-script')
-		if(runScript) {
-			window['run-script'].value = JSON.stringify(data)
-			window['run-accessor'].click()
-		}
-		if(SYS.worker) {
-			SYS.worker.postMessage(data)
-		}
-	}
-
 }
 
 
@@ -308,14 +357,12 @@ function domMessageResponseMiddleware() {
 // TODO: SHOULD MAKE SURE ENCRYPTION WORKS SIMPLY THROUGH AUTH PROCESS ALSO.
 
 function workerMessageResponseMiddleware() {
-	let doRunFunction
 
 	function sendMessage(data) {
-	if(data.accessor
-		&& data.accessor.includes('exports.')) {
-		debugger
-	}
-
+		if(data.accessor
+			&& data.accessor.includes('exports.')) {
+			
+		}
 		self.postMessage(data)
 	}
 
@@ -325,28 +372,38 @@ function workerMessageResponseMiddleware() {
 	async function onMessage(request) {
 
 		let lib
-		if(request.data 
-			&& typeof onAccessor != 'undefined'
-			&& typeof request.data.accessor != 'undefined'
-			&& (lib = onAccessor(request.data))) {
-			return sendMessage(lib)
-		} else
-		if (request.data
-			&& typeof request.data.script != 'undefined') {
-			return await doBootstrap(request.data.script, 
-					Object.assign(globalThis, { sendMessage: sendMessage }))
-		} else {
+		if(!request) {
+			debugger
 			throw new Error('Unknown command: ', request)
+		}
+		if(typeof onAccessor != 'undefined'
+			&& typeof request.accessor != 'undefined'
+			&& (lib = onAccessor(request.data))) {
+			return awaitOrTimeout(lib)
+		} else
+		if (typeof request.script != 'undefined') {
+			return await doBootstrap(request.script, 
+					Object.assign(globalThis, { 
+						sendMessage: awaitOrTimeout 
+					}))
+		} else {
 		}
 
 	}
+
+	let {
+		awaitOrTimeout,
+		forwardResponseById,
+	} = installAsyncTriggerMiddleware(onMessage, sendMessage)
 
 	// this was for a web-worker setup
 	if(typeof globalThis != 'undefined' 
 			&& typeof globalThis.window == 'undefined') {
 		globalThis.window = globalThis
 	}
-	self.onmessage = onMessage
+	self.onmessage = function (request) {
+		forwardResponseById(request.data)
+	}
 	if(typeof FS == 'undefined') {
     globalThis.FS = {
       virtual: {}
@@ -462,7 +519,7 @@ if(typeof module != 'undefined') {
 		backendMessageResponseMiddleware,
 		workerMessageResponseMiddleware,
 		serviceMessageResponseMiddleware,
-		
+		installAsyncTriggerMiddleware,
 	}
 }
 
