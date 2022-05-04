@@ -165,6 +165,8 @@ function backendMessageResponseMiddleware() {
 		})
 	}
 
+	let threads = {}
+
 	function onMessage(replyFunction, request) {
 		if(typeof request.script != 'undefined') {
 			doRun(request.script, {
@@ -200,8 +202,6 @@ function backendMessageResponseMiddleware() {
 		}
 
 	}
-
-	let threads = {}
 
 	chrome.runtime.onMessage.addListener(function (request, sender, reply) {
 		onMessage(reply, request)

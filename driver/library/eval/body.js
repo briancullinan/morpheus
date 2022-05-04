@@ -210,7 +210,8 @@ async function runStatement(i, AST, runContext) {
 			return
 		} else
 
-		if(AST[i].type == 'DoWhileStatement') {
+		if(AST[i].type == 'DoWhileStatement'
+			|| AST[i].type == 'WhileStatement') {
 			await runWhile(AST[i], runContext)
 		} else
 
@@ -289,7 +290,10 @@ async function runBody(AST, runContext) {
 	//   which means error messaging must intercept here not to
 	//   ruin out worker process
 	try {
-
+//if(runContext.bubbleStack[0][1] == '<eval>'
+//	&& runContext.bubbleStack[runContext.bubbleStack.length-1][0] == 'doRun') {
+//debugger
+//}
 		let result = await runParameters(AST, runContext)
 		if(await shouldBubbleOut(runContext)) {
 			return result.pop()

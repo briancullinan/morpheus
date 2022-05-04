@@ -51,7 +51,7 @@ function doRun(runContext) {
 		if(!oldRunTimer) {
 			oldRunTimer = setInterval(pruneOldRuns, 1000)
 		}	
-    result = runBody(ctx.body, ctx)
+    result = runBody([ctx.body], ctx)
   } catch (e) {
     doError(e)
 		runContext.ended = true
@@ -166,7 +166,6 @@ function doAccessor(member) { // shouldn't need senderId with DI
 		accessor: memberName
 	})
 	if (!response || typeof response.fail != 'undefined') {
-		debugger
 		throw new Error('Member access error: ' + memberName)
 	}
 	if(typeof response.library != 'undefined') {
@@ -232,6 +231,8 @@ function doLibraryLookup(functionName) {
 }
 
 
+let threads = {}
+
 // SINK
 function getThreads() {
 	return JSON.stringify(Object.keys(threads)
@@ -290,26 +291,38 @@ async function doStatus(doSleep) {
 		if(e.message.includes('context invalidated')) {
 			// ignore, happens on refresh sometimes
 		} else {
-			debugger
+
 		}
 	}
 }
 
 function getLocals(ctx) {
+	let result = ctx.localVariables
 	if(typeof ctx.localDeclarations == 'undefined') {
 		return {}
 	}
-	return ctx.localDeclarations.reduce(function (obj, localCtx) {
+	for(let i = 0; i < ctx.localDeclarations.length; i++) {
+		let localCtx = ctx.localDeclarations[i]
 		let localVariables = Object.keys(localCtx)
-		for(let i = 0; i < localVariables.length; i++) {
-			obj[localVariables[i]] = typeof localCtx[localVariables[i]]
+		for(let l = 0; l < localVariables.length; l++) {
+			result[localVariables[l]] = typeof localCtx[localVariables[l]]
 		}
 		let localProperties = Object.getOwnPropertyNames(localCtx)
-		for(let i = 0; i < localProperties.length; i++) {
-			obj[localProperties[i]] = typeof localCtx[localProperties[i]]
+		for(let k = 0; k < localProperties.length; k++) {
+			result[localProperties[k]] = typeof localCtx[localProperties[k]]
 		}
-		return obj
-	}, {})
+		let parentObject = Object.getPrototypeOf(localCtx)
+		while(parentObject.constructor !== Object
+			&& parentObject.constructor !== Array) {
+			let localProperties = Object.getOwnPropertyNames(parentObject)
+			console.log(localProperties)
+			for(let j = 0; j < localProperties.length; j++) {
+				result[localProperties[j]] = typeof localCtx[localProperties[j]]
+			}
+			parentObject = Object.getPrototypeOf(parentObject)
+		}
+	}
+	return result
 }
 
 
@@ -320,11 +333,13 @@ async function doBootstrap(script, globalContext) {
 		localVariables: {
 			module: 'object',
 			Object: 'function',
+			Array: 'function',
 			console: 'object',
 		},
 		localDeclarations: [{
 			module: WEBDRIVER_API,
 			Object: Object,
+			Array: Array,
 			console: console,
 		}],
 	}
@@ -356,6 +371,7 @@ async function doBootstrap(script, globalContext) {
 				= bootstrapRunContext.bubbleFile = '<eval>'
 		try {
 			bootstrapRunContext.script = script
+			debugger
 			let result = await doRun(bootstrapRunContext) // NOW IT'S RECURSIVE
 			//sendMessage({
 			//	result: result

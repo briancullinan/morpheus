@@ -128,7 +128,7 @@ async function runMember(AST, runContext) {
   }
 
   if(!parent || (!parent.hasOwnProperty(property)
-    && !parent[property])) {
+    && typeof parent[property] == 'undefined')) {
 		debugger
     throw new Error('Member access error: ' + property)
   } else {

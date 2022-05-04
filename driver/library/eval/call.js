@@ -219,6 +219,9 @@ async function runCall(AST, runContext) {
 	if(await shouldBubbleOut(runContext)) {
 		return // bubble up
 	}
+	if(AST.callee.name == 'updateFilelist') {
+		debugger
+	}
 
 	runContext.bubbleMember = null
 	runContext.bubbleProperty = ''

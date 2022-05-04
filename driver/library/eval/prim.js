@@ -6,12 +6,19 @@ function runPrimitive(AST, runContext) {
 	if(AST.type == 'Identifier') {
 		if(runContext.localVariables.hasOwnProperty(AST.name)) {
 			for(let i = runContext.localDeclarations.length-1; i >= 0; i--) {
-				if(runContext.localDeclarations[i].hasOwnProperty(AST.name)) {
+				if(runContext.localDeclarations[i].hasOwnProperty(AST.name)
+					|| typeof runContext.localDeclarations[i][AST.name] != 'undefined') {
 					return runContext.localDeclarations[i][AST.name]
 				}
 			}
 		} else {
 			if(AST.name == 'console') {
+				debugger
+			}
+			if(AST.name == 'Array') {
+				debugger
+			}
+			if(AST.name == 'setInterval') {
 				debugger
 			}
 			throw new Error('Identifier not defined: ' + AST.name)
