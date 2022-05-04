@@ -299,11 +299,23 @@ function domMessageResponseMiddleware() {
 
 }
 
+
+
+
+// ALL THAT WORK JUST TO UNDERSTAND THIS PART? THIS IS SOMETHING
+//   THAT WAS CONFUSING ME, IN WORKER MODE I GUESS I NEED THE 
+//   SESSION ENCRYPTION MIDDLEWARE FROM FRONTEND ABOVE ALSO,
+// TODO: SHOULD MAKE SURE ENCRYPTION WORKS SIMPLY THROUGH AUTH PROCESS ALSO.
+
 function workerMessageResponseMiddleware() {
 	let doRunFunction
 
 	function sendMessage(data) {
+	if(data.accessor
+		&& data.accessor.includes('exports.')) {
 		debugger
+	}
+
 		self.postMessage(data)
 	}
 

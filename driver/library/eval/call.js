@@ -219,9 +219,6 @@ async function runCall(AST, runContext) {
 	if(await shouldBubbleOut(runContext)) {
 		return // bubble up
 	}
-	if(AST.callee.name == 'updateFilelist') {
-		debugger
-	}
 
 	runContext.bubbleMember = null
 	runContext.bubbleProperty = ''
@@ -297,10 +294,11 @@ async function runCall(AST, runContext) {
 	}, runContext)
 	// TODO: __func__, __line__, __file__ for debugging fun
 
+
 	try {
 		let result;
 		if(AST.type == 'NewExpression') {
-			if(calleeFunc == _Promise) {
+			if(calleeFunc == Promise) {
 				result = Promise.resolve().then(d => {
 					runContext.asyncRunners++
 					return d

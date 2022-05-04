@@ -100,22 +100,18 @@ async function runMember(AST, runContext) {
   if(AST.property.type == 'Literal') {
     property = AST.property.value
   } else
-  if(AST.property.type == 'Identifier') {
-    if(AST.computed) {
-      property = await runStatement(0, [AST.property], runContext)
-			if(await shouldBubbleOut(runContext)) {
-				return
-			}
-    } else {
-      property = AST.property.name
-    }
-	} else if (AST.property.computed) {
-		property = await runStatement(0, [AST.property], runContext)
-  } else {
+	if(AST.computed) {
+    property = await runStatement(0, [AST.property], runContext)
+		if(await shouldBubbleOut(runContext)) {
+			return
+		}
+	} else 
+	if(AST.property.type == 'Identifier') {
+		property = AST.property.name
+	} else {
 		debugger
     throw new Error('MemberExpression: Not implemented!')
   }
-
 
   let parent = await runStatement(0, [AST.object], runContext)
   if(await shouldBubbleOut(runContext)) {

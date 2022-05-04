@@ -50,8 +50,9 @@ function doRun(runContext) {
   try {
 		if(!oldRunTimer) {
 			oldRunTimer = setInterval(pruneOldRuns, 1000)
-		}	
-    result = runBody([ctx.body], ctx)
+		}
+		ctx.bubbleStack[ctx.bubbleStack.length-1][1] = '<eval>'
+    result = runStatement(0, [ctx.body], ctx)
   } catch (e) {
     doError(e)
 		runContext.ended = true
@@ -266,6 +267,9 @@ function pruneOldRuns() {
 
 
 async function doStatus(doSleep) {
+	if(typeof currentContext == 'undefined') {
+		return
+	}
 	try {
 		let statusUpdate = { 
 			// always subtract 1 because code is wrapping in a 1-line function above
@@ -328,6 +332,10 @@ function getLocals(ctx) {
 
 async function doBootstrap(script, globalContext) {
 	let bootstrapRunContext = {
+		ended: false,
+		stopped: false,
+		paused: false,
+		returned: false,
 		senderId: 0, // always comes from frontend?
 		bubbleStack: [['inline func 0', 'library/repl.js', 0]],
 		localVariables: {
@@ -340,6 +348,7 @@ async function doBootstrap(script, globalContext) {
 			module: WEBDRIVER_API,
 			Object: Object,
 			Array: Array,
+			Promise: Promise,
 			console: console,
 		}],
 	}
@@ -367,11 +376,10 @@ async function doBootstrap(script, globalContext) {
 	bootstrapRunContext.returned = false
 	delete bootstrapRunContext.bubbleReturn
 	if(typeof doRun != 'undefined') {
-		bootstrapRunContext.bubbleStack[0][1] 
-				= bootstrapRunContext.bubbleFile = '<eval>'
 		try {
 			bootstrapRunContext.script = script
-			debugger
+			bootstrapRunContext.bubbleFile = '<eval>'
+			bootstrapRunContext.bubbleStack.push(['inline func 0', '<eval>', 0])
 			let result = await doRun(bootstrapRunContext) // NOW IT'S RECURSIVE
 			//sendMessage({
 			//	result: result

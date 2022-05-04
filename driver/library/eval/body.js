@@ -47,30 +47,46 @@ async function shouldBubbleOut(runContext) {
 	return false
 }
 
+
+async function runFrame(i, AST, runContext) {
+	currentContext = runContext
+	if(AST[i] && AST[i].loc) {
+		console.assert(runContext.bubbleStack.length)
+		let currentFile = runContext.bubbleStack[
+				runContext.bubbleStack.length-1][1]
+			// normally we'd skip and let it run async
+			//   but doStatus() also does @Delay()
+		let shouldRunStatus = typeof doStatus != 'undefined'
+			&& runContext.bubbleLine != AST[i].loc.start.line
+			&& runContext.bubbleFile != 'library/repl.js'
+		let doSleep = runContext.bubbleFile == '<eval>'
+			&& (!AST[i].callee || AST[i].callee.name != 'sleep')
+		if(currentFile != 'library/repl.js'
+			|| !runContext.bubbleFile
+		) {
+			runContext.bubbleFile = currentFile
+			runContext.bubbleColumn = AST[i].loc.start.column
+			runContext.bubbleLine = AST[i].loc.start.line
+			runContext.bubbleAST = AST
+			runContext.bubbleTime = Date.now()
+			runContext.bubbleLine = AST[i].loc.start.line
+		}
+
+		if(shouldRunStatus) {
+			// PREVENT RECURSION
+			runContext.bubbleFile = 'library/repl.js'
+			await doStatus(doSleep)
+			runContext.bubbleFile = currentFile
+		}
+	} else if (!AST[i]) {
+		debugger
+	}
+}
+
+
 async function runStatement(i, AST, runContext) {
 	try {
-    currentContext = runContext
-		if(AST[i] && AST[i].loc) {
-			console.assert(runContext.bubbleStack.length)
-			runContext.bubbleFile = runContext.bubbleStack[runContext.bubbleStack.length-1][1]
-			runContext.bubbleColumn = AST[i].loc.start.column
-			if(runContext.bubbleLine != AST[i].loc.start.line) {
-				runContext.bubbleTime = Date.now()
-				runContext.bubbleLine = AST[i].loc.start.line
-				runContext.bubbleAST = AST
-				// normally we'd skip and let it run async
-				//   but doStatus() also does @Delay()
-				if(typeof doStatus != 'undefined'
-					&& runContext.bubbleFile != 'library/repl.js'
-				) { // BOOTSTRAP CODE?
-					let doSleep = runContext.bubbleFile == '<eval>'
-					&& (!AST[i].callee || AST[i].callee.name != 'sleep')
-					await doStatus(doSleep)
-				}
-			}
-		} else if (!AST[i]) {
-			debugger
-		}
+    await runFrame(i, AST, runContext)
 
 		// moved this here so we get the line number of the latest statement
 		//   ONLY PAUSE ON <EVAL> CALLS
@@ -290,10 +306,6 @@ async function runBody(AST, runContext) {
 	//   which means error messaging must intercept here not to
 	//   ruin out worker process
 	try {
-//if(runContext.bubbleStack[0][1] == '<eval>'
-//	&& runContext.bubbleStack[runContext.bubbleStack.length-1][0] == 'doRun') {
-//debugger
-//}
 		let result = await runParameters(AST, runContext)
 		if(await shouldBubbleOut(runContext)) {
 			return result.pop()
