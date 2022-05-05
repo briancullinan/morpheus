@@ -13,15 +13,12 @@ async function runPrimitive(AST, runContext) {
 			}
 		} else {
 		// TODO: incase libraries aren't sent, preprocessed libs are used here
-			return await doAccessor({
+			let result = await sendMessage({
 				// WOOHOO my first polyfill
-				object: {
-					name: 'exports'
-				},
-				property: {
-					name: AST.name
-				}
+				script: 'return ' + AST.name,
+				name: AST.name,
 			})
+			return doAccessor(result)
 		/*
 		{
 			if(AST.name == 'console') {

@@ -63,6 +63,9 @@ async function runAssignment(left, right, runContext) {
 
 		if(typeof parent == 'object' && parent // BUG: null, whoops
 				&& typeof parent._accessor != 'undefined') {
+			if(typeof parent._accessor != 'function') {
+				debugger
+			}
 			await parent._accessor(0, [{
 				type: 'AssignmentExpression',
 				left: left,

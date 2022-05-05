@@ -145,23 +145,29 @@ function onError(error) {
 }
 
 
-// access info from another remote, or another context
-//   used to lookup library functions, inject scripts 
-//   into other pages
-async function doAccessor(response) { // shouldn't need senderId with DI
-	
-	if (!response || typeof response.fail != 'undefined') {
-		console.log(response)
-		throw new Error('Member access error: ', response)
-	} else 
+async function onAccessor(response) {
 
-	if(typeof response.object != 'undefined') {
-		let memberName = response.object.name + '.' + response.property.name
-		let memberAccess = await sendMessage({
-			accessor: memberName
-		})
-		return doAccessor(memberAccess)
-		// TODO: return doAccessor(memberAccess) ? convert string func to RPC
+	// convert response to compatible output
+	if(typeof response != 'object' || !response) {
+		let value = response
+		let type = typeof value
+		if(type == 'function') {
+			value = value + ''
+		} else if (type == 'object') {
+			type = 'json'
+			value = JSON.stringify(Object.assign({
+				_accessor: true
+			}, value || {}))
+		} else {
+			value = JSON.stringify(value)
+		}
+		let result = {
+			responseId: response.responseId,
+			type: type,
+		}
+		result[type] = value
+		return value
+
 	} else 
 
 	if(typeof response.library != 'undefined') {
@@ -186,7 +192,30 @@ async function doAccessor(response) { // shouldn't need senderId with DI
 			console.log(up)
 			throw up
 		}
-	} else
+		return
+	} 
+
+}
+
+
+// access info from another remote, or another context
+//   used to lookup library functions, inject scripts 
+//   into other pages
+async function doAccessor(response) { // shouldn't need senderId with DI
+	
+	if (!response || typeof response.fail != 'undefined') {
+		console.log(response)
+		throw new Error('Member access error: ', response)
+	} else 
+
+	if(typeof response.object != 'undefined') {
+		let memberName = response.object.name + '.' + response.property.name
+		response =  await sendMessage({
+			accessor: memberName
+		})
+		// TODO: return doAccessor(memberAccess) ? convert string func to RPC
+	}
+	
 
 	if(typeof response.function != 'undefined') {
 		if(response.value) {
@@ -195,7 +224,7 @@ async function doAccessor(response) { // shouldn't need senderId with DI
 			response.value = (async function (request, ...params) {
 				// TODO: add paramerters
 				let result = await sendMessage({
-					script: '\nreturn ' + request.name + '();\n'
+					script: '\nreturn ' + response.name + '();\n'
 				})
 				return result
 			}).bind(this, response)
@@ -205,9 +234,9 @@ async function doAccessor(response) { // shouldn't need senderId with DI
 
 	// INTERESTING, REALIZING THIS IS THE ONLY ABSTRACTION REPL CAN
 	//   DO BY ITSELF, WINDOW.LOCATION LOOKUPS ARE CONTEXT DEPENDENT
-	if(typeof response.accessor != 'undefined'
-		&& request.accessor.startsWith('exports.')) {
-		return await doLibraryLookup(request.accessor.split('.')[1])
+	if(typeof response.accessor != 'undefined') {
+		debugger
+		return await doLibraryLookup(response.accessor)
 	} else
 
 
@@ -226,7 +255,7 @@ async function doAccessor(response) { // shouldn't need senderId with DI
 				})
 			} else {
 				return await await sendMessage({
-					script: prop
+					script: 'return ' + prop
 				})
 			}
 		}
@@ -495,16 +524,15 @@ async function onFrontend(replyFunction, request) {
 			}
 			let result = {
 				responseId: request.responseId,
+				name: request.name,
 				type: type,
-				name: request.script 
 			}
 			result[type] = value
 			return replyFunction(result)
 		} catch (e) {
-			debugger
+			console.log(e)
 			replyFunction({
 				responseId: request.responseId,
-				name: request.script, 
 				fail: e.message,
 			})
 		}
@@ -519,8 +547,7 @@ async function onFrontend(replyFunction, request) {
 	} else
 
 	// WHAT IF URLS WERE XPATHS TO FUNCTIONS? AND ROUTING TABLES WHERE JUST FUNCTIONS?
-	if(typeof request.accessor != 'undefined'
-			&& request.accessor.startsWith('exports.')) {
+	if(typeof request.accessor != 'undefined') {
 		// TODO: re-forward back to the backend accessor because
 		//   worker shares a local storage, this is what
 		//   I meant by "ask language server". No matter if

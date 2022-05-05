@@ -503,6 +503,15 @@ function workerMessageResponseMiddleware() {
 		let asyncResult = encryptResultsIfSession(data)
 		console.assert(asyncResult.constructor === Promise) //  === Promise
 		return Promise.resolve(asyncResult)
+			.then(function (result) {
+				if(!result) {
+					// TODO: fixme, timers are not getting cleared for middleware
+					//  too complicated
+					//debugger
+				}
+				console.log('result: ', result)
+				return result
+			})
 	}
 
 	// lol, make a game where lost accounts lead to a virtual court room to prove your identity just like IRL

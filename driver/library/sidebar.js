@@ -349,6 +349,10 @@ function renderFile(link, item, path) {
 
 
 function renderDocument(link, item, path) {
+	//Promise.resolve(sendMessage({
+	//	script: 'return renderDocument2();\n'
+	//}))
+	//return
 	for(let i = 0; i < ACE.documentation.length; i++) {
 		let replacedName = ACE.documentation[i]
 			.replace('.js', '.md')

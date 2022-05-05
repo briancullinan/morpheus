@@ -251,7 +251,7 @@ async function runCall(AST, runContext) {
 			&& runContext.bubbleFile != 'library/repl.js'
 			&& (lib = doLibraryLookup(functionName))
 		) {
-			calleeFunc = await doAccessor(lib)
+			calleeFunc = await onAccessor(lib)
 		}
 	} else
 	if(AST.callee.type) {
@@ -322,6 +322,7 @@ async function runCall(AST, runContext) {
 		} else if (typeof calleeFunc == 'function') {
 			result = await calleeFunc(...params)
 		} else {
+			debugger
 			throw new Error('Not a function! ' + AST.callee.name)
 		}
 		runContext.bubbleMember = null
