@@ -413,6 +413,16 @@ function debuggerMessageResponseMiddleware() {
 // THIS IS INTERESTING BECAUSE I CAN BASICALLY SEND BACKEND COMMANDS TO 
 //   MY OWN FRONTEND PLUGIN IN THE CONTEXT OF THE PAGE.
 function domMessageResponseMiddleware() {
+	let {
+		awaitOrTimeout,
+		forwardResponseById,
+	} = installAsyncTriggerMiddleware(onMessage, sendMessage)
+	
+	function onMessage(data) {
+		return onFrontend(function (response) {
+			return sendMessage(response)
+		}, data)
+	}
 
 	function sendMessage(data) {
 		let runScript = document.getElementById('run-script')
@@ -426,11 +436,10 @@ function domMessageResponseMiddleware() {
 	}
 
 	window.addEventListener('load', function () {
-		
-
 		window.addEventListener('message', 
 				onFrontend.bind(this, sendMessage), false)
-		window.sendMessage = sendMessage
+		window.sendMessage = awaitOrTimeout
+		window.onMessage = forwardResponseById
 		// check for plugin or emitDownload
 		// maybe we don't have the plugin
 		// TODO: .bind(null, 'morph-plugin')
@@ -511,16 +520,85 @@ function workerMessageResponseMiddleware() {
 			return sendMessage(lib)
 		} else
 		if (typeof request.script != 'undefined') {
-			return doBootstrap(request.script, 
+			let resultPromise = doBootstrap(request.script, 
 					Object.assign(globalThis, { 
 						sendMessage: sendMessage,
+						renderMarkdown: renderMarkdown,
+						readFile: readFile,
+						responseId: request.responseId,
 						//doLibraryLookup: doLibraryLookup,
 					}))
+			return resultPromise
+			.then(function (result) {
+				if(typeof result != 'object') {
+					debugger
+					return
+				}
+				// better seperatation
+				result.responseId = request.responseId
+				return self.postMessage(result)
+			})
 		} else {
 			return doAccessor(request)
 		}
 
 	}
+
+
+	function readFile(filename) {
+		return Array.from(FS.virtual[filename].contents)
+			.map(function (c) { return String.fromCharCode(c) })
+			.join('')
+	}
+
+function renderMarkdown(filename) {
+  //var hljs       = require('highlight.js') // https://highlightjs.org/
+	let libraryFiles = Object.keys(FS.virtual)
+	for(let i = 0; i < libraryFiles.length; i++) {
+		if(filename == libraryFiles[i]) {
+			var md = new Remarkable('full', {
+			})
+			let result = md.render(readFile(libraryFiles[i]))
+			console.log(result);
+			return result
+		}
+	}
+	/*
+	var md = new Remarkable('full', {
+		html:         false,        // Enable HTML tags in source
+		xhtmlOut:     false,        // Use '/' to close single tags (&lt;br /&gt;)
+		breaks:       false,        // Convert '\n' in paragraphs into &lt;br&gt;
+		langPrefix:   'language-',  // CSS language prefix for fenced blocks
+		linkify:      true,         // autoconvert URL-like texts to links
+		linkTarget:   '',           // set target to open link in
+
+		// Enable some language-neutral replacements + quotes beautification
+		typographer:  false,
+
+		// Double + single quotes replacement pairs, when typographer enabled,
+		// and smartquotes on. Set doubles to '«»' for Russian, '„“' for German.
+		quotes: '“”‘’',
+
+		// Highlighter function. Should return escaped HTML,
+		// or '' if input not changed
+		highlight: function (str, lang) {
+			if (lang && hljs.getLanguage(lang)) {
+				try {
+					return hljs.highlight(lang, str).value;
+				} catch (__) {}
+			}
+
+			try {
+				return hljs.highlightAuto(str).value;
+			} catch (__) {}
+
+			return ''; // use external default escaping
+		}
+	});
+	*/
+}
+
+
 
 	if(typeof FS == 'undefined') {
     globalThis.FS = {

@@ -201,8 +201,8 @@ function Sys_Frame() {
 		SYS.inFrame = true
 		SYS.running = !SYS.running
 		try {
-			if(typeof window.ace != 'undefined') {
-				Ace_Frame()
+			if(typeof ACE != 'undefined') {
+				renderFilelist()
 			}
 			Com_Frame(SYS.running)
 		} catch (e) {

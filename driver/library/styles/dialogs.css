@@ -1,0 +1,78 @@
+
+.dialog input,
+.dialog select,
+.dialog option {
+  font: 12px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+  margin: 1px;
+  padding: 0;
+  outline: none;
+}
+
+.dialog {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: #202020;
+  z-index: 1000;
+  height: 100%;
+  background-color: rgba(0,0,0,.5);
+}
+.dialog .title,
+.dialog h2 {
+  margin: -40px -40px 20px -40px;
+  padding: 0.2em 0.5em;
+  background: #333;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+.dialog .description,
+.dialog > *:first-child {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-top: -100px;
+  margin-left: -200px;
+  font-size: 18px;
+  color: #FFF;
+  display: block;
+  background: #222;
+  padding: 40px;
+}
+
+.dialog input[type="radio"] {
+  height: 1px;
+  width: 1px;
+  position:absolute;
+  left:100%;
+  top:100%;
+  /* visibility: hidden; won't record status if it's hidden */
+  opacity: 0.01;
+}
+
+.dialog input[type="radio"] + label {
+  padding: 20px;
+  border: 2px solid #333;
+  display:inline-block;
+}
+
+.dialog input[type="radio"]:checked + label {
+  background: #333;
+}
+
+#file-list .interaction .dialog > *:first-child {
+  top: 100%;
+  left: 0;
+  margin-top: 0;
+  margin-left: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+#file-list .interaction:hover .dialog > *:first-child,
+#file-list .interaction .dialog:hover > *:first-child,
+#file-list .interaction a:hover + .dialog > *:first-child {
+  position: absolute;
+  overflow: visible;
+}

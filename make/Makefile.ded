@@ -26,7 +26,7 @@ morph.ded.opt: morph.ded.wasm $(BUILD_DIR)/morph.ded.wasm
 WORKER_FILES  := $(wildcard driver/library/eval/*.js)      \
 	driver/utils/acorn.js driver/utils/acorn-loose.js        \
 	driver/utils/crypt.js driver/utils/jsencrypt.js \
-	driver/library/repl.js
+	driver/library/repl.js driver/utils/remarkable.js
 
 #	driver/utils/remarkable.min.js
 

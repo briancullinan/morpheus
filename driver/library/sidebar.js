@@ -18,6 +18,16 @@
 
 
 
+
+const FILE_WIDGETS = [
+	['Documentation', showDocument, renderDocument],
+	['Local Storage', listFiles, renderFile],
+	['Call Stack', callStack, renderFunc],
+	['Cookies', cookieList, renderCookie],
+	['Threads', threadPool, renderThread],
+	['Interactions', interactionsList, renderInteractions],
+];
+
 function anyParentsCollapsed(segments) {
 	if(!ACE.filescollapsed) {
 		return
@@ -28,6 +38,7 @@ function anyParentsCollapsed(segments) {
 				segments.slice(0, i + 1).join('/')]
 		}, 0)
 }
+
 
 
 function simplifyMilliseconds(milli) {
@@ -51,6 +62,21 @@ function simplifyMilliseconds(milli) {
 	} else {
 		return milli + 'ms'
 	}
+}
+
+
+function showDocument() {
+	if(!ACE.documentation) {
+		return []
+	}
+	let currentDoc = ACE.bubbleFile
+			.replace('library/', 'library/docs/')
+			.replace('.js', '.md')
+			
+	if(ACE.documentation.includes(currentDoc)) {
+		return [currentDoc.replace(/\//g, '_')]
+	}
+	return []
 }
 
 
@@ -147,14 +173,16 @@ function updateFilelist(filepath) {
 	if(typeof ACE == 'undefined') {
 		return
 	}
-	debugger
 	if(!ACE.fileList) {
 		ACE.fileList = document.getElementById('file-list')
 	}
-	ACE.filestimer = null
 	if(!ACE.fileList) {
-		return
+		ACE.fileList = document.createElement('DIV')
+		ACE.fileList.id = 'file-list'
+		document.body.append(ACE.fileList)
+		ACE.fileList.appendChild(document.createElement('OL'))
 	}
+	ACE.filestimer = null
 	if(!ACE.filetypes) {
 		ACE.filetypes = {}
 	}
@@ -203,6 +231,12 @@ function updateFilelist(filepath) {
 	ACE.filescount = Object.values(ACE.filesvisible)
 			.reduce(function (p, i) { return p + i }, 0)
 	ACE.filesmoved = true
+	if(typeof Com_Frame == 'undefined') {
+		SYS.frameInterval = setInterval(function () {
+			renderFilelist()
+		}, 100)
+	}
+
 }
 
 function isDirectory(i) {
@@ -314,6 +348,39 @@ function renderFile(link, item, path) {
 }
 
 
+function renderDocument(link, item, path) {
+	for(let i = 0; i < ACE.documentation.length; i++) {
+		let replacedName = ACE.documentation[i]
+			.replace('.js', '.md')
+			.replace(/\//g, '_')
+		if(replacedName != path) {
+			continue
+		}
+		if(!ACE.sidebarStyle) {
+			Promise.resolve(sendMessage({
+				script: 'return readFile("library/styles/sidebar.css");\n'
+			}).then(function (response) {
+				ACE.sidebarStyle = document.createElement('STYLE')
+				ACE.sidebarStyle.innerText = response
+				document.body.insertBefore(ACE.sidebarStyle, ACE.fileList)
+			}))
+		}
+
+		Promise.resolve(sendMessage({
+			script: 'return renderMarkdown("' + ACE.documentation[i] + '");\n'
+		}).then(function (response) {
+			if(response) {
+				let newDialog = document.createElement('DIV')
+				newDialog.id = 'documentation'
+				newDialog.innerHTML = response
+				item.appendChild(newDialog)
+			}
+		}))
+	}
+	
+}
+
+
 function renderWidget(link, item, path) {
 	if(link.innerText != path) { // otherwise annoying flash in element page
 		link.innerText = path
@@ -379,6 +446,11 @@ function renderFilelist() {
 			return
 		}
 	}
+	let lineHeight = 21
+	if(typeof window.ace != 'undefined'
+			&& typeof window.ace.renderer != 'undefined') {
+		lineHeight = ace.renderer.lineHeight
+	}
 
 	// GENERATE THIS LIST ON BACKEND USING VIRTUAL DOM, CSS CONTROL OVER LIST WILL
 	//   LOOK THE SAME
@@ -386,12 +458,12 @@ function renderFilelist() {
 	if(!actualList) {
 		return
 	}
-	let newHeight = ACE.filescount * ace.renderer.lineHeight
+	let newHeight = ACE.filescount * lineHeight
 	if(actualList.clientHeight != newHeight)
 		actualList.style.height = newHeight + 'px'
 
 	let virtualLineCount = Math.min(Math.ceil(
-		ACE.fileList.clientHeight / ace.renderer.lineHeight)
+		ACE.fileList.clientHeight / lineHeight)
 				, ACE.filescount) // min, updated on interaction
 
 	// THIS IS WRONG, STARTING ON VISIBLE LINES LIST
@@ -399,7 +471,7 @@ function renderFilelist() {
 	//   CERTAINLY CAN'T DISPLAY LINES BEFORE THEIR SCROLL
 	//   EVEN IF THEY ARE COLLAPSED OR NOT.
 	let startLine = Math.floor(
-		ACE.fileList.scrollTop / ace.renderer.lineHeight)
+		ACE.fileList.scrollTop / lineHeight)
 	let displayCount = 0
 
 	let renderFunction = getWidgetBeforeRow(startLine)[2]
@@ -452,15 +524,6 @@ function renderFilelist() {
 	}
 	ACE.filesmoved = false
 }
-
-
-const FILE_WIDGETS = [
-	['Local Storage', listFiles, renderFile],
-	['Call Stack', callStack, renderFunc],
-	['Cookies', cookieList, renderCookie],
-	['Threads', threadPool, renderThread],
-	['Interactions', interactionsList, renderInteractions],
-];
 
 
 /*

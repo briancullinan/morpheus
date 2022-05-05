@@ -155,7 +155,7 @@ function doAccessor(request, reply) {
 
 
 function doWorker(data) {
-	SYS.worker.postMessage(JSON.stringify(data))
+	sendMessage(JSON.stringify(data))
 }
 
 

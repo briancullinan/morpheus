@@ -167,7 +167,7 @@ async function doAccessor(response) { // shouldn't need senderId with DI
 	if(typeof response.library != 'undefined') {
 		try {
 			let AST = acorn.parse(
-				'(function () {\n' + response.library + '\nreturn doRun;})()\n'
+				'(function () {\n' + response.library + '\nreturn ' + response.name + ';\n})()\n'
 				, {ecmaVersion: 2020, locations: true, onComment: []})
 			currentContext.script = response.library
 			currentContext.bubbleFile = response.file
@@ -195,7 +195,7 @@ async function doAccessor(response) { // shouldn't need senderId with DI
 			response.value = (async function (request, ...params) {
 				// TODO: add paramerters
 				let result = await sendMessage({
-					script: request.name + '();'
+					script: '\nreturn ' + request.name + '();\n'
 				})
 				return result
 			}).bind(this, response)
@@ -256,8 +256,10 @@ async function doAccessor(response) { // shouldn't need senderId with DI
 
 function doLibraryLookup(functionName) {
 	let libraryFiles = Object.keys(FS.virtual)
-		.filter(function (p) { return p.startsWith('library/') })
 	for(let i = 0; i < libraryFiles.length; i++) {
+		if(!libraryFiles[i].startsWith('library/')) {
+			continue
+		}
 		let libraryCode = Array.from(FS.virtual[libraryFiles[i]].contents)
 			.map(function (c) { return String.fromCharCode(c) })
 			.join('')
@@ -436,21 +438,20 @@ async function doBootstrap(script, globalContext) {
 			bootstrapRunContext.bubbleFile = '<eval>'
 			bootstrapRunContext.bubbleStack.push(['inline func 0', '<eval>', 0])
 			let result = await doRun(bootstrapRunContext) // NOW IT'S RECURSIVE
-			if(bootstrapRunContext.ended) {
-				sendMessage({
-					stopped: result + ''
-				})
-			} else if (bootstrapRunContext.async) {
-				sendMessage({ 
-					async: getThreads()
-				})
-			} else {
-				sendMessage({ 
-					result: result + ''
-				})
-			}
 			bootstrapRunContext.returned = false
-			return result
+			if(bootstrapRunContext.ended) {
+				return { // ahhh same as somewhere else in doAccessor
+					stopped: result,
+				}
+			} else if (bootstrapRunContext.async) {
+				return { 
+					async: getThreads(),
+				}
+			} else {
+				return { 
+					result: result,
+				}
+			}
 		} catch (e) {
 			console.error(e)
 		}
@@ -461,8 +462,20 @@ async function doBootstrap(script, globalContext) {
 
 
 async function onFrontend(replyFunction, request) {
-	if(!request.status) {
-	} 
+	if(!request) {
+		// no error because backend times out
+		return
+	} else
+
+	if(request.status) {
+		if(typeof ACE != 'undefined') {
+			ACE.bubbleFile = request.file
+		}
+		// future coding?
+		if(typeof onStatus != 'undefined') {
+			return onStatus(request)
+		}
+	} else
 
 	if(typeof request.script != 'undefined') {
 		setTimeout(function () {
@@ -538,6 +551,11 @@ async function onFrontend(replyFunction, request) {
 		return replyFunction(result)
 	} else 
 
+	// combine with repl.js doAccessor
+	// result means they asked for it?
+	if(typeof request.result != 'undefined') {
+		return request.result
+	} else 
 
 	if(typeof doDialog != 'undefined'
 			&& typeof request.accessor != 'undefined') { // REPL?
@@ -545,6 +563,10 @@ async function onFrontend(replyFunction, request) {
 		return dialog
 	}
 
+	// TODO: fold frontend and onAccessor into each other based on request type 
+	//   should be able to have a specific direction for when to encode result
+	//   or when to return real result to REPL, like the opposite of the member.object
+	//   access thing
 	if(typeof doRun != 'undefined') {
 		doRun(request.accessor || request.script, {
 			window: window,
