@@ -28,43 +28,6 @@ function doProperty() {
 
 let oldRunTimer
 
-// starts a thread
-function doRun(runContext) {
-  let env = createEnvironment(runContext)
-  let ctx = createRunContext(env)
-  let AST
-  try {
-		AST = acorn.parse(
-			'(function () {\n' + runContext.script + '\n})()\n'
-			, {ecmaVersion: 2020, locations: true, onComment: []})
-	} catch (e) {
-		// return parser errors right away
-    doError(e)
-		runContext.ended = true
-		return
-	}
-  ctx.body = AST.body[0].expression.callee.body
-  ctx.bubbleTime = Date.now()
-  console.log('script:', runContext.script)
-  let result
-  try {
-		if(!oldRunTimer) {
-			oldRunTimer = setInterval(pruneOldRuns, 1000)
-		}
-		ctx.bubbleStack[ctx.bubbleStack.length-1][1] = '<eval>'
-    result = runStatement(0, [ctx.body], ctx)
-  } catch (e) {
-    doError(e)
-		runContext.ended = true
-    return
-  }
-	return result
-}
-
-function onRun() {
-
-}
-
 function createEnvironment(runContext) {
   let declarations = {
     // include our own API so we can use it from code elsewhere
@@ -147,13 +110,6 @@ function onError(error) {
 
 async function onAccessor(response) {
 
-	if (!response) {
-		throw new Error('Protocol error.')
-	} else 
-	if(typeof response.fail != 'undefined') {
-		throw new Error('Member access error: ' + response.fail)
-	} else
-
 	// convert response to compatible output
 	if(typeof response != 'object' || !response) {
 		let value = response
@@ -168,14 +124,84 @@ async function onAccessor(response) {
 			value = JSON.stringify(value)
 		}
 		let result = {
-			responseId: response.responseId,
 			type: type,
 		}
 		result[type] = value
-		return value
-
+		return result
 	} else 
 
+	if(typeof response.fail != 'undefined') {
+		throw new Error('Member access error: ' + response.fail)
+	} else
+
+	if(typeof response.type != 'undefined') {
+		return response[response.type]
+	} else
+
+
+	{
+		debugger
+		throw new Error('Protocol error.')
+	}
+
+}
+
+
+// access info from another remote, or another context
+//   used to lookup library functions, inject scripts 
+//   into other pages
+async function doAccessor(response) { // shouldn't need senderId with DI
+	if (!response) {
+		throw new Error('Protocol error.')
+	} else 
+	if(typeof response.fail != 'undefined') {
+		throw new Error('Member access error: ' + response.fail)
+	} else
+
+	if(typeof response.object != 'undefined') {
+		let memberName = response.object.name + '.' + response.property.name
+		response =  await sendMessage({
+			accessor: memberName
+		})
+		// TODO: return doAccessor(memberAccess) ? convert string func to RPC
+	}
+	
+
+	if (typeof response.script != 'undefined') {
+		if(typeof doEval != 'undefined') {
+			// will send a result, async, error response
+			let runContext = {
+				script: response.script
+			}
+			let result = await doEval(runContext)
+			if(result !== runContext.bubbleReturn) {
+				console.error('WARNING: not bubbling correctly: ' + response.script)
+				result = runContext.bubbleReturn
+			}
+			if(runContext.ended) {
+				return { // ahhh same as somewhere else in doAccessor
+					stopped: await onAccessor(result),
+				}
+			} else if (runContext.async) {
+				return { 
+					async: getThreads(),
+				}
+			} else {
+				return { 
+					result: await onAccessor(result),
+				}
+			}
+		} else if (typeof WorkerGlobalScope !== 'undefined'
+				&& self instanceof WorkerGlobalScope ) {
+			debugger
+			throw new Error('Don\'t know what to do!')
+		} else {
+			let value = await Promise.resolve(
+				eval('(function (){\n' + response.script + '\n})()'))
+			// format for network response in an object
+			return await onAccessor(value)
+		}
+	} else 
 	if(typeof response.library != 'undefined') {
 		try {
 			let AST = acorn.parse(
@@ -218,39 +244,6 @@ async function onAccessor(response) {
 			return response
 		}
 	} else
-
-	if(typeof response.type != 'undefined') {
-		return response[response.type]
-	} else
-
-	{
-		debugger
-		throw new Error('Protocol error.')
-	}
-
-}
-
-
-// access info from another remote, or another context
-//   used to lookup library functions, inject scripts 
-//   into other pages
-async function doAccessor(response) { // shouldn't need senderId with DI
-	if (!response) {
-		throw new Error('Protocol error.')
-	} else 
-	if(typeof response.fail != 'undefined') {
-		throw new Error('Member access error: ' + response.fail)
-	} else
-
-	if(typeof response.object != 'undefined') {
-		let memberName = response.object.name + '.' + response.property.name
-		response =  await sendMessage({
-			accessor: memberName
-		})
-		// TODO: return doAccessor(memberAccess) ? convert string func to RPC
-	}
-	
-
 
 	if(typeof response._accessor != 'undefined') {
 		response._accessor = async function (i, left, right, ctx) {
@@ -424,168 +417,12 @@ function getLocals(ctx) {
 }
 
 
-async function doBootstrap(script, globalContext) {
-	let bootstrapRunContext = {
-		ended: false,
-		stopped: false,
-		paused: false,
-		returned: false,
-		senderId: 0, // always comes from frontend?
-		bubbleStack: [['inline func 0', 'library/repl.js', 0]],
-		localVariables: {
-			module: 'object',
-			Object: 'function',
-			Array: 'function',
-			console: 'object',
-		},
-		localDeclarations: [{
-			module: WEBDRIVER_API,
-			Object: Object,
-			Array: Array,
-			Promise: Promise,
-			console: console,
-		}],
-	}
-	bootstrapRunContext.localDeclarations[0].currentContext = bootstrapRunContext
-	bootstrapRunContext.localVariables.currentContext = 'object'
-
-	if(typeof doRun == 'undefined') {
-		let replLibrary = Array.from(FS.virtual['library/repl.js'].contents)
-			.map(function (c) { return String.fromCharCode(c) }).join('')
-		try {
-			let AST = acorn.parse(
-				'(function () {\n' + replLibrary + '\nreturn doRun;})()\n'
-				, {ecmaVersion: 2020, locations: true, onComment: []})
-			bootstrapRunContext.script = replLibrary
-			await runStatement(0, 
-					[AST.body[0].expression.callee.body], bootstrapRunContext)
-			bootstrapRunContext.returned = false
-			delete bootstrapRunContext.bubbleReturn
-			Object.assign(globalContext, bootstrapRunContext.localDeclarations[0])
-		} catch (e) {
-			console.log(e)
-		}
-	}
-
-	bootstrapRunContext.localDeclarations.unshift(globalContext)
-	bootstrapRunContext.localVariables = await getLocals(bootstrapRunContext)
-	bootstrapRunContext.returned = false
-	delete bootstrapRunContext.bubbleReturn
-	if(typeof doRun != 'undefined') {
-		try {
-			bootstrapRunContext.script = script
-			bootstrapRunContext.bubbleFile = '<eval>'
-			bootstrapRunContext.bubbleStack.push(['inline func 0', '<eval>', 0])
-			let result = await doRun(bootstrapRunContext) // NOW IT'S RECURSIVE
-			bootstrapRunContext.returned = false
-			if(bootstrapRunContext.ended) {
-				return { // ahhh same as somewhere else in doAccessor
-					stopped: result,
-				}
-			} else if (bootstrapRunContext.async) {
-				return { 
-					async: getThreads(),
-				}
-			} else {
-				return { 
-					result: result,
-				}
-			}
-		} catch (e) {
-			console.error(e)
-		}
-	} else {
-		throw new Error('Bootstrap failed!')
-	}
-}
-
-
-async function onFrontend(replyFunction, request) {
-	if(!request) {
-		// no error because backend times out
-		return
-	} else
-
-	if(request.status) {
-		if(typeof ACE != 'undefined') {
-			ACE.bubbleFile = request.file
-		}
-		// future coding?
-		if(typeof onStatus != 'undefined') {
-			return onStatus(request)
-		}
-	} else
-
-	// WHAT IF URLS WERE XPATHS TO FUNCTIONS? AND ROUTING TABLES WHERE JUST FUNCTIONS?
-		// TODO: re-forward back to the backend accessor because
-		//   worker shares a local storage, this is what
-		//   I meant by "ask language server". No matter if
-		//   a request comes from more or engine or worker
-		//   or plugin, it all leads back to my code in IDBFS
-		// TODO: need to include installAsync here also, but only
-		//   for worker interface because plugin is event/reply based
-		//if(replyFunction === SYS.worker.postMessage) {
-	if(typeof request.script != 'undefined') {
-		console.assert(request.responseId)
-		setTimeout(function () {
-		// repl dom stuff? probably not
-		try {
-			let value = eval('(function (){\n' + request.script + '\n})()')
-			let type = typeof value
-			if(type == 'function') {
-				value = value + ''
-			} else if (type == 'object') {
-				value = JSON.stringify(Object.assign({
-					_accessor: true
-				}, value || {}))
-			} else {
-				value = JSON.stringify(value)
-			}
-			let result = {
-				responseId: request.responseId,
-				name: request.name,
-				type: type,
-			}
-			result[type] = value
-			return replyFunction(result)
-		} catch (e) {
-			console.log(e)
-			replyFunction({
-				responseId: request.responseId,
-				fail: e.message,
-			})
-		}
-		}, 200)
-	} else
-
-
-	// combine with repl.js doAccessor
-	// result means they asked for it?
-	if(typeof request.result != 'undefined') {
-		return request.result
-	} else 
-
-	// TODO: fold frontend and onAccessor into each other based on request type 
-	//   should be able to have a specific direction for when to encode result
-	//   or when to return real result to REPL, like the opposite of the member.object
-	//   access thing
-	if(typeof doRun != 'undefined') {
-		doRun(request.script, {
-			window: window,
-			ACE: ACE,
-		}) // NOW IT'S RECURSIVE
-	}
-}
-
-
- // BOOTSTRAP CODE?
- if(typeof module != 'undefined') {
+// BOOTSTRAP CODE?
+if(typeof module != 'undefined') {
 	module.exports = {
 		doAccessor,
-		doBootstrap,
+		onAccessor,
 		doLibraryLookup,
-		onFrontend,
-		
 	}
 }
 

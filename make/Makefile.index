@@ -41,7 +41,8 @@ morph.html: $(INDEX_FILES)
 	node -e "require('./engine/wasm/bin/make').normalReplace( \
 		'$(BUILD_DIR)/morph.html', '\n'  \
 		+ require('./driver/library/quine.js').emitDownload + '\n' \
-		+ require('./driver/library/repl.js').onFrontend + '\n' \
+		+ require('./driver/library/repl.js').doAccessor + '\n' \
+		+ require('./driver/library/repl.js').onAccessor + '\n' \
 		+ require('./driver/library/auth.js').getRunId + '\n' \
 		+ require('./driver/library/middleware.js').asyncTriggerMiddleware + '\n' \
 		+ require('./driver/library/quine.js').encryptedResponseMiddleware + '\n' \

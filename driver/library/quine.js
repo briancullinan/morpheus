@@ -79,7 +79,6 @@ const MIDDLEWARE_REPL = [
 	'replAccessorMiddleware',
 	'readPreFS',
 	'_base64ToArrayBuffer',
-	'doBootstrap',
 ]
 
 // have to do this to build
@@ -372,9 +371,10 @@ function domMessageResponseMiddleware() {
 	} = asyncTriggerMiddleware(onMessage, sendMessage)
 	
 	function onMessage(data) {
-		return onFrontend(function (response) {
-			return sendMessage(response)
-		}, data)
+		return doAccessor(data)
+		.then(function (response) {
+			return onAccessor(response)
+		}).then(sendMessage)
 	}
 
 	function sendMessage(data) {
@@ -389,8 +389,12 @@ function domMessageResponseMiddleware() {
 	}
 
 	window.addEventListener('load', function () {
-		window.addEventListener('message', 
-				onFrontend.bind(this, sendMessage), false)
+		window.addEventListener('message', function (request) {
+			return Promise.resolve(doAccessor(request))
+				.then(function (response) {
+					return onAccessor(response)
+				}).then(sendMessage)
+		})
 		window.sendMessage = awaitOrTimeout
 		window.onMessage = forwardResponseById
 		// check for plugin or emitDownload
@@ -410,30 +414,12 @@ function domMessageResponseMiddleware() {
 
 		// TODO: update for lvlworld engine only?
 		if(typeof SYS.worker != 'undefined') {
-			sendMessage({
+			awaitOrTimeout({
 				script: 'loadDocumentation();\nupdateFilelist("Instructions");\n'
 			})
 		}
 	})
 	
-}
-
-
-function sharedMessageResponseMiddleware() {
-	/*
-	onchange = function() {
-  myWorker.port.postMessage([squareNumber.value,squareNumber.value]);
-  console.log('Message posted to worker');
-}
-onconnect = function(e) {
-  var port = e.ports[0];
-
-  port.onmessage = function(e) {
-    var workerResult = 'Result: ' + (e.data[0] * e.data[1]);
-    port.postMessage(workerResult);
-  }
-}
-*/
 }
 
 
@@ -478,28 +464,13 @@ function workerMessageResponseMiddleware() {
 		if(!request) {
 			return
 		}
-		if (typeof request.script != 'undefined') {
-			let resultPromise = doBootstrap(request.script, 
-					Object.assign(globalThis, { 
-						sendMessage: sendMessage,
-						readFile: readFile,
-						responseId: request.responseId,
-						//doLibraryLookup: doLibraryLookup,
-					}))
-			return resultPromise
-			.then(function (result) {
-				if(typeof result != 'object') {
-					debugger
-					return
-				}
-				// better seperatation
-				result.responseId = request.responseId
-				return self.postMessage(result)
-			})
-		} else {
-			return onAccessor(request)
-		}
-
+		// this is the only thing worker does?
+		return doAccessor(request).then(function (response) {
+			if(response && typeof response == 'object') {
+				response.responseId = request.responseId
+			}
+			return Promise.resolve(sendMessage(response))
+		})
 	}
 
 
@@ -561,6 +532,10 @@ function readFile(filename) {
 	self.onmessage = async function (request) {
 		let result = await decryptResponseIfSession(request.data)
 	}
+	// BOOTSTRAP?
+	Object.assign(globalThis, { 
+		sendMessage: sendMessage,
+	})
 
 	self.addEventListener('install', function () {
 		debugger
@@ -569,6 +544,24 @@ function readFile(filename) {
 }
 
 
+
+// shared service worker
+function sharedMessageResponseMiddleware() {
+	/*
+	onchange = function() {
+  myWorker.port.postMessage([squareNumber.value,squareNumber.value]);
+  console.log('Message posted to worker');
+}
+onconnect = function(e) {
+  var port = e.ports[0];
+
+  port.onmessage = function(e) {
+    var workerResult = 'Result: ' + (e.data[0] * e.data[1]);
+    port.postMessage(workerResult);
+  }
+}
+*/
+}
 
 function serviceMessageResponseMiddleware() {
 

@@ -36,8 +36,7 @@ $(BUILD_DIR)/sys_worker.js: dedicated $(BUILD_DIR)/morph.ded.wasm $(WORKER_FILES
 	node -e "require('./engine/wasm/bin/make').normalFormatAll( \
 		'$@', 'driver/library', 'driver/library/', 'library/')"
 	node -e "console.log( \
-		require('./driver/library/repl.js').doBootstrap + '\n' \
-		+ require('./$(WASM_SOURCE)/sys_idbfs.js').readPreFS + '\n' \
+		require('./$(WASM_SOURCE)/sys_idbfs.js').readPreFS + '\n' \
 		+ require('./$(WASM_SOURCE)/sys_idbfs.js')._base64ToArrayBuffer + '\n' \
 		+ require('./driver/library/auth.js').getRunId + '\n' \
 		+ require('./driver/library/middleware.js').asyncTriggerMiddleware + '\n' \
