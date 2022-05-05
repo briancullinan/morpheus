@@ -17,6 +17,9 @@ const FLASH_DURATION = 700.0
 
 // TODO: add eye-dropper element selector here
 
+// TODO: cool, almost done, force this to load worker side
+//   or move it somewhere only the backend will access, dom.js
+//   is imported into frontend.
 function loadDocumentation() {
 	let docs = []
 	let libraryFiles = Object.keys(FS.virtual)

@@ -56,6 +56,7 @@ async function runAssignment(left, right, runContext) {
 			return
 		}
 
+		debugger
 		parent[property] = result
 		// notify clients
 		return result
@@ -114,13 +115,20 @@ async function runMember(AST, runContext) {
   }
 
 	let parent = await runStatement(0, [AST.object], runContext)
+	runContext.bubbleMember = parent
+	runContext.bubbleProperty = (runContext.bubbleProperty 
+		? (runContext.bubbleProperty + '.') : '') 
+		+ AST.object.name + '.' + property
   if(await shouldBubbleOut(runContext)) {
     return // bubble up
   }
 
   if(typeof parent == 'object' && parent // BUG: null, whoops
     && typeof parent._accessor != 'undefined') {
-    return await parent._accessor(0, AST, AST, runContext)
+		if(typeof parent._accessor != 'function') {
+			debugger
+		}
+    return await parent._accessor(0, [AST], AST, runContext)
   }
 
   if(!parent || (!parent.hasOwnProperty(property)
@@ -128,8 +136,6 @@ async function runMember(AST, runContext) {
 		debugger
     throw new Error('Member access error: ' + property)
   } else {
-    runContext.bubbleMember = parent
-    runContext.bubbleProperty = (runContext.bubbleProperty || AST.object.name) + '.' + property
     return parent[property]
   }
 }

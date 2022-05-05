@@ -164,13 +164,6 @@ async function doAccessor(response) { // shouldn't need senderId with DI
 		// TODO: return doAccessor(memberAccess) ? convert string func to RPC
 	} else 
 
-	// INTERESTING, REALIZING THIS IS THE ONLY ABSTRACTION REPL CAN
-	//   DO BY ITSELF, WINDOW.LOCATION LOOKUPS ARE CONTEXT DEPENDENT
-	if(typeof response.accessor != 'undefined'
-		&& request.accessor.startsWith('exports.')) {
-		return await doLibraryLookup(request.accessor.split('.')[1])
-	} else
-
 	if(typeof response.library != 'undefined') {
 		try {
 			let AST = acorn.parse(
@@ -194,6 +187,7 @@ async function doAccessor(response) { // shouldn't need senderId with DI
 			throw up
 		}
 	} else
+
 	if(typeof response.function != 'undefined') {
 		if(response.value) {
 			return response.value
@@ -208,8 +202,25 @@ async function doAccessor(response) { // shouldn't need senderId with DI
 			return response
 		}
 	} else
+
+	// INTERESTING, REALIZING THIS IS THE ONLY ABSTRACTION REPL CAN
+	//   DO BY ITSELF, WINDOW.LOCATION LOOKUPS ARE CONTEXT DEPENDENT
+	if(typeof response.accessor != 'undefined'
+		&& request.accessor.startsWith('exports.')) {
+		return await doLibraryLookup(request.accessor.split('.')[1])
+	} else
 	if(typeof response.json != 'undefined') {
 		return JSON.parse(response.json) // window.location, not volatile objects
+	} else
+	if(typeof response._accessor != 'undefined') {
+		response._accessor = async function (i, left, right, ctx) {
+			let prop = ctx.bubbleProperty
+			ctx.bubbleProperty = ''
+			return await await sendMessage({
+				script: prop
+			})
+		}
+		return response
 	} else
 	if(typeof response.value != 'undefined'
 		|| typeof response.type != 'undefined') {
@@ -241,7 +252,9 @@ function doLibraryLookup(functionName) {
 			.map(function (c) { return String.fromCharCode(c) })
 			.join('')
 		// TODO: make these tokens instead of function for cross language support
-		if(libraryCode.includes('function ' + functionName)) {
+		if(libraryCode.match(new RegExp(
+				'function\s' + functionName + '.*?\{'))) {
+			debugger
 			return {
 				// TODO: responseId
 				library: libraryCode,
@@ -440,29 +453,36 @@ async function doBootstrap(script, globalContext) {
 
 async function onFrontend(replyFunction, request) {
 	if(!request.status) {
-		debugger
 	} 
 
 	if(typeof request.script != 'undefined') {
 		setTimeout(function () {
 		// repl dom stuff? probably not
 		try {
-			debugger
-			let value = JSON.stringify(eval(request.script))
-			if(typeof window[name] == 'function') {
-				value = window[name] + ''
+			let value = eval('(function (){\n' + request.script + '\n})()')
+			let type = typeof value
+			if(type == 'function') {
+				value = value + ''
+			} else if (type == 'object') {
+				type = 'json'
+				value = JSON.stringify(Object.assign({
+					_accessor: true
+				}, value || {}))
+			} else {
+				value = JSON.stringify(value)
 			}
-			let type = typeof window[name]
 			let result = {
 				responseId: request.responseId,
 				type: type,
-				name: name 
+				name: request.script 
 			}
 			result[type] = value
 			return replyFunction(result)
 		} catch (e) {
+			debugger
 			replyFunction({
 				responseId: request.responseId,
+				name: request.script, 
 				fail: e.message,
 			})
 		}
@@ -487,12 +507,19 @@ async function onFrontend(replyFunction, request) {
 		// TODO: need to include installAsync here also, but only
 		//   for worker interface because plugin is event/reply based
 		//if(replyFunction === SYS.worker.postMessage) {
+		let value
 		let name = request.accessor.split('.')[1]
-		let value = JSON.stringify(window[name])
-		if(typeof window[name] == 'function') {
-			value = window[name] + ''
-		}
 		let type = typeof window[name]
+		if(type == 'function') {
+			value = window[name] + ''
+		} else if (type == 'object') {
+			type = 'json'
+			value = JSON.stringify(Object.assign({
+				_accessor: true
+			}, window[name] || {}))
+		} else {
+			value = JSON.stringify(window[name])
+		}
 		let result = {
 			responseId: request.responseId,
 			type: type,

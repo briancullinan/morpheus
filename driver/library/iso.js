@@ -12,7 +12,6 @@ TOOLS FOR MAKING THE WHOLE PACKAGE ISOMORPHIC
 
 */
 
-
 let ACE = {
 	consoleLines: 0,
 	playCount: 0,
@@ -51,6 +50,8 @@ function initAce(editorId) {
 
 }
 
+
+/*
 function showConsole(console, lastLine) {
 	let newLines = console.replace(/\s*$/, '') // only truncating end like Chrome
 																						// see, I do have some nice things to say
@@ -128,4 +129,13 @@ function showError(request) {
 }
 
 // TODO: INJECT CKEDITOR INSTEAD
+*/
+
+if(typeof module != 'undefined') {
+	module.exports = {
+		ACE
+	}
+} else if (typeof window != 'undefined') {
+	window.ACE = ACE
+}
 

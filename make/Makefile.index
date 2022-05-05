@@ -8,9 +8,12 @@ FRONTEND_JS      :=                       \
 	driver/utils/crypt.js                   \
 	driver/utils/keymaster.js               \
 	driver/library/sidebar.js               \
+	driver/library/dom.js                   \
+	driver/library/iso.js                   \
 	$(wildcard engine/wasm/http/ace/*.js)   \
 	engine/wasm/http/nipplejs.js            \
 	$(wildcard engine/wasm/sys_*.js) 
+
 FRONTEND_EMBEDS  :=                       \
 	$(HTTP_SOURCE)/index.html               \
 	$(HTTP_SOURCE)/index.css                \
@@ -23,7 +26,6 @@ INDEX_FILES    := \
 ifdef USE_UGLIFY
 
 
-#	driver/library/iso.js                   \
 
 else
 

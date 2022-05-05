@@ -286,7 +286,10 @@ async function runStatement(i, AST, runContext) {
 		}
 		debugger
 		console.log(up)
-		if(runContext.bubbleStack[runContext.bubbleStack.length-1][1] != 'library/repl.js') {
+		if(runContext.bubbleFile != 'library/repl.js'
+			//runContext.bubbleStack[runContext.bubbleStack.length-1][1] != 'library/repl.js'
+		) {
+			runContext.bubbleFile = 'library/repl.js'
 			await doError(up, runContext)
 			runContext.ended = true
 		}
@@ -306,6 +309,7 @@ async function runBody(AST, runContext) {
 	//   AM IN A DIFFERENT SCOPE LOOKING AT A VARIABLE WITH
 	//   THE SAME NAME AS THE SCOPE IT'S PAUSED ON, IT SHOWS
 	//   ME THE WRONG SCOPE WHEN I USE THE STACK!
+	runContext.bubbleProperty = ''
 
 	// TODO: restore outer scope when context was created
 	// doesn't need to be fast, because async DevTools calls, are not fast
@@ -316,6 +320,7 @@ async function runBody(AST, runContext) {
 	//   ruin out worker process
 	try {
 		let result = await runParameters(AST, runContext)
+		runContext.bubbleProperty = ''
 		if(await shouldBubbleOut(runContext)) {
 			return result.pop()
 		}

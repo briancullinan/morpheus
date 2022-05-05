@@ -426,6 +426,8 @@ function domMessageResponseMiddleware() {
 	}
 
 	window.addEventListener('load', function () {
+		
+
 		window.addEventListener('message', 
 				onFrontend.bind(this, sendMessage), false)
 		window.sendMessage = sendMessage
@@ -445,7 +447,7 @@ function domMessageResponseMiddleware() {
 		Sys_fork() // automatically start whatever service worker we have
 
 		// TODO: update for lvlworld engine only?
-		if(typeof ACE == 'undefined') {
+		if(typeof SYS.worker != 'undefined') {
 			sendMessage({
 				script: 'loadDocumentation();\nupdateFilelist("Instructions");\n'
 			})

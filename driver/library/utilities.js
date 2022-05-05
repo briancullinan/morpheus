@@ -20,3 +20,4 @@ function makeResizeTo(id, tabs) {
     return setWindowBounds(id, tabs, void 0, void 0, w, h)
   }
 }
+
