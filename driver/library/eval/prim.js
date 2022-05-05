@@ -18,7 +18,7 @@ async function runPrimitive(AST, runContext) {
 				script: 'return ' + AST.name,
 				name: AST.name,
 			})
-			return doAccessor(result)
+			return await doAccessor(result)
 		/*
 		{
 			if(AST.name == 'console') {

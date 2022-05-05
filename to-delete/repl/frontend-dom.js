@@ -178,9 +178,6 @@ function onMessage(reply, message) {
 		document.body.classList.add(requestType)
 	}
 
-	if(typeof request.accessor != 'undefined') {
-		doAccessor(request, reply)
-	} else 
 	if(typeof request.service != 'undefined') {
 		debugger
 	} else 

@@ -349,6 +349,7 @@ async function runCall(AST, runContext) {
 			&& runContext.bubbleStack[
 				runContext.bubbleStack.length] == '<eval>') {
 			console.log('LONG DELAY!!! ' + functionName + ' . ' + beforeLine)
+			debugger
 			await new Promise(resolve => setTimeout(resolve, DEFAULT_DELAY))
 		}
 		return result

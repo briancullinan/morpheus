@@ -56,84 +56,37 @@ function emitPlugin() {
 }
 
 
-// CODE REVIEW, NOW THESE BECOME THE ONLY REPETATIVE STUFF I HAVE TO
-//   INCLUDE IN EVERY CONTEXT INSTEAD OF A HUGE LIBRARY OF CODE.
-function installAsyncTriggerMiddleware(onMessage, sendMessage) {
-	// for services with a callback like email marketing
-	//   or zapier
+// SHORTER LIST OF DEPENDENCIES THAN EMSCRIPTEN?
+const MIDDLEWARE_DEPENDENCIES = [
+	'getRunId',
+	'generateRunId',
+	'asyncTriggerMiddleware',
+	'encryptedResponseMiddleware',
+	'installEncryptedAsyncMiddleware',
+]
 
-	// BECAUSE THIS IS CALLED MULTIPLE TIMES BUT I WAS TREATING THIS LIKE STATIC
-	//let awaitingResponse = {}
-	if(typeof awaitingResponse == 'undefined') {
-		globalThis.awaitingResponse = {}
-	}
+const MIDDLEWARE_FRONTEND = [
+	'onFrontend',
+	'emitDownload',
+	'domMessageResponseMiddleware',
+].concat(MIDDLEWARE_DEPENDENCIES)
 
-	// TODO: move this to auth
-	function getRunId(length) {
-		let output = []
-		let uint8array = crypto.getRandomValues(new Uint8Array(length))
-		for (var i = 0; i < uint8array.length; i++) {
-			output.push(String.fromCharCode(uint8array[i]));
-		}
-		return btoa(output.join(''));
-	}
-	
-	// FOR CALLING REPEAT TIMES BUT PROTECTING RUNID SCOPE
-	function generateRunId() {
-		let runId = getRunId(20)
-		return function (request) {
-			request.runId = runId
-			return request
-		}
-	}
+const MIDDLEWARE_BACKEND = [
+	'workerMessageResponseMiddleware',
+].concat(MIDDLEWARE_DEPENDENCIES)
 
-	function awaitOrTimeout(request) {
-		// access a client variable they've shared from code
-		// basic client status message
-		// THIS IS PURELY FOR TECHNICALLY MATCHING CLICKS ON THE PAGE
-		//   BACK UP WITH THE RIGHT PROCESS, THIS IS NOT A SECURITY THING.
-		let responseEventId = getRunId(20)
-		// return function
-		return new Promise(function (resolve) {
-			let responseTimer = setTimeout(function () {
-				resolve()
-				delete awaitingResponse[responseEventId]
-			}, 3000)
+const MIDDLEWARE_REPL = [
+	'replAccessorMiddleware',
+	'readPreFS',
+	'_base64ToArrayBuffer',
+	'doBootstrap',
+]
 
-			if(typeof request == 'object' && request) {
-				request.responseId = responseEventId
-			}
+// have to do this to build
+const MIDDLEWARE_CLI = [
+	'cliMiddleware'
+]
 
-			awaitingResponse[responseEventId] = 
-			function (response) {
-				clearTimeout(responseTimer)
-				resolve(response)
-				delete awaitingResponse[responseEventId]
-				// ROUND AND ROUND WE GO
-			}
-
-			sendMessage(request)
-			return awaitingResponse[responseEventId]
-		}).then(onMessage)
-	}
-
-	function forwardResponseById(responseData) {
-		if(responseData && responseData.responseId
-			&& awaitingResponse.hasOwnProperty(responseData.responseId)) {
-				return awaitingResponse[responseData.responseId](responseData)
-		} /* else {
-			throw new Error('Message received with no responseId.')
-		} */ // must fail in script
-		return onMessage(responseData)
-
-	}
-
-
-	return {
-		awaitOrTimeout,
-		forwardResponseById,
-	}
-}
 
 
 // TODO: extrapolate complexity in the client sending the first request
@@ -143,20 +96,20 @@ function installEncryptedAsyncMiddleware(onMessage, sendMessage) {
 
 	let {
 		encryptResults,
-	} = encryptedAccessorResponseMiddleware(decryptResponseIfSession, sendMessage)
+	} = encryptedResponseMiddleware(decryptResponseIfSession, sendMessage)
 
 	let {
 		awaitOrTimeout,
-	} = installAsyncTriggerMiddleware(onMessage, sendMessage)
+	} = asyncTriggerMiddleware(onMessage, sendMessage)
 
 	let {
 		awaitOrTimeout: encryptedAwait,
 		forwardResponseById,
-	} = installAsyncTriggerMiddleware(onMessage, encryptResults)
+	} = asyncTriggerMiddleware(onMessage, encryptResults)
 
 	let {
 		decryptResponse,
-	} = encryptedAccessorResponseMiddleware(forwardResponseById, encryptResultsIfSession)
+	} = encryptedResponseMiddleware(forwardResponseById, encryptResultsIfSession)
 
 	function encryptResultsIfSession (request) {
 		if(request.responseId) {
@@ -188,7 +141,7 @@ function installEncryptedAsyncMiddleware(onMessage, sendMessage) {
 //   passed through here, this is simply to prevent and sniffy/
 //   logging plugins from saving some data to disk accidentally.
 // this is not meant to stop authorities.
-function encryptedAccessorResponseMiddleware(onMessage, sendMessage) {
+function encryptedResponseMiddleware(onMessage, sendMessage) {
 
 	// accessors on all ends will expect their results to be symmetrically
 	//   key encrypted by a pregenerated session id. In the case of plugin
@@ -416,7 +369,7 @@ function domMessageResponseMiddleware() {
 	let {
 		awaitOrTimeout,
 		forwardResponseById,
-	} = installAsyncTriggerMiddleware(onMessage, sendMessage)
+	} = asyncTriggerMiddleware(onMessage, sendMessage)
 	
 	function onMessage(data) {
 		return onFrontend(function (response) {
@@ -499,19 +452,22 @@ function workerMessageResponseMiddleware() {
 	} = installEncryptedAsyncMiddleware(onMessage, self.postMessage) 
 
 	function sendMessage(data) {
+		if(data === '[object Object]') {
+			debugger
+		}
 		console.log('request: ', data)
 		let asyncResult = encryptResultsIfSession(data)
 		console.assert(asyncResult.constructor === Promise) //  === Promise
-		return Promise.resolve(asyncResult)
-			.then(function (result) {
-				if(!result) {
-					// TODO: fixme, timers are not getting cleared for middleware
-					//  too complicated
-					//debugger
-				}
-				console.log('result: ', result)
-				return result
-			})
+		return Promise.resolve(asyncResult).then(
+		function (result) {
+			if(!result) {
+				// TODO: fixme, timers are not getting cleared for middleware
+				//  too complicated
+				//debugger
+			}
+			console.log('result: ', result)
+			return result
+		})
 	}
 
 	// lol, make a game where lost accounts lead to a virtual court room to prove your identity just like IRL
@@ -522,17 +478,10 @@ function workerMessageResponseMiddleware() {
 		if(!request) {
 			return
 		}
-		if(typeof onAccessor != 'undefined'
-			&& typeof request.accessor != 'undefined'
-			// on the backend we choose to do everything in the same place
-			&& (lib = doAccessor(request))) {
-			return sendMessage(lib)
-		} else
 		if (typeof request.script != 'undefined') {
 			let resultPromise = doBootstrap(request.script, 
 					Object.assign(globalThis, { 
 						sendMessage: sendMessage,
-						renderMarkdown: renderMarkdown,
 						readFile: readFile,
 						responseId: request.responseId,
 						//doLibraryLookup: doLibraryLookup,
@@ -548,30 +497,18 @@ function workerMessageResponseMiddleware() {
 				return self.postMessage(result)
 			})
 		} else {
-			return doAccessor(request)
+			return onAccessor(request)
 		}
 
 	}
 
 
-	function readFile(filename) {
-		return Array.from(FS.virtual[filename].contents)
-			.map(function (c) { return String.fromCharCode(c) })
-			.join('')
-	}
+function readFile(filename) {
+	return Array.from(FS.virtual[filename].contents)
+		.map(function (c) { return String.fromCharCode(c) })
+		.join('')
+}
 
-function renderMarkdown(filename) {
-  //var hljs       = require('highlight.js') // https://highlightjs.org/
-	let libraryFiles = Object.keys(FS.virtual)
-	for(let i = 0; i < libraryFiles.length; i++) {
-		if(filename == libraryFiles[i]) {
-			var md = new Remarkable('full', {
-			})
-			let result = md.render(readFile(libraryFiles[i]))
-			console.log(result);
-			return result
-		}
-	}
 	/*
 	var md = new Remarkable('full', {
 		html:         false,        // Enable HTML tags in source
@@ -605,7 +542,6 @@ function renderMarkdown(filename) {
 		}
 	});
 	*/
-}
 
 
 
@@ -744,8 +680,7 @@ if(typeof module != 'undefined') {
 		backendMessageResponseMiddleware,
 		workerMessageResponseMiddleware,
 		serviceMessageResponseMiddleware,
-		installAsyncTriggerMiddleware,
-		encryptedAccessorResponseMiddleware,
+		encryptedResponseMiddleware,
 		installEncryptedAsyncMiddleware,
 
 	}

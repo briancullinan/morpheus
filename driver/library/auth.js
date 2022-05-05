@@ -5,9 +5,37 @@ let temporaryDecrypter
 let temporaryEncrypter
 let temporaryUser
 
+// TODO: move this to auth
+function getRunId(length) {
+	let output = []
+	let uint8array = crypto.getRandomValues(new Uint8Array(length))
+	for (var i = 0; i < uint8array.length; i++) {
+		output.push(String.fromCharCode(uint8array[i]));
+	}
+	return btoa(output.join(''));
+}
+
+// FOR CALLING REPEAT TIMES BUT PROTECTING RUNID SCOPE
+function generateRunId() {
+	let runId = getRunId(20)
+	return function (request) {
+		if(request && typeof request == 'object') {
+			request.runId = runId
+		}
+		return request
+	}
+}
+
+if(typeof module != 'undefined') {
+	module.exports = {
+		getRunId,
+		generateRunId,
+	}
+}
 
 // THIS IS THE KITCHEN SINK. AND ANYWHERE THAT USES "CRYPT(" AND "TEMPORARYENCRYPTOR("
 
+/*
 async function doMorpheusPass(required) {
 	if(!required && temporaryEncrypter
 		&& Date.now() - morpheusPassTime < 30 * 1000) {
@@ -259,6 +287,9 @@ if(typeof chrome.storage == 'undefined') {
 			}
 		}
 	}
-	*/
 }
+
+
+*/
+
 

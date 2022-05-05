@@ -284,7 +284,6 @@ async function runStatement(i, AST, runContext) {
 		if(runContext.bubbleUp) {
 			throw up
 		}
-		debugger
 		console.log(up)
 		if(runContext.bubbleFile != 'library/repl.js'
 			//runContext.bubbleStack[runContext.bubbleStack.length-1][1] != 'library/repl.js'

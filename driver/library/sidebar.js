@@ -66,13 +66,13 @@ function simplifyMilliseconds(milli) {
 
 
 function showDocument() {
-	if(!ACE.documentation) {
+	if(!ACE.documentation || !ACE.bubbleFile) {
 		return []
 	}
 	let currentDoc = ACE.bubbleFile
 			.replace('library/', 'library/docs/')
 			.replace('.js', '.md')
-			
+
 	if(ACE.documentation.includes(currentDoc)) {
 		return [currentDoc.replace(/\//g, '_')]
 	}
@@ -169,6 +169,16 @@ function threadPool() {
 }
 
 
+function initSidebarTheme(newStyle) {
+	if(ACE.sidebarStyle || !newStyle) {
+		return
+	}
+	ACE.sidebarStyle = document.createElement('STYLE')
+	ACE.sidebarStyle.innerText = newStyle
+	document.body.insertBefore(ACE.sidebarStyle, ACE.fileList)
+
+}
+
 function updateFilelist(filepath) {
 	if(typeof ACE == 'undefined') {
 		return
@@ -180,6 +190,9 @@ function updateFilelist(filepath) {
 		ACE.fileList = document.createElement('DIV')
 		ACE.fileList.id = 'file-list'
 		document.body.append(ACE.fileList)
+		sendMessage({
+			script: 'return readFile("library/styles/sidebar.css");'
+		}).then(initSidebarTheme)
 		ACE.fileList.appendChild(document.createElement('OL'))
 	}
 	ACE.filestimer = null
@@ -359,15 +372,6 @@ function renderDocument(link, item, path) {
 			.replace(/\//g, '_')
 		if(replacedName != path) {
 			continue
-		}
-		if(!ACE.sidebarStyle) {
-			Promise.resolve(sendMessage({
-				script: 'return readFile("library/styles/sidebar.css");\n'
-			}).then(function (response) {
-				ACE.sidebarStyle = document.createElement('STYLE')
-				ACE.sidebarStyle.innerText = response
-				document.body.insertBefore(ACE.sidebarStyle, ACE.fileList)
-			}))
 		}
 
 		Promise.resolve(sendMessage({

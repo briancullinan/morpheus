@@ -147,6 +147,13 @@ function onError(error) {
 
 async function onAccessor(response) {
 
+	if (!response) {
+		throw new Error('Protocol error.')
+	} else 
+	if(typeof response.fail != 'undefined') {
+		throw new Error('Member access error: ' + response.fail)
+	} else
+
 	// convert response to compatible output
 	if(typeof response != 'object' || !response) {
 		let value = response
@@ -154,7 +161,6 @@ async function onAccessor(response) {
 		if(type == 'function') {
 			value = value + ''
 		} else if (type == 'object') {
-			type = 'json'
 			value = JSON.stringify(Object.assign({
 				_accessor: true
 			}, value || {}))
@@ -192,30 +198,11 @@ async function onAccessor(response) {
 			console.log(up)
 			throw up
 		}
-		return
-	} 
-
-}
-
-
-// access info from another remote, or another context
-//   used to lookup library functions, inject scripts 
-//   into other pages
-async function doAccessor(response) { // shouldn't need senderId with DI
-	
-	if (!response || typeof response.fail != 'undefined') {
-		console.log(response)
-		throw new Error('Member access error: ', response)
-	} else 
+	} else
 
 	if(typeof response.object != 'undefined') {
-		let memberName = response.object.name + '.' + response.property.name
-		response =  await sendMessage({
-			accessor: memberName
-		})
-		// TODO: return doAccessor(memberAccess) ? convert string func to RPC
-	}
-	
+		return JSON.parse(response.object)
+	} else
 
 	if(typeof response.function != 'undefined') {
 		if(response.value) {
@@ -232,17 +219,38 @@ async function doAccessor(response) { // shouldn't need senderId with DI
 		}
 	} else
 
-	// INTERESTING, REALIZING THIS IS THE ONLY ABSTRACTION REPL CAN
-	//   DO BY ITSELF, WINDOW.LOCATION LOOKUPS ARE CONTEXT DEPENDENT
-	if(typeof response.accessor != 'undefined') {
+	if(typeof response.type != 'undefined') {
+		return response[response.type]
+	} else
+
+	{
 		debugger
-		return await doLibraryLookup(response.accessor)
-	} else
+		throw new Error('Protocol error.')
+	}
+
+}
 
 
-	if(typeof response.json != 'undefined') {
-		return JSON.parse(response.json) // window.location, not volatile objects
+// access info from another remote, or another context
+//   used to lookup library functions, inject scripts 
+//   into other pages
+async function doAccessor(response) { // shouldn't need senderId with DI
+	if (!response) {
+		throw new Error('Protocol error.')
+	} else 
+	if(typeof response.fail != 'undefined') {
+		throw new Error('Member access error: ' + response.fail)
 	} else
+
+	if(typeof response.object != 'undefined') {
+		let memberName = response.object.name + '.' + response.property.name
+		response =  await sendMessage({
+			accessor: memberName
+		})
+		// TODO: return doAccessor(memberAccess) ? convert string func to RPC
+	}
+	
+
 
 	if(typeof response._accessor != 'undefined') {
 		response._accessor = async function (i, left, right, ctx) {
@@ -261,6 +269,7 @@ async function doAccessor(response) { // shouldn't need senderId with DI
 		}
 		return response
 	} else
+
 	if(typeof response.value != 'undefined'
 		|| typeof response.type != 'undefined') {
 		return response.value // primitive types
@@ -352,8 +361,8 @@ function pruneOldRuns() {
 
 
 async function doStatus(doSleep) {
+	return
 	if(typeof currentContext == 'undefined') {
-		return
 	}
 	try {
 		let statusUpdate = { 
@@ -374,6 +383,7 @@ async function doStatus(doSleep) {
 		// don't sleep on library functions
 		if(doSleep && currentContext.bubbleFile == '<eval>') {
 			console.log('DELAYING! ' + currentContext.bubbleLine)
+			debugger
 			await new Promise(resolve => setTimeout(resolve, DEFAULT_SHORT_DELAY))
 		}
 	} catch (e) {
@@ -506,7 +516,17 @@ async function onFrontend(replyFunction, request) {
 		}
 	} else
 
+	// WHAT IF URLS WERE XPATHS TO FUNCTIONS? AND ROUTING TABLES WHERE JUST FUNCTIONS?
+		// TODO: re-forward back to the backend accessor because
+		//   worker shares a local storage, this is what
+		//   I meant by "ask language server". No matter if
+		//   a request comes from more or engine or worker
+		//   or plugin, it all leads back to my code in IDBFS
+		// TODO: need to include installAsync here also, but only
+		//   for worker interface because plugin is event/reply based
+		//if(replyFunction === SYS.worker.postMessage) {
 	if(typeof request.script != 'undefined') {
+		console.assert(request.responseId)
 		setTimeout(function () {
 		// repl dom stuff? probably not
 		try {
@@ -515,7 +535,6 @@ async function onFrontend(replyFunction, request) {
 			if(type == 'function') {
 				value = value + ''
 			} else if (type == 'object') {
-				type = 'json'
 				value = JSON.stringify(Object.assign({
 					_accessor: true
 				}, value || {}))
@@ -539,44 +558,6 @@ async function onFrontend(replyFunction, request) {
 		}, 200)
 	} else
 
-	if(typeof request.accessor != 'undefined'
-			&& typeof onAccessor != 'undefined') {
-		// TODO: incase we need REPL on frontend because of CSP
-		let lib = onAccessor(request)
-		return replyFunction(lib)
-	} else
-
-	// WHAT IF URLS WERE XPATHS TO FUNCTIONS? AND ROUTING TABLES WHERE JUST FUNCTIONS?
-	if(typeof request.accessor != 'undefined') {
-		// TODO: re-forward back to the backend accessor because
-		//   worker shares a local storage, this is what
-		//   I meant by "ask language server". No matter if
-		//   a request comes from more or engine or worker
-		//   or plugin, it all leads back to my code in IDBFS
-		// TODO: need to include installAsync here also, but only
-		//   for worker interface because plugin is event/reply based
-		//if(replyFunction === SYS.worker.postMessage) {
-		let value
-		let name = request.accessor.split('.')[1]
-		let type = typeof window[name]
-		if(type == 'function') {
-			value = window[name] + ''
-		} else if (type == 'object') {
-			type = 'json'
-			value = JSON.stringify(Object.assign({
-				_accessor: true
-			}, window[name] || {}))
-		} else {
-			value = JSON.stringify(window[name])
-		}
-		let result = {
-			responseId: request.responseId,
-			type: type,
-			name: name
-		}
-		result[type] = value
-		return replyFunction(result)
-	} else 
 
 	// combine with repl.js doAccessor
 	// result means they asked for it?
@@ -584,18 +565,12 @@ async function onFrontend(replyFunction, request) {
 		return request.result
 	} else 
 
-	if(typeof doDialog != 'undefined'
-			&& typeof request.accessor != 'undefined') { // REPL?
-		let dialog = doDialog(request, replyFunction)
-		return dialog
-	}
-
 	// TODO: fold frontend and onAccessor into each other based on request type 
 	//   should be able to have a specific direction for when to encode result
 	//   or when to return real result to REPL, like the opposite of the member.object
 	//   access thing
 	if(typeof doRun != 'undefined') {
-		doRun(request.accessor || request.script, {
+		doRun(request.script, {
 			window: window,
 			ACE: ACE,
 		}) // NOW IT'S RECURSIVE

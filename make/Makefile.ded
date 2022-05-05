@@ -39,10 +39,10 @@ $(BUILD_DIR)/sys_worker.js: dedicated $(BUILD_DIR)/morph.ded.wasm $(WORKER_FILES
 		require('./driver/library/repl.js').doBootstrap + '\n' \
 		+ require('./$(WASM_SOURCE)/sys_idbfs.js').readPreFS + '\n' \
 		+ require('./$(WASM_SOURCE)/sys_idbfs.js')._base64ToArrayBuffer + '\n' \
-		+ require('./driver/library/quine.js').installAsyncTriggerMiddleware + '\n' \
-		+ require('./driver/library/quine.js').encryptedAccessorResponseMiddleware + '\n' \
+		+ require('./driver/library/auth.js').getRunId + '\n' \
+		+ require('./driver/library/middleware.js').asyncTriggerMiddleware + '\n' \
+		+ require('./driver/library/quine.js').encryptedResponseMiddleware + '\n' \
 		+ require('./driver/library/quine.js').workerMessageResponseMiddleware + '\n'  \
-		+ require('./driver/library/quine.js').installAsyncTriggerMiddleware + '\n'  \
 		+ require('./driver/library/quine.js').installEncryptedAsyncMiddleware \
 		+ '\nworkerMessageResponseMiddleware();\n' );" >> $@
 	$(Q)cat $(WORKER_FILES) >> $@

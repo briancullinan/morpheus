@@ -44,3 +44,17 @@ function loadDocumentation() {
 }
 
 
+function renderMarkdown(filename) {
+  //var hljs       = require('highlight.js') // https://highlightjs.org/
+	let libraryFiles = Object.keys(FS.virtual)
+	for(let i = 0; i < libraryFiles.length; i++) {
+		if(filename == libraryFiles[i]) {
+			var md = new Remarkable('full', {
+			})
+			let result = md.render(readFile(libraryFiles[i]))
+			console.log(result);
+			return result
+		}
+	}
+}
+
