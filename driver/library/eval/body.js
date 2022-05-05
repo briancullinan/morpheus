@@ -99,7 +99,7 @@ async function runStatement(i, AST, runContext) {
 		//    IS FEATURE COMPLETE?
 		//////////////////////////  PASS-THRU
 		if(AST[i].type == 'Literal' || AST[i].type == 'Identifier') {
-			return runPrimitive(AST[i], runContext)
+			return await runPrimitive(AST[i], runContext)
 		} else 
 		if(AST[i].type == 'BreakStatement') {
 			runContext.broken = true // TODO: check how detailed parser is, 
@@ -149,11 +149,14 @@ async function runStatement(i, AST, runContext) {
 			return await runStatement(0, [AST[i].argument], runContext)
 		} else
 		if(AST[i].type == 'ReturnStatement') {
+			// CODE REVIEW, WHOOPS
 			if(AST[i].argument && AST[i].argument.type) {
 				runContext.bubbleReturn = await runStatement(0, [AST[i].argument], runContext)
 				runContext.returned = true
 				return runContext.bubbleReturn
 			} else {
+				runContext.returned = true
+				runContext.bubbleReturn = void 0
 				return
 			}
 		} else
@@ -277,10 +280,14 @@ async function runStatement(i, AST, runContext) {
 			throw new Error(AST[i].type + ': Not implemented!')
 		}
 
-	} catch (e) {
-		console.log(e)
+	} catch (up) {
+		if(runContext.bubbleUp) {
+			throw up
+		}
+		debugger
+		console.log(up)
 		if(runContext.bubbleStack[runContext.bubbleStack.length-1][1] != 'library/repl.js') {
-			await doError(e, runContext)
+			await doError(up, runContext)
 			runContext.ended = true
 		}
 		return

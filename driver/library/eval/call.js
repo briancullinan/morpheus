@@ -235,20 +235,8 @@ async function runCall(AST, runContext) {
 				throw up
 			}
 		}
+		// CODE REVIEW: omg it's ready
 
-		// TODO: incase libraries aren't sent, preprocessed libs are used here
-		if (!calleeFunc && runContext.bubbleFile != 'library/repl.js') {
-			functionName = AST.callee.name
-			calleeFunc = await doAccessor({
-				// WOOHOO my first polyfill
-				object: {
-					name: 'exports'
-				},
-				property: {
-					name: functionName
-				}
-			})
-		}
 	} else
 	if(AST.callee.type) {
 		calleeFunc = await runStatement(0, [AST.callee], runContext)

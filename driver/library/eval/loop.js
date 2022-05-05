@@ -7,12 +7,18 @@ async function runLoop(init, test, update, body, runContext) {
 	if(body.type != 'BlockStatement') {
 		throw new Error('ForStatement: Not implemented!')
 	}
-	let initAndTest = await runThisAndThat(init, test, runContext)
+	if(init) {
+		await runStatement(0, [init], runContext)
+		if(await shouldBubbleOut(runContext)) {
+			return
+		}
+	}
+
+	let testResults = await runStatement(0, [test], runContext)
 	if(await shouldBubbleOut(runContext)) {
 		return
 	}
 
-	let testResults = initAndTest[1]
 	// TODO: turn off safety feature with an attribute @LongLoops
 	let safety = LONG_LOOPS
 	for(;testResults && safety > 0; safety--) {

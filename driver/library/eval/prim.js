@@ -1,5 +1,5 @@
 
-function runPrimitive(AST, runContext) {
+async function runPrimitive(AST, runContext) {
 	if(AST.type == 'Literal') {
 		return AST.value
 	} else 
@@ -11,7 +11,21 @@ function runPrimitive(AST, runContext) {
 					return runContext.localDeclarations[i][AST.name]
 				}
 			}
-		} else {
+		} else 
+		// TODO: incase libraries aren't sent, preprocessed libs are used here
+		if (runContext.bubbleFile != 'library/repl.js') {
+			return await doAccessor({
+				// WOOHOO my first polyfill
+				object: {
+					name: 'exports'
+				},
+				property: {
+					name: AST.name
+				}
+			})
+		} else 
+
+		{
 			if(AST.name == 'console') {
 				debugger
 			}
@@ -28,18 +42,6 @@ function runPrimitive(AST, runContext) {
 	}
 }
 
-async function runThisAndThat(_this, _that, runContext) {
-	let left = await runStatement(0, [_this], runContext)
-	if(await shouldBubbleOut(runContext)) {
-		return
-	}
-
-	let right = await runStatement(0, [_that], runContext)
-	if(await shouldBubbleOut(runContext)) {
-		return
-	}
-	return [left, right]
-}
 
 async function runUnary(AST, runContext) {
 	if(AST.operator == 'void') {
@@ -50,6 +52,7 @@ async function runUnary(AST, runContext) {
 	} else
 	if(AST.operator == 'typeof') {
 		try {
+			runContext.bubbleUp = true
 			let result = await runStatement(0, [AST.argument], runContext)
 			return typeof result
 		} catch (up) {
@@ -58,6 +61,8 @@ async function runUnary(AST, runContext) {
 			} else {
 				throw up
 			}
+		} finally {
+			runContext.bubbleUp = false
 		}
 	} else
 	if(AST.operator == '-') {
@@ -129,12 +134,15 @@ async function runLogical(AST, runContext) {
 //   ONCE THE META-PROGRAMMING INTERFACES ARE COMPLETED, CONSUMPTION CAN BEGIN.
 // Obviously, I'm not the only one working on this sort of thing.
 async function runBinary(AST, runContext) {
-	let thisAndThat = await runThisAndThat(AST.left, AST.right, runContext)
+	let left = await runStatement(0, [AST.left], runContext)
 	if(await shouldBubbleOut(runContext)) {
 		return
 	}
-	let left = thisAndThat[0]
-	let right = thisAndThat[1]
+
+	let right = await runStatement(0, [AST.right], runContext)
+	if(await shouldBubbleOut(runContext)) {
+		return
+	}
 
 	// MATHS!
 	if(AST.operator == '*') {

@@ -145,8 +145,7 @@ function threadPool() {
 
 function updateFilelist(filepath) {
 	if(typeof ACE == 'undefined') {
-		window.ACE = {}
-
+		return
 	}
 	if(!ACE.fileList) {
 		ACE.fileList = document.getElementById('file-list')

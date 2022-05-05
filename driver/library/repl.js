@@ -114,7 +114,7 @@ function doError(err) {
 			error: err.message + '',
 			// always subtract 1 because code is wrapping in a 1-line function above
 			line: currentContext.bubbleLine - 1,
-			file: currentContext.bubbleFile,
+			file: currentContext.bubbleStack[currentContext.bubbleStack.length-1][1],
 			stack: currentContext.bubbleStack,
 			// LOOK AT THIS FANCY SHIT GOOGLE CHROME DEBUGGER!
 			//   MAKE A LIST OF ASSIGNMENTS NEARBY AND SEND THEIR CURRENT VALUE TO THE FRONTEND
@@ -177,6 +177,8 @@ async function doAccessor(response) { // shouldn't need senderId with DI
 				'(function () {\n' + response.library + '\nreturn doRun;})()\n'
 				, {ecmaVersion: 2020, locations: true, onComment: []})
 			currentContext.script = response.library
+			currentContext.bubbleFile = response.file
+			currentContext.bubbleStack.push(['inline func 0', response.file || '<eval>', 0])
 			await runStatement(0, 
 					[AST.body[0].expression.callee.body], currentContext)
 					currentContext.returned = false
@@ -305,7 +307,7 @@ async function doStatus(doSleep) {
 			// always subtract 1 because code is wrapping in a 1-line function above
 			line: currentContext.bubbleLine - 1,
 			stack: currentContext.bubbleStack,
-			file: currentContext.bubbleFile,
+			file: currentContext.bubbleStack[currentContext.bubbleStack.length-1][1],
 		}
 		if(currentContext.ended) {
 			statusUpdate.stopped = getThreads()
@@ -437,13 +439,15 @@ async function doBootstrap(script, globalContext) {
 
 
 async function onFrontend(replyFunction, request) {
-	if(request.status) {
-	} else
+	if(!request.status) {
+		debugger
+	} 
 
 	if(typeof request.script != 'undefined') {
 		setTimeout(function () {
 		// repl dom stuff? probably not
 		try {
+			debugger
 			let value = JSON.stringify(eval(request.script))
 			if(typeof window[name] == 'function') {
 				value = window[name] + ''
@@ -452,7 +456,7 @@ async function onFrontend(replyFunction, request) {
 			let result = {
 				responseId: request.responseId,
 				type: type,
-				name: name
+				name: name 
 			}
 			result[type] = value
 			return replyFunction(result)

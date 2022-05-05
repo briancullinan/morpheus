@@ -28,7 +28,11 @@ function loadDocumentation() {
 			docs.push(libraryFiles[i])
 		}
 	}
-	console.log(docs)
+	if(typeof ACE != 'undefined') {
+		ACE.documentation = docs
+	} else {
+		console.log(docs)
+	}
 	return docs
 }
 
