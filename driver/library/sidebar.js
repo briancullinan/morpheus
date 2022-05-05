@@ -147,6 +147,7 @@ function updateFilelist(filepath) {
 	if(typeof ACE == 'undefined') {
 		return
 	}
+	debugger
 	if(!ACE.fileList) {
 		ACE.fileList = document.getElementById('file-list')
 	}

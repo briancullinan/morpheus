@@ -226,17 +226,33 @@ async function runCall(AST, runContext) {
 	let functionName
 	if(AST.callee.type == 'Identifier') {
 		// handle identifiers here because looking it up with bubble up an error
+		functionName = AST.callee.name
 		try {
 			// TODO: should probably have a better way of handling NOT-ERROR
 			calleeFunc = await runPrimitive(AST.callee, runContext)
-			functionName = AST.callee.name
 		} catch (up) {
-			if(!up.message.includes('not defined')) {
+			if(!up.message.includes('not defined')
+					// CODE REVIEW, meant to do this earlier
+					&& !up.message.includes('access error')) {
 				throw up
 			}
 		}
-		// CODE REVIEW: omg it's ready
+		if(await shouldBubbleOut(runContext)) {
+			return // bubble up
+		}
 
+		// CODE REVIEW: omg it's ready
+		let lib
+		// TODO: shortcut the frontend FS.virtual
+		//   for now and just provide whatever is saved in IDBFS
+		// will need RPC to save code storage, will provide it in
+		//   cloud build so needs to be generic through accessors.
+		if (!calleeFunc
+			&& runContext.bubbleFile != 'library/repl.js'
+			&& (lib = doLibraryLookup(functionName))
+		) {
+			calleeFunc = await doAccessor(lib)
+		}
 	} else
 	if(AST.callee.type) {
 		calleeFunc = await runStatement(0, [AST.callee], runContext)

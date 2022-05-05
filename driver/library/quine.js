@@ -490,18 +490,7 @@ function workerMessageResponseMiddleware() {
 	} = installEncryptedAsyncMiddleware(onMessage, self.postMessage) 
 
 	function sendMessage(data) {
-		if(data.accessor
-			&& data.accessor.includes('exports.')) {
-			// TODO: shortcut the frontend FS.virtual
-			//   for now and just provide whatever is saved in IDBFS
-			// will need RPC to save code storage, will provide it in
-			//   cloud build so needs to be generic through accessors.
-			let lib = doLibraryLookup(data.accessor.split('.')[1])
-			if(lib) {
-				return lib
-			}
-		}
-		console.log(data)
+		console.log('request: ', data)
 		let asyncResult = encryptResultsIfSession(data)
 		console.assert(asyncResult.constructor === Promise) //  === Promise
 		return Promise.resolve(asyncResult)

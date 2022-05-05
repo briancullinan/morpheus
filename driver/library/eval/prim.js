@@ -11,9 +11,8 @@ async function runPrimitive(AST, runContext) {
 					return runContext.localDeclarations[i][AST.name]
 				}
 			}
-		} else 
+		} else {
 		// TODO: incase libraries aren't sent, preprocessed libs are used here
-		if (runContext.bubbleFile != 'library/repl.js') {
 			return await doAccessor({
 				// WOOHOO my first polyfill
 				object: {
@@ -23,8 +22,7 @@ async function runPrimitive(AST, runContext) {
 					name: AST.name
 				}
 			})
-		} else 
-
+		/*
 		{
 			if(AST.name == 'console') {
 				debugger
@@ -36,6 +34,7 @@ async function runPrimitive(AST, runContext) {
 				debugger
 			}
 			throw new Error('Identifier not defined: ' + AST.name)
+			*/
 		}
 	} else {
 		throw new Error(AST.type + ': Not implemented!')

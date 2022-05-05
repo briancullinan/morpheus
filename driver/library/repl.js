@@ -209,16 +209,26 @@ async function doAccessor(response) { // shouldn't need senderId with DI
 		&& request.accessor.startsWith('exports.')) {
 		return await doLibraryLookup(request.accessor.split('.')[1])
 	} else
+
+
 	if(typeof response.json != 'undefined') {
 		return JSON.parse(response.json) // window.location, not volatile objects
 	} else
+
 	if(typeof response._accessor != 'undefined') {
 		response._accessor = async function (i, left, right, ctx) {
 			let prop = ctx.bubbleProperty
 			ctx.bubbleProperty = ''
-			return await await sendMessage({
-				script: prop
-			})
+			if(left && left[0] 
+				&& left[0].type == 'AssignmentExpression') {
+				return await await sendMessage({
+					script: prop + ' = JSON.parse(\'' + JSON.stringify(right) + '\');'
+				})
+			} else {
+				return await await sendMessage({
+					script: prop
+				})
+			}
 		}
 		return response
 	} else
@@ -253,8 +263,7 @@ function doLibraryLookup(functionName) {
 			.join('')
 		// TODO: make these tokens instead of function for cross language support
 		if(libraryCode.match(new RegExp(
-				'function\s' + functionName + '.*?\{'))) {
-			debugger
+				'function\\s' + functionName + '.*?\\{'))) {
 			return {
 				// TODO: responseId
 				library: libraryCode,

@@ -56,7 +56,20 @@ async function runAssignment(left, right, runContext) {
 			return
 		}
 
-		debugger
+		runContext.bubbleMember = parent
+		runContext.bubbleProperty = (runContext.bubbleProperty 
+				? (runContext.bubbleProperty + '.') : '') 
+				+ left.object.name + '.' + property
+
+		if(typeof parent == 'object' && parent // BUG: null, whoops
+				&& typeof parent._accessor != 'undefined') {
+			await parent._accessor(0, [{
+				type: 'AssignmentExpression',
+				left: left,
+				right: right,
+			}], result, runContext)
+			// TODO: duplicate assignments?
+		}
 		parent[property] = result
 		// notify clients
 		return result
@@ -115,13 +128,14 @@ async function runMember(AST, runContext) {
   }
 
 	let parent = await runStatement(0, [AST.object], runContext)
-	runContext.bubbleMember = parent
-	runContext.bubbleProperty = (runContext.bubbleProperty 
-		? (runContext.bubbleProperty + '.') : '') 
-		+ AST.object.name + '.' + property
   if(await shouldBubbleOut(runContext)) {
     return // bubble up
   }
+
+	runContext.bubbleMember = parent
+	runContext.bubbleProperty = (runContext.bubbleProperty 
+			? (runContext.bubbleProperty + '.') : '') 
+			+ AST.object.name + '.' + property
 
   if(typeof parent == 'object' && parent // BUG: null, whoops
     && typeof parent._accessor != 'undefined') {
