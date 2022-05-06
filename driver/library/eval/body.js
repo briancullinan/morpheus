@@ -1,8 +1,5 @@
 
 
-let currentContext
-
-
 const DEFAULT_DELAY = 1000
 const DEFAULT_SHORT_DELAY = 100
 const DEFAULT_PAUSED_INTERVAL = 100

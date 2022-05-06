@@ -110,39 +110,31 @@ function onError(error) {
 
 async function onAccessor(response) {
 
-	// convert response to compatible output
-	if(typeof response != 'object' || !response) {
-		let value = response
-		let type = typeof value
-		if(type == 'function') {
-			value = value + ''
-		} else if (type == 'object') {
-			value = JSON.stringify(Object.assign({
-				_accessor: true
-			}, value || {}))
-		} else {
-			value = JSON.stringify(value)
-		}
-		let result = {
-			type: type,
-		}
-		result[type] = value
-		return result
-	} else 
-
-	if(typeof response.fail != 'undefined') {
+	if(response && typeof response.fail != 'undefined') {
 		throw new Error('Member access error: ' + response.fail)
 	} else
 
-	if(typeof response.type != 'undefined') {
+	if(response && typeof response.type != 'undefined') {
 		return response[response.type]
-	} else
-
-
-	{
-		debugger
-		throw new Error('Protocol error.')
 	}
+
+	// convert response to compatible output
+	let value = response
+	let type = typeof value
+	if(type == 'function') {
+		value = value + ''
+	} else if (type == 'object') {
+		value = JSON.stringify(Object.assign({
+			_accessor: true
+		}, value || {}))
+	} else {
+		value = JSON.stringify(value)
+	}
+	let result = {
+		type: type,
+	}
+	result[type] = value
+	return result
 
 }
 
@@ -173,24 +165,31 @@ async function doAccessor(response) { // shouldn't need senderId with DI
 			let runContext = {
 				script: response.script
 			}
-			let result = await doEval(runContext)
-			if(result !== runContext.bubbleReturn) {
-				console.error('WARNING: not bubbling correctly: ' + response.script)
-				result = runContext.bubbleReturn
+			try {
+				let result = await doEval(runContext)
+				if(!Object.is(result, runContext.bubbleReturn[0])) {
+					console.error('WARNING: not bubbling correctly: ' + response.script)
+					result = runContext.bubbleReturn[0]
+				}
+				if(runContext.ended) {
+					return { // ahhh same as somewhere else in doAccessor
+						stopped: await onAccessor(result),
+					}
+				} else if (runContext.async) {
+					return { 
+						async: getThreads(),
+					}
+				} else {
+					return { 
+						result: await onAccessor(result),
+					}
+				}
+			} catch(e) {
+				return {
+					fail: e.message
+				}
 			}
-			if(runContext.ended) {
-				return { // ahhh same as somewhere else in doAccessor
-					stopped: await onAccessor(result),
-				}
-			} else if (runContext.async) {
-				return { 
-					async: getThreads(),
-				}
-			} else {
-				return { 
-					result: await onAccessor(result),
-				}
-			}
+
 		} else if (typeof WorkerGlobalScope !== 'undefined'
 				&& self instanceof WorkerGlobalScope ) {
 			debugger
