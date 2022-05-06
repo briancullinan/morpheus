@@ -1,4 +1,4 @@
-# Boostrap Pattern
+# Boostrap pattern
 
 Similar to dependency injection, the bootstrap pattern,
 starts with minimal dependencies, like an unzipper.

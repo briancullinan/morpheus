@@ -186,7 +186,8 @@ async function doAccessor(response) { // shouldn't need senderId with DI
 				}
 			} catch(e) {
 				return {
-					fail: e.message
+					fail: e.message,
+					stack: e.stack,
 				}
 			}
 
