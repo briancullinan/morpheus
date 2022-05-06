@@ -108,13 +108,28 @@ function shouldBubbleOut(AST, callFrame, runContext) {
 			//runContext.programCount--
 		}
 	}
-	return !AST
-			|| runContext.programCount - callFrame == -1
+	return runContext.programCount - callFrame == -1
 			|| (typeof runContext.error != 'undefined'
 					&& !runContext.continueOnError)
 }
 
-
+// CODE REVIEW, FINALLY FOUND A WAY TO TEST A PROGRAMMING LANGUAGE FOR FEATURE COMPLETENESS
+//   ADDING TO THIS SWITCH LIST, AND USING THE PROGRAM COUNTER, IT BREAKS EVERY TIME A
+//   POLYFILL IS NOT MANIPULATING THE PROGRAM STACK CORRECTLY.
+//   THIS WAY I CAN ADD ASPECTS (BEFORE/AFTER) CALLS LIKE TRACKING TIMERS
+//   AND GAURANTEE THE STACK DOESN'T GET CORRUPTED.
+// TODO: NEED TO DO THE SAME THING FOR RETURN STATEMENTS, EVERY EXPRESSION
+//   PUSHES A RETURN VALUE, AND THEN POP IT OFF IF IT ISN'T USED IN THE NEXT STATEMENT
+//   CAN ONLY HAVE 1 THING IN RETURN STACK WHEN RETURN STATEMENT IS EVALUATED
+//   THAT MEANS ALL THE OTHER TOKEN TYPES CLEARED THE EXTRA CALL FRAME VALUES
+//   THEY STORED (I.E. LEFT/RIGHT)
+// CODE REVIEW, OH GOD, SO MUCH LESS CODE. IMAGINE REPLACING ALL OF BABEL
+//   GULP, THE WHOLE NODE ECOSYSTEM CAN BE EVOLVED WITH SO MUCH SMALLER
+//   VISITOR CODE. NOW ADDING IN MY SYNTAX SERVICE, I CAN APPEND ANY FUNCTION
+//   IN THE NODE API WITH MY OWN PRECURSORS, IMAGINE CONTEXTUALIZED FILE-SYSTEMS
+// WHERE THE SAME CODE RUNS BUT IN ONE ENVIRONMENT IT'S READING FROM MEMFS, AND
+//   ONE ENVIRONMENT IT'S READING FROM ZFS. LIKE DEPENDENCY INJECTION ON STEROIDS.
+//   IT'S LIKE THE ASPECTS CHANGE DEPENDENCIES ON THE FLY.
 function programCounter(callFrame, runContext) {
 	currentContext = runContext
 	//if(runContext.programCount > callFrame) { // waiting for something
@@ -126,12 +141,12 @@ function programCounter(callFrame, runContext) {
 	if(shouldBubbleOut(AST, callFrame, runContext)) {
 		return cleanupProgram(runContext)
 	}
-	if(runContext.programCount < 0
-		|| runContext.programCount > runContext.programCallstack.length) {
+	if(runContext.programCount != runContext.programCallstack.length) {
 		debugger
 		throw new Error('Call stack exceeded!')
 	}
 	// TODO: control how many commands it calls every frame?
+	//console.log(AST.type)
 	switch(AST.type) {
 		case 'Evaluate': 
 			// prevent the program from doing anything unless the stack changes
@@ -231,6 +246,9 @@ function programCounter(callFrame, runContext) {
 				runContext.programCount += 1
 				runContext.programCallstack.push(AST.arguments[i])
 			}
+			// CODE REVIEW, I made a change where each token doesn't
+			//   have to make the same stack/counter changes and forgot this one
+			runContext.programCount += 1
 			runContext.programCallstack.push(AST.callee)
 			break
 		case 'ReturnStatement':
@@ -248,6 +266,8 @@ function programCounter(callFrame, runContext) {
 		case 'FunctionExpression':
 			// TODO: copy creation context
 			// return a function?
+			runContext.programCount -= 1 // because we are adding a return statement
+			// not adding an Evaluate command so need to subtract 1
 			runContext.bubbleReturn.push((function (body, params, ...args) {
 				// TODO: assign params and defaults
 				//runContext.programCallstack = []
@@ -329,7 +349,6 @@ function programCounter(callFrame, runContext) {
 						runContext.localDeclarations[runContext.localDeclarations.length-1]
 							[assignee.name] = runContext.bubbleReturn[runContext.bubbleReturn.length-1]
 					}
-					debugger
 					if(runContext.error) {
 						console.error(runContext.error)
 						delete runContext.error
