@@ -67,6 +67,9 @@ function doStatments(runContext, program) {
 				],
 				'remove': [
 					doRemove
+				],
+				'@evaluate': [
+					onEval
 				]
 			}
 		}
@@ -202,7 +205,9 @@ function doBootstrap(attributeParams, {runContext}) {
 	}
 }
 
-function onEval(runContext, node, ...exp) {
+function onEval(attributeParams, 
+	{abstractNode, programCallstack, runContext}) {
+	debugger
 	console.log('Thread ' + runContext.programTimer, 'Evaluate.' + node.type)
 	//console.log(...exp)
 }
@@ -210,6 +215,7 @@ function onEval(runContext, node, ...exp) {
 function doInstruction(attributeParams, 
 		{abstractNode, programCallstack, runContext}
 ) {
+	// TODO: if type == Evaluate, await
 	debugger
 	programCallstack.push({
 		type: 'Evaluate',
