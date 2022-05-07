@@ -35,6 +35,7 @@ const PREAMBLE_LINES = BOOTSTRAP_EVAL
 //   onTranspile, doTranspile is make stack change, and reverse 
 //   stack change back to language.
 function doEval(evalStr) {
+	let programCallstack = []
 	let accumulatedComments = []
 	let comments = []
 	let program = acorn.parse(
@@ -43,12 +44,11 @@ function doEval(evalStr) {
 		onToken: doComment.bind(null, comments, accumulatedComments),
 		onComment: onComment.bind(null, accumulatedComments),
 	})
-	// make sure we hit a `Program` first thing
-	walk.full(program, 
-		// pass to infix to postfix stack creator
-		doInstruction.bind(null, programCallstack, comments))
 	// await (Promise) for program to finish executing
-	return onInstruction(programCallstack, program).then(onEval)
+	// make sure we hit a `Program` first thing
+	return onInstruction({
+		programCallstack, program, comments, 
+	}).then(onEval)
 }
 
 // every time I feel like I can make a vast improvement in style
@@ -60,6 +60,31 @@ function doComment(comments, accumulatedComments, token) {
 }
 function onComment(accumulatedComments, _, comment) {
 	accumulatedComments.push(comment)
+}
+
+// *on - request
+// *do - trigger
+
+// onInstruction awaits until stack is cleared
+function onInstruction(runContext) {
+	// TODO: return a new call frame
+	if(!runContext.programTimer) {
+		runContext.programTimer = setInterval(
+			// bind to self for timed execution ?
+			doInstruction.bind(null, runContext), 1000/60)
+	}
+	if (stack.length < frame) {
+		clearInterval(runContext.programTimer)
+		if(typeof runContext.error != 'undefined'
+			|| stack.length < frame - 1) {
+			console.log('Program error: ', runContext.error)
+			return reject(runContext.error)
+		}
+		return resolve(runContext.async)
+	}
+	return new Promise(function (resolve, reject) {
+		
+	})
 }
 
 // doInstruction pushes AST arguments/left/right 
@@ -74,23 +99,35 @@ function onComment(accumulatedComments, _, comment) {
 //   a new mirror of doInstruction push operations, 
 //   makes it easy to isolate single call-frames 
 //   when debugging.
-function doInstruction(programCallstack, comments) {
+function doInstruction(runContext, abstractNode) {
+	// TODO: collect comments here instead of parser? where are they?
 	//   higher level language? software nuero-lingistic 
 	//   programming?
 	// off the program stack, on to call stack, 
 	//   same as in CPU memory, but at the...
-	let abstractNode = programCallstack.pop()
 	programCallstack.push({
 		type: 'Evaluate',
 		value: onEval.bind(null, abstractNode)
 	})
-	// TODO: check for `NodeAttributes` ?
+	// TODO: check for `@NodeAttributes` ?
 	//  @Program, do pushes in order of predicates.
 	//    implied predicated pushed first to be evaled 
 	//    last. add parallelism options this time with
 	//    Array.filter() and _Promise replacement as a
 	//    part of REPL middleware. evaluator should 
 	//    be able to support it this time around.
+	// Format: @Program(__name, __callback)
+	if(comments[abstractNode.loc.start]
+		&& comments[abstractNode.loc.start].includes('@')) {
+		onAttributes(programCallstack, comments, abstractNode)
+	}
+	if(typeof onNode == 'function') {
+		onNode(programCallstack, comments, abstractNode)
+	}
+	walk.simple(abstractNode, doInstruction
+		// pass to infix to postfix stack creator
+		.bind(null, programCallstack, comments))
+
 }
 
 // PROGRAM CALCULATOR IN < 100 LOC WAS 
@@ -104,31 +141,12 @@ function doInstruction(programCallstack, comments) {
 //   ware pattern to add specific data-types/JSON/ZMQ/COM
 
 
-// onInstruction awaits until stack is cleared
-function onInstruction(programCallstack, program) {
-	// TODO: return a new call frame
-	if(!runContext.programTimer) {
-		runContext.programTimer = setInterval(
-			runStatement.bind(null, runContext, resolve, reject))
-	}
-	if(stack.length < frame - 1) {
-		clearInterval(runContext.programTimer)
-		throw new Error('Program error: ', runContext.error)
-	} else if (stack.length < frame) {
-		clearInterval(runContext.programTimer)
-		if(typeof runContext.error != 'undefined') {
-			return reject(runContext.error)
-		} else {
-			return resolve(runContext.bubbleReturn.pop())
-		} 
-	}
-}
-
 // TODO: get rid of repl/accessor
-function onEval(node) {
-	if(node && node.type == 'Evaluate') {
+function onEval(abstractNode) {
+	if(abstractNode && abstractNode.type == 'Evaluate') {
 		return Promise.resolve(node.value())
 	}
+	doAttributes(programCallstack, comments, abstractNode)
 	// TODO: manage call stack / return stack, that's all
 	return ctx.bubbleReturn[0]
 }
