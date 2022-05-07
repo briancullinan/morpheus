@@ -8,14 +8,38 @@ let programHeap = []
 
 const BOOTSTRAP_CURSOR = 'script'
 const BOOTSTRAP_EVAL = `(
-// 
-// @Add(@FunctionExpression,doBootstrap)
+// add aspects to control program stack
+// @Add(@Program,doBootstrap)
 function () {
 	${BOOTSTRAP_CURSOR}
 })()`
 const PREAMBLE_LINES = BOOTSTRAP_EVAL
 		.split(BOOTSTRAP_CURSOR)[0]
 		.split('\n').length
+
+
+function doEval(evalStr) {
+	if(!evalStr) {
+		throw new Error('No program!')
+	}
+	if(evalStr.hasOwnProperty('length')) {
+		return Promise.resolve(onInstruction(evalStr))
+	}
+	if(typeof evalStr != 'string') {
+		throw new Error('Don\'t know what to do!')
+	}
+	let accumulatedComments = []
+	let comments = []
+	let program = acorn.parse(BOOTSTRAP_EVAL.replace('script', evalStr),
+	{	
+		ecmaVersion: 2020, locations: true, 
+		onToken: doComments,
+		onComment: onComments,
+	})
+	program.comments = comments
+	// make sure we hit a `Program` first thing
+	return onInstruction(doInstruction(evalStr))
+}
 
 // pretty loose attribute parser, parses attribs with 1 or more params
 //  like @Function(_bootstrap,doBootstrap)
@@ -24,29 +48,99 @@ const MATCH_ATTRIBUTE = /@(add|remove)\s*\(\s*([^,\)]*?)\s*(,\s*[^,\)]*?\s*)*\)/
 
 // every time I feel like I can make a vast improvement in style
 // to test this concept, lets use it from the very beginning
-function doEval(runContext) {
-	let accumulatedComments = []
-	if(!runContext.body) {
-		return Promise.resolve(acorn.parse(
-			BOOTSTRAP_EVAL.replace('script', runContext.script),
-			{	
-				ecmaVersion: 2020, locations: true, 
-				onToken: function (abstractNode) {
-					if(typeof runContext.comments == 'undefined') {
-						runContext.comments = []
-					}
-					runContext.comments[abstractNode.start] = accumulatedComments
-					accumulatedComments = []
-				},
-				onComment: function (_, comment, start, end) {
-					accumulatedComments.push(comment)
-					// add aspects to control program stack
-				}
-			// make sure we hit a `FunctionExpresion` first thing
-			}).body[0].expression.callee)
-			.then(doStatments.bind(null, runContext))
+
+function onInstruction(runContext, resolve, reject) {
+	if(!runContext.programTimer) {
+		runContext.programTimer = setInterval(runStatement.bind(null, runContext, resolve, reject))
+	}
+	if(stack.length < frame - 1) {
+		clearInterval(runContext.programTimer)
+		throw new Error('Program error: ', runContext.error)
+	} else if (stack.length < frame) {
+		clearInterval(runContext.programTimer)
+		if(typeof runContext.error != 'undefined') {
+			return reject(runContext.error)
+		} else {
+			return resolve(runContext.bubbleReturn.pop())
+		} 
 	} else {
-		return Promise.resolve(doStatments.bind(null, runContext))
+		doAttributes(programCallstack.pop(), 
+		{programCallstack, callFrame, runContext})
+	}
+
+}
+
+function doInstruction() {
+	programCallstack.push({
+		type: 'Evaluate',
+		value: (function (instruction) {
+			onEval(runContext, instruction)
+			debugger
+			throw new Error(abstractNode.type + ': Not implemented!')
+		}).bind(null, abstractNode)
+	})
+	// TODO: return program context if one does not exist
+}
+
+// TODO: write in a way we can add attribution to other things like MP3s
+function doAttributes() {
+	let comments = runContext.comments[abstractNode.start] || []
+	if(typeof comments == 'string') {
+		comments = [runContext.comments[abstractNode.start]]
+	}
+	for(let i = 0; i <= comments.length; i++) {
+		let attribName
+		let params = []
+		if(i == comments.length) {
+			attribName = '@'+abstractNode.type.toLocaleLowerCase()
+		}
+	}
+	// TODO: push Attributes to stack
+	// do instruction
+}
+
+
+function onAttributes() {
+	// on instructions
+	// actually to do the attribute thing
+}
+
+
+function doComments(abstractNode) {
+	let match = MATCH_ATTRIBUTE.exec(runContext.comments[abstractNode.start])
+	if(match) {
+		attribName = match[1].toLocaleLowerCase()
+		params = match[3].split(/\s*,\s*/g).slice(1)
+		params.unshift(match[2])
+	}
+	comments[abstractNode.start] = accumulatedComments
+	accumulatedComments = []
+	for(let j = 0; j < runContext.attributes[attribName].length; j++) {
+		let callee = runContext.attributes[attribName][j]
+		if(typeof callee == 'string') {
+			callee = runContext[runContext.attributes[attribName][j]]
+		}
+		// TODO: push onto stack using same mechanisms
+		callee(params, {abstractNode, programCallstack, callFrame, runContext})
+		// TODO: doAttributes
+	}
+}
+
+
+function onComments(_, comment, start, end) {
+	debugger
+	accumulatedComments.push(comment)
+	// TODO: doComments
+}
+
+
+// TODO: get rid of repl/accessor
+function onEval(node) {
+	if(node && node.type == 'Evaluate') {
+		return Promise.resolve(node.value())
+	}
+	return {
+		result: ctx.bubbleReturn[0]
 	}
 }
 
@@ -78,14 +172,9 @@ function doStatments(runContext, program) {
 		function ({programCallstack, callFrame, runContext}) {
 			if(doBubbleOut(programCallstack, callFrame, runContext)) {
 				programThreads.splice(programThreads.indexOf(runContext), 1)
-				if(typeof runContext.error != 'undefined') {
-					return reject(runContext.error)
-				} else {
-					return resolve(runContext.bubbleReturn.pop())
-				}
+				
 			} else {
-				doAttributes(programCallstack.pop(), 
-						{programCallstack, callFrame, runContext})
+				
 			}
 		}).bind(null, {
 			programCallstack: program.hasOwnProperty('length') ? program : [program],
@@ -96,44 +185,21 @@ function doStatments(runContext, program) {
 }
 
 function doBubbleOut(stack, frame, runContext) {
-	if(stack.length < frame - 1) {
-		throw new Error('Program error: ', runContext.error)
-	} else // if (stack.length)
-	return stack.length < frame
+	
 }
 
 function doAttributes(abstractNode, {programCallstack, callFrame, runContext}) {
-	let comments = runContext.comments[abstractNode.start] || []
-	if(typeof comments == 'string') {
-		comments = [runContext.comments[abstractNode.start]]
-	}
-	for(let i = 0; i <= comments.length; i++) {
-		let attribName
-		let params = []
-		if(i == comments.length) {
-			attribName = '@'+abstractNode.type.toLocaleLowerCase()
-		} /* else if (i == comments.length + 1) {
+	 /* else if (i == comments.length + 1) {
 			attribName = 
 		} */ else {
-			let match = MATCH_ATTRIBUTE.exec(runContext.comments[abstractNode.start])
-			if(match) {
-				attribName = match[1].toLocaleLowerCase()
-				params = match[3].split(/\s*,\s*/g).slice(1)
-				params.unshift(match[2])
-			} else {
+			 else {
 				continue
 			}
 		}
 		if(typeof runContext.attributes[attribName] == 'undefined') {
 			continue
 		}
-		for(let j = 0; j < runContext.attributes[attribName].length; j++) {
-			let callee = runContext.attributes[attribName][j]
-			if(typeof callee == 'string') {
-				callee = runContext[runContext.attributes[attribName][j]]
-			}
-			callee(params, {abstractNode, programCallstack, callFrame, runContext})
-		}
+		
 	}
 	
 }
@@ -217,14 +283,7 @@ function doInstruction(attributeParams,
 ) {
 	// TODO: if type == Evaluate, await
 	debugger
-	programCallstack.push({
-		type: 'Evaluate',
-		value: (function (instruction) {
-			onEval(runContext, instruction)
-			debugger
-			throw new Error(abstractNode.type + ': Not implemented!')
-		}).bind(null, abstractNode)
-	})
+	
 	//
 }
 
