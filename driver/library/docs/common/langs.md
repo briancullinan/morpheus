@@ -1,0 +1,17 @@
+# Functional
+
+
+
+
+# Procedural
+
+
+
+# Idempotent
+
+
+
+# Variadic
+
+
+

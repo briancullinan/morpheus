@@ -17,7 +17,7 @@ function doBootstrap(script) {
 	parser.body[0].expression.arguments[0].type = 'Literal'
 	parser.body[0].expression.arguments[0].value = script
 	let program = doEval({ body: parser.body[0], script: acornParse })
-	return program
+	return doEval({ body: program.body[0], script: acornParse })
 	// doEval({ body: program.body[0], script: script })
 }
 
@@ -25,7 +25,6 @@ function doEval(runContext) {
 	// convert entire eval repl to a single program stack
 	//   this might help with debugging because then it is flat
 	//   no branching to await calls
-	debugger
 	if(!runContext.body) {
 		// TODO: move doBootstrap here so I don't have to put anything more in Makefile
 		let program = acorn.parse('(' + doBootstrap + ')(script)', 
@@ -49,8 +48,9 @@ function doEval(runContext) {
 		//   IN THE CALL WHEN I CLICK ON IT, THEN USE SOME OTHER INDICATION TO NAVIGATE LINES.
 		runContext.body = program.body[0]
 	} else {
-		console.log('eval: ' + script)
+		console.log('eval: ' + runContext.script)
 	}
+	doEval.interpreted = true
 	return awaitProgram(runContext.body, runContext)
 }
 
@@ -61,11 +61,9 @@ function awaitProgram(program, runContext) {
 		runContext = currentContext
 	}
 	// to test this concept, lets use it from the very beginning
-	if(typeof runContext.programCallstack == 'undefined') {
-		runContext.bubbleReturn = [void 0]
+	if(typeof runContext.bubbleReturn == 'undefined') {
+		runContext.bubbleReturn = new Array(programThreads.length + 1).fill(void 0)
 		runContext.continueOnError = true
-		runContext.programCallstack = []
-		runContext.programCount = -1
 		runContext.localDeclarations = [
 			globalThis,
 			runContext,
@@ -75,25 +73,26 @@ function awaitProgram(program, runContext) {
 		runContext.bubbleReturn.push(void 0)
 		//debugger
 		//throw new Error('Don\'t know what to do!')
+		console.assert(runContext.bubbleReturn.length == programThreads.length + 1)
 	}
 	// program continues until it is stopped or 
 	//   errors or program stack is emptied
 	console.log('timer started')
-	
+	// always keep at least 1 void so we know where -1 is (aka null)
+	let programCallstack = new Array(programThreads.length + 1).fill(void 0)
+	runContext.programTimer = setInterval(
+		programCounter.bind(null, {
+			programCallstack: programCallstack,
+			callFrame: programThreads.length + 1,
+			runContext: runContext,
+		}), 1000/60)
 	return new Promise(function (resolve, reject) {
-		runContext.programTimer = setInterval(
-			programCounter.bind(null, 
-				/* callFrame + 1 */
-				runContext.programCallstack.length,
-				runContext), 1000/60)
 		if(program.hasOwnProperty('length')) {
 			for(let i = program.length-1; i >= 0; --i) {
-				runContext.programCount++
-				runContext.programCallstack.push(program[i])
+				programCallstack.push(program[i])
 			}
 		} else {
-			runContext.programCount++
-			runContext.programCallstack.push(program)
+			programCallstack.push(program)
 		}
 		programThreads.push(runContext)
 		programResponses.push({resolve, reject})
@@ -108,11 +107,10 @@ function cleanupProgram(runContext) {
 	let programI = programThreads.indexOf(runContext)
 	programThreads.splice(programI, 1)
 	let {resolve, reject} = programResponses.splice(programI, 1)[0]
-	debugger
 	if(typeof runContext.error != 'undefined') {
 		return reject(runContext.error)
 	} else {
-		return resolve(runContext.bubbleReturn[0])
+		return resolve(runContext.bubbleReturn.pop())
 	}
 }
 
@@ -125,7 +123,7 @@ function onEval(runContext, AST, ...exp) {
 }
 
 
-function beforeSymbol(AST, frame, runContext) {
+function beforeSymbol(AST, programCallstack, frame, runContext) {
 	// TODO: add attribute modifiers
 	// TODO: VISUALIZING THIS SHOULD HELP DEBUG TOO LARGE PARAMETER PASSING
 	//   AND THE KIND OF PLACES THAT THINGS LIKE CLOJURE CAN TREE-FOLD OUT.
@@ -151,12 +149,12 @@ function beforeSymbol(AST, frame, runContext) {
 	}
 
 	console.log('Thread ' + runContext.programTimer,
-		' . S-length: ' + runContext.programCallstack.length,
+		' . S-length: ' + programCallstack.length,
 		' . C-frame: ' + frame,
 		' . A-type: ' + AST.type,
 		rValues,
 		nameStr,
-		/*+ ', P-codes: ' + runContext.programCallstack
+		/*+ ', P-codes: ' + programCallstack
 		.slice(AST.frameStart, AST.frameEnd)
 		.map(function (symbol) {return symbol.type})
 		.join(' . ')
@@ -165,7 +163,7 @@ function beforeSymbol(AST, frame, runContext) {
 }
 
 
-function shouldBubbleOut(AST, callFrame, runContext) {
+function shouldBubbleOut(AST, programCallstack, callFrame, runContext) {
 	if(runContext.continueOnError && runContext.error) {
 		// clear error for non member statements
 		//   otherwise member access will take care of it
@@ -177,15 +175,15 @@ function shouldBubbleOut(AST, callFrame, runContext) {
 				// TODO: add error remover to CallExpression
 				//&& AST.type != 'CallExpression'
 		) {
-		//if(runContext.programCount) {
+		//if(programCount) {
 			// TODO: callback somewhere?
 			//console.error(runContext.error)
 			//delete runContext.error
-			//runContext.programCallstack.pop()
-			//runContext.programCount--
+			//programCallstack.pop()
+			//programCount--
 		}
 	}
-	return runContext.programCount - callFrame == -1
+	return programCallstack.length < callFrame
 			|| (typeof runContext.error != 'undefined'
 					&& !runContext.continueOnError)
 }
@@ -207,43 +205,40 @@ function shouldBubbleOut(AST, callFrame, runContext) {
 // WHERE THE SAME CODE RUNS BUT IN ONE ENVIRONMENT IT'S READING FROM MEMFS, AND
 //   ONE ENVIRONMENT IT'S READING FROM ZFS. LIKE DEPENDENCY INJECTION ON STEROIDS.
 //   IT'S LIKE THE ASPECTS CHANGE DEPENDENCIES ON THE FLY.
-function programCounter(callFrame, runContext) {
+function programCounter({programCallstack, callFrame, runContext}) {
 	currentContext = runContext
-	//if(runContext.programCount > callFrame + 1) { // waiting for something
+	//if(programCount > callFrame + 1) { // waiting for something
 	//  return
 	//}
 	// INTERESTING IT APPEARS TO BE CONTINUING ON ERROR, 
 	//   I SHOULD PRESERVE THAT FUNCTIONALITY AS A FEATURE
 	// TODO: move to before symbol
-	if(runContext.programCallstack.length > 0
+	if(programCallstack.length > 0
 		// TODO: CODE REVIEW, too much hardening?
-		&& runContext.programCallstack[
-			runContext.programCallstack.length-1]
-		&& runContext.programCallstack[
-			runContext.programCallstack.length-1].stillRunning) {
+		&& programCallstack[
+			programCallstack.length-1]
+		&& programCallstack[
+			programCallstack.length-1].stillRunning) {
 		return
 	}
-	let AST = runContext.programCallstack.pop()
-	if(shouldBubbleOut(AST, callFrame, runContext)) {
+	let AST = programCallstack.pop()
+	if(shouldBubbleOut(AST, programCallstack, callFrame, runContext)) {
 		return cleanupProgram(runContext)
-	}
-	if(runContext.programCount != runContext.programCallstack.length) {
-		debugger
-		throw new Error('Thread ' + runContext.programTimer + ':Call stack exceeded!')
 	}
 	// TODO: control how many commands it calls every frame?
 	// TODO: add @Function(__name, __func) // symbol attributes
 	// TODO: add @Identifier(__name, __func) // symbol attributes
-	beforeSymbol(AST, callFrame, runContext)
-	AST.frameStart = runContext.programCallstack.length
+	beforeSymbol(AST, programCallstack, callFrame, runContext)
+	AST.frameStart = programCallstack.length
 	switch(AST.type) {
+		// TODO: seperate VISITOR code from 
+		// type: 'Evaluate' evalIdentifier() callbacks
 		case 'Evaluate': 
 			// prevent the program from doing anything unless the stack changes
 			if(AST.stillRunning) {
-				runContext.programCallstack.push(AST)
+				programCallstack.push(AST)
 			} else {
 				AST.stillRunning = true
-				runContext.programCount -= 1
 				Promise.resolve(AST.value.apply(AST))
 			}
 			break
@@ -252,7 +247,7 @@ function programCounter(callFrame, runContext) {
 				//debugger
 			}
 			// TODO: check if local and don't take another frame
-			runContext.programCallstack.push({
+			programCallstack.push({
 				type: 'Evaluate',
 				value: (function (identifier, idName) {
 					onEval(runContext, identifier)
@@ -270,7 +265,7 @@ function programCounter(callFrame, runContext) {
 			})
 			break
 		case 'MemberExpression':
-			runContext.programCallstack.push({
+			programCallstack.push({
 				type: 'Evaluate',
 				// TODO: NEED A WAY TO SET EXPECTATIONS BETWEEN REMOTE SERVICES
 				//   IF I DO THIS ON A LANGUAGE LEVEL, LIKE MEMBER EXPRESSION -> CALL EXPRESSION
@@ -293,29 +288,25 @@ function programCounter(callFrame, runContext) {
 						return
 					}
 					// TODO: push async propery eval and 
-					// runContext.programCount += 1
 					// CODE REVIEW, SEE CONTROL IS EASIER IN 1 LOOP
 					runContext.bubbleReturn.push(object[property])
 				}).bind(null, AST)
 			})
 			if(AST.computed) {
-				runContext.programCount += 2
 				// need object on bubbleReturn stack first
-				runContext.programCallstack.push(AST.property) 
+				programCallstack.push(AST.property) 
 			} else {
-				runContext.programCount += 1
 			}
-			runContext.programCallstack.push(AST.object)
+			programCallstack.push(AST.object)
 			break
 		case 'Literal':
 			// interesting, showing a literal move from program memory to 
 			//   heap?
-			runContext.programCount--
 			runContext.bubbleReturn.push(AST.value)
 			break
 		case 'CallExpression':
 
-			if(runContext.bubbleReturn.length != callFrame + 1) {
+			if(runContext.bubbleReturn.length != callFrame) {
 				debugger
 				// something it's putting it's previous result back on the stack
 				//   used in situations like `if((assignee = value))`
@@ -342,7 +333,7 @@ function programCounter(callFrame, runContext) {
 						throw new Error('Thread ' + runContext.programTimer + ':Callee is not a function.')
 					}
 
-					if(runContext.bubbleReturn.length != callFrame + 1) {
+					if(runContext.bubbleReturn.length != callFrame) {
 						debugger
 						// something it's putting it's previous result back on the stack
 						//   used in situations like `if((assignee = value))`
@@ -354,24 +345,22 @@ function programCounter(callFrame, runContext) {
 
 					// pop this guy back onto the stack because it's async
 					//   it will clear when async finalizes
-					console.log('call: ', callee, params)
+					console.log('Thread ' + runContext.programTimer + ': call: ', callee, params)
 					console.assert(reEvaluate.type == 'Evaluate')
-					runContext.programCount++
-					runContext.programCallstack.push(reEvaluate)
+					programCallstack.push(reEvaluate)
 					Promise.resolve(callee(...params))
 					.catch(function (e) { runContext.error = e; return e })
 					.then(function (result) {
-						console.log('result: ', result)
+						console.log('Thread ' + runContext.programTimer + ': result: ', result)
 						// need a little bit of screwarounds incase the call actually
 						//   makes stack changes. this prevents the runner from doing anything
 						//   even if it's called multiple times
-						runContext.programCount--
-						runContext.programCallstack.pop()
+						programCallstack.pop() // remove async Evaluate
 						if(callee && callee.interpreted) {
-							runContext.bubbleResult = runContext.bubbleReturn.pop()
-							if(result !== runContext.bubbleResult) {
-								console.error('Thread ' + runContext.programTimer + ': Not bubbling correctly.')
-							}
+							//runContext.bubbleReturn.pop() // void 0?
+							//if(result !== runContext.bubbleResult) {
+							//	console.error('Thread ' + runContext.programTimer + ': Not bubbling correctly.')
+							//}
 						} else {
 							
 						}
@@ -381,18 +370,16 @@ function programCounter(callFrame, runContext) {
 
 				}).bind(null, AST)
 			}
-			runContext.programCallstack.push(reEvaluate)
+			programCallstack.push(reEvaluate)
 			for(let i = AST.arguments.length-1; i >= 0; --i) {
-				runContext.programCount += 1
-				runContext.programCallstack.push(AST.arguments[i])
+				programCallstack.push(AST.arguments[i])
 			}
 			// CODE REVIEW, I made a change where each token doesn't
 			//   have to make the same stack/counter changes and forgot this one
-			runContext.programCount += 1
-			runContext.programCallstack.push(AST.callee)
+			programCallstack.push(AST.callee)
 			break
 		case 'ReturnStatement':
-			runContext.programCallstack.push({
+			programCallstack.push({
 				type: 'Evaluate',
 				value: (function (statement) {
 					onEval(runContext, statement)
@@ -401,21 +388,22 @@ function programCounter(callFrame, runContext) {
 					//   return value from processing the argument command below
 					//   everything else should clear their own values, when they 
 					//   are Evaled
-					if(runContext.bubbleReturn.length != callFrame + 1) {
+					let result = runContext.bubbleReturn.pop()
+					if(runContext.bubbleReturn.length != callFrame) {
 						debugger
 						throw new Error('Thread ' + runContext.programTimer + ': Corrupted stack.')
 					}
+					debugger
+					return result
 					// TODO: exit whole frame
 					//runContext.bubbleReturn.push(globalThis[AST.name])
 				}).bind(null, AST)
 			})
-			runContext.programCount += 1
-			runContext.programCallstack.push(AST.argument)
+			programCallstack.push(AST.argument)
 			break
 		case 'FunctionExpression':
 			// TODO: copy creation context
 			// return a function?
-			runContext.programCount -= 1 // because we are adding a return statement
 			// not adding an Evaluate command so need to subtract 1
 			let newInterpretedFunction = (function (interpretedFunction, body, params, ...args) {
 				// evaluate body after params?
@@ -423,36 +411,24 @@ function programCounter(callFrame, runContext) {
 				// implied assignment expression
 				// assign params and defaults
 				for(let i = params.length-1; i >= 0; --i) {
-					//runContext.programCount += 1
 					newProgram.push({
 						type: 'AssignmentExpression',
 						left: { type: 'Identifier', name: params[i].name },
 						right: { type: 'Literal', value: args[i] },
 					})
 				}
-				//runContext.programCount += 1
 				newProgram.push(body)
-
-				let reEvaluate;
-				reEvaluate = {
-					type: 'Evaluate',
-					value: (function (interpreted) {
-						onEval(interpreted)
-						debugger
-						// TODO: make the first timer stick at the end of it's frame
-						//   make the second timer continue on the stack between
-						//   arbitrary frames
-						console.assert(reEvaluate.type == 'Evaluate')
-						runContext.programCount++
-						runContext.programCallstack.push(reEvaluate)
-								return awaitProgram(newProgram, runContext)
-					}).bind(null, interpretedFunction)
-				}
-				// TODO: need a way to trick the first thread into waiting 
-				//   and continue the program on the same stack?
-				runContext.programCount++
-				runContext.programCallstack.push(reEvaluate)
-				debugger
+				// leave an extra void 0 in front like a chip call frame
+				let beforeLength = runContext.bubbleReturn.length
+				runContext.bubbleReturn.push(void 0)
+				return Promise.resolve(awaitProgram(newProgram, runContext))
+				.then(function (result) {
+					debugger
+					console.assert(runContext.bubbleReturn.length == beforeLength)
+					console.assert(runContext.bubbleReturn.pop() == void 0)
+					runContext.bubbleReturn.push(result)
+					return result
+				})
 
 			}).bind(null, AST, AST.body, AST.params)
 			newInterpretedFunction.interpreted = true
@@ -462,16 +438,15 @@ function programCounter(callFrame, runContext) {
 			// so going into every expression can have a
 			//   maximum of one return value from previous
 			//   statement/exp/call
-			if(runContext.bubbleReturn.length != callFrame + 1) {
+			if(runContext.bubbleReturn.length != callFrame) {
 				debugger
 				throw new Error('Thread ' + runContext.programTimer + ': Corrupted stack.')
 			}
-			runContext.programCallstack.push({
+			programCallstack.push({
 				type: 'Evaluate',
 				value: (function (statement, expression) {
 					onEval(runContext, statement)
-					runContext.programCount += 1
-					runContext.programCallstack.push(expression)
+					programCallstack.push(expression)
 					// TODO: make a change like implied return? 
 					// TODO: discard previous statement so every token doesn't need to?
 					//runContext.bubbleReturn.pop()
@@ -481,21 +456,18 @@ function programCounter(callFrame, runContext) {
 			break
 		case 'BlockStatement':
 			// TODO: something to do with promises?
-			if(runContext.bubbleReturn.length != callFrame + 1) {
+			if(runContext.bubbleReturn.length != callFrame) {
 				debugger
 				throw new Error('Thread ' + runContext.programTimer + ': Corrupted stack.')
 			}
-			runContext.bubbleReturn.pop()
 			// TODO: create context on stack
-			runContext.programCount -= 1
-			runContext.programCount += AST.body.length
 			for(let i = AST.body.length-1; i >= 0; i--) {
-				runContext.programCallstack.push(AST.body[i])
+				programCallstack.push(AST.body[i])
 			}
 			break
 		case 'BinaryExpression':
 			// TODO: THIS WILL ALLOW ME TO TRANSFORM ARRAY.FILTER() INTO PARALLEL PROMISES?
-			runContext.programCallstack.push({
+			programCallstack.push({
 				type: 'Evaluate',
 				value: (function (expression) {
 					onEval(runContext, expression)
@@ -504,23 +476,19 @@ function programCounter(callFrame, runContext) {
 					runContext.bubbleReturn.push(left + right)
 				}).bind(null, AST)
 			})
-			runContext.programCount += 1
-			runContext.programCallstack.push(AST.left)
-			runContext.programCount += 1
-			runContext.programCallstack.push(AST.right)
+			programCallstack.push(AST.left)
+			programCallstack.push(AST.right)
 			break
 		case 'VariableDeclaration':
-			runContext.programCount -= 1
 			for(let i = 0; i < AST.declarations.length; i++) {
-				runContext.programCount += 1
-				runContext.programCallstack.push(AST.declarations[i])
+				programCallstack.push(AST.declarations[i])
 			}
-			if(runContext.bubbleReturn.length == callFrame) {
-				runContext.bubbleReturn.push(void 0)
+			if(runContext.bubbleReturn.length < callFrame) {
+				//runContext.bubbleReturn.push(void 0)
 			}
 			break
 		case 'VariableDeclarator':
-			runContext.programCallstack.push({
+			programCallstack.push({
 				type: 'Evaluate',
 				value: (function (declaration, varName) {
 					onEval(runContext, declaration)
@@ -528,23 +496,22 @@ function programCounter(callFrame, runContext) {
 							[varName] = runContext.bubbleReturn.pop()
 
 					// i think (let i = 0) == undefined? no?
-					if(runContext.bubbleReturn.length == callFrame) {
+					if(runContext.bubbleReturn.length < callFrame) {
 						runContext.bubbleReturn.push(void 0)
 						// declarations have no return statement
 					}
 
 				}).bind(null, AST, AST.id.name)
 			})
-			runContext.programCount += 1
-			runContext.programCallstack.push(AST.init)
+			programCallstack.push(AST.init)
 			break
 		case 'AssignmentExpression':
-			if(runContext.bubbleReturn.length != callFrame + 1) {
+			if(runContext.bubbleReturn.length != callFrame) {
 				debugger
 				throw new Error('Thread ' + runContext.programTimer + ': Corrupted stack.')
 			}
 			runContext.bubbleReturn.pop()
-			runContext.programCallstack.push({
+			programCallstack.push({
 				type: 'Evaluate',
 				value: (function (expression, assignee) {
 					onEval(runContext, expression)
@@ -564,19 +531,17 @@ function programCounter(callFrame, runContext) {
 				}).bind(null, AST, AST.left)
 			})
 			if(AST.left.type == 'MemberExpression') {
-				runContext.programCount += 1
-				runContext.programCallstack.push(AST.left.object)
+				programCallstack.push(AST.left.object)
 			} else if (AST.left.type == 'Identifier') {
 
 			} else {
 				// TODO: runContext.error = 
 				throw new Error(AST.type + ': Not implemented: ' + AST.left.type)
 			}
-			runContext.programCount += 1
-			runContext.programCallstack.push(AST.right)
+			programCallstack.push(AST.right)
 			break
 		case 'ObjectExpression':
-			runContext.programCallstack.push({
+			programCallstack.push({
 				type: 'Evaluate',
 				value: (function (object) {
 					onEval(runContext, object)
@@ -594,20 +559,18 @@ function programCounter(callFrame, runContext) {
 			// TODO: paralell object initializers?
 			for(let k = AST.properties.length-1; k >= 0; k--) {
 				if(AST.properties[k].value) {
-					runContext.programCount += 1
-					runContext.programCallstack.push(AST.properties[k].value)
+					programCallstack.push(AST.properties[k].value)
 				}
 			}
 			break
 		/*
 		case 'Property':
-			runContext.programCallstack.pop()
-			runContext.programCallstack.push({
+			programCallstack.pop()
+			programCallstack.push({
 				type: 'Evaluate',
 				value: (function (object) {
 					debugger
-					runContext.programCount -= 1
-					runContext.programCallstack.pop()
+					programCallstack.pop()
 				}).bind(null, )
 			})
 		*/
@@ -615,7 +578,7 @@ function programCounter(callFrame, runContext) {
 			debugger
 			throw new Error(AST.type + ': Not implemented!')
 	}
-	AST.frameEnd = runContext.programCallstack.length
+	AST.frameEnd = programCallstack.length
 }
 
 
