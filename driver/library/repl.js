@@ -166,7 +166,7 @@ async function doAccessor(response) { // shouldn't need senderId with DI
 				script: response.script
 			}
 			try {
-				let result = await doEval(runContext)
+				let result = await doEval(runContext.script)
 				if(!runContext.bubbleReturn
 					|| !Object.is(result, runContext.bubbleReturn[0])) {
 					console.error('WARNING: not bubbling correctly: ' + response.script)

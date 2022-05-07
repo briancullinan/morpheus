@@ -1,6 +1,8 @@
 // something is wrong with repl
 //   it's way too slow
 //   let's try something new
+// every time I feel like I can make a vast improvement in style
+// to test this concept, lets use it from the very beginning
 
 let programThreads = []
 let programResponses = []
@@ -18,8 +20,10 @@ const BOOTSTRAP_CURSOR = 'script'
 //   actually using eval, where-as here, its using a 
 //   visitor and hacking the scope for real references.
 // add aspects to control program stack
-const BOOTSTRAP_EVAL = `( // @Add(@Program,doBootstrap)
+const BOOTSTRAP_EVAL = `(
+/* @Add(@Program,doBootstrap) */
 function () { ${BOOTSTRAP_CURSOR} })()`
+
 const PREAMBLE_LINES = BOOTSTRAP_EVAL
 		.split(BOOTSTRAP_CURSOR)[0]
 		.split('\n').length
@@ -46,45 +50,28 @@ function doEval(evalStr) {
 	})
 	// await (Promise) for program to finish executing
 	// make sure we hit a `Program` first thing
-	return onInstruction({
-		programCallstack, program, comments, 
-	}).then(onEval)
+	return new Promise(onInstruction
+		.bind(this, {
+			// runContext
+			programCallstack, program, comments, 
+			// this returns with function below removes
+		})).then(onEval)
 }
 
-// every time I feel like I can make a vast improvement in style
-// to test this concept, lets use it from the very beginning
-function doComment(comments, accumulatedComments, token) {
-	let commentLength = accumulatedComments.length
-	comments[token.start] = accumulatedComments.splice(0)
-	console.assert(comments[token.start].length == commentLength)
-}
-function onComment(accumulatedComments, _, comment) {
-	accumulatedComments.push(comment)
-}
-
-// *on - request
-// *do - trigger
-
-// onInstruction awaits until stack is cleared
-function onInstruction(runContext) {
-	// TODO: return a new call frame
-	if(!runContext.programTimer) {
-		runContext.programTimer = setInterval(
-			// bind to self for timed execution ?
-			doInstruction.bind(null, runContext), 1000/60)
+// TODO: get rid of repl/accessor
+function onEval(abstractNode) {
+	if(abstractNode && abstractNode.type == 'Evaluate') {
+		return Promise.resolve(node.value())
 	}
-	if (stack.length < frame) {
-		clearInterval(runContext.programTimer)
-		if(typeof runContext.error != 'undefined'
-			|| stack.length < frame - 1) {
-			console.log('Program error: ', runContext.error)
-			return reject(runContext.error)
-		}
-		return resolve(runContext.async)
+	// queues up new instructions or pushes onto return stack
+	debugger
+	doAttributes()
+	// TODO: micro manage call stack / return stack, that's all
+	if(typeof doNode == 'function') {
+		doNode()
 	}
-	return new Promise(function (resolve, reject) {
-		
-	})
+		// TODO: doNode() // callback for status reporting?
+	return ctx.bubbleReturn[0]
 }
 
 // doInstruction pushes AST arguments/left/right 
@@ -105,7 +92,22 @@ function doInstruction(runContext, abstractNode) {
 	//   programming?
 	// off the program stack, on to call stack, 
 	//   same as in CPU memory, but at the...
-	programCallstack.push({
+	let abstractNode = runContext.programCallstack.pop()
+
+if(!evalStr) {
+	throw new Error('No program!')
+}
+if(evalStr.hasOwnProperty('length')) {
+	return Promise.resolve(onInstruction(evalStr))
+}
+if(typeof evalStr != 'string') {
+	throw new Error('Don\'t know what to do!')
+}
+
+	if(runContext.programCallstack.length != runContext.frameId) {
+		throw new Error('Callstack corrupted!')
+	}
+	runContext.programCallstack.push({
 		type: 'Evaluate',
 		value: onEval.bind(null, abstractNode)
 	})
@@ -117,17 +119,47 @@ function doInstruction(runContext, abstractNode) {
 	//    part of REPL middleware. evaluator should 
 	//    be able to support it this time around.
 	// Format: @Program(__name, __callback)
-	if(comments[abstractNode.loc.start]
-		&& comments[abstractNode.loc.start].includes('@')) {
-		onAttributes(programCallstack, comments, abstractNode)
+	if(runContext.comments[abstractNode.loc.start]
+		&& runContext.comments[abstractNode.loc.start].includes('@')) {
+		onAttributes(runContext.programCallstack, 
+			runContext.comments, abstractNode)
 	}
 	if(typeof onNode == 'function') {
-		onNode(programCallstack, comments, abstractNode)
+		onNode(runContext.programCallstack, 
+			runContext.comments, abstractNode)
 	}
 	walk.simple(abstractNode, doInstruction
 		// pass to infix to postfix stack creator
-		.bind(null, programCallstack, comments))
+		.bind(null, runContext.programCallstack, comments))
 
+}
+
+// *on - request
+// *do - trigger
+
+// onInstruction awaits until stack is cleared
+function onInstruction(runContext, resolve, reject) {
+	// TODO: return a new call frame
+	if(!runContext.programTimer) {
+		runContext.programTimer = setInterval(
+			// onInstruction is called once, begins
+			//   stack frame initialization unto onEval
+			//   can be called with a final result and
+			//   frame returns to (frame - 1)
+			// bind to self for timed execution ?
+			doInstruction.bind(null, runContext), 1000/60)
+	}
+	if (runContext.programCallstack.length < frame) {
+		clearInterval(runContext.programTimer)
+		if(typeof runContext.error != 'undefined'
+			|| runContext.programCallstack.length < frame - 1) {
+			console.log('Program error: ', runContext.error)
+			return reject(runContext.error)
+		}
+		return resolve(runContext.async)
+	}
+	runContext.programCallstack.push(runContext.program.body[0])
+	// doInstruction(runContext, )
 }
 
 // PROGRAM CALCULATOR IN < 100 LOC WAS 
@@ -140,13 +172,3 @@ function doInstruction(runContext, abstractNode) {
 //   REPL features would be the same simple middle-
 //   ware pattern to add specific data-types/JSON/ZMQ/COM
 
-
-// TODO: get rid of repl/accessor
-function onEval(abstractNode) {
-	if(abstractNode && abstractNode.type == 'Evaluate') {
-		return Promise.resolve(node.value())
-	}
-	doAttributes(programCallstack, comments, abstractNode)
-	// TODO: manage call stack / return stack, that's all
-	return ctx.bubbleReturn[0]
-}

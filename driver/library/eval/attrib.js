@@ -3,22 +3,21 @@
 
 // TODO: add attributes to comments to JS for use in CI
 
+// collects comments from parser?
+function doComment(comments, accumulatedComments, token) {
+	let commentLength = accumulatedComments.length
+	comments[token.start] = accumulatedComments.splice(0)
+	console.assert(comments[token.start].length == commentLength)
+}
+function onComment(accumulatedComments, _, comment) {
+	accumulatedComments.push(comment)
+}
+
 // pretty loose attribute parser, parses attribs with 1 or more params
 //  like @Function(_bootstrap,doBootstrap)
 const MATCH_ATTRIBUTE = /@(add|remove)\s*\(\s*([^,\)]*?)\s*(,\s*[^,\)]*?\s*)*\)/i
 
 
-
-
-if(!evalStr) {
-	throw new Error('No program!')
-}
-if(evalStr.hasOwnProperty('length')) {
-	return Promise.resolve(onInstruction(evalStr))
-}
-if(typeof evalStr != 'string') {
-	throw new Error('Don\'t know what to do!')
-}
 // TODO: write in a way we can add attribution to other things like MP3s
 function doAttributes() {
 	let comments = runContext.comments[abstractNode.start] || []
@@ -36,18 +35,37 @@ function doAttributes() {
 	// do instruction
 }
 
-
 function onAttributes() {
 	// on instructions
 	// actually to do the attribute thing
+	// TODO: @Node attribute also fires
+	//   doAttribute within the predicate frame
 }
+
+/*
+
+if(!evalStr) {
+	throw new Error('No program!')
+}
+if(evalStr.hasOwnProperty('length')) {
+	return Promise.resolve(onInstruction(evalStr))
+}
+if(typeof evalStr != 'string') {
+	throw new Error('Don\'t know what to do!')
+}
+
+
 
 
 function doComments(abstractNode) {
 	let match = MATCH_ATTRIBUTE.exec(runContext.comments[abstractNode.start])
 	if(match) {
 		attribName = match[1].toLocaleLowerCase()
-		params = match[3].split(/\s*,\s*/g).slice(1)
+*/
+
+//		params = match[3].split(/\s*,\s*/g).slice(1)
+
+/*
 		params.unshift(match[2])
 	}
 	comments[abstractNode.start] = accumulatedComments
@@ -115,7 +133,7 @@ function doStatments(runContext, program) {
 function doAttributes(abstractNode, {programCallstack, callFrame, runContext}) {
 	 /* else if (i == comments.length + 1) {
 			attribName = 
-		} */ else {
+		}  {
 			 else {
 				continue
 			}
@@ -214,3 +232,8 @@ function doInstruction(attributeParams,
 //function doFunctionExpression(attributeArg, attributeParams, abstractNode, runContext) {
 //	debugger
 //}
+
+
+*/
+
+
