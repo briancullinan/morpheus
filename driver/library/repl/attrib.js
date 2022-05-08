@@ -1,7 +1,9 @@
 
+// TODO: make this a DFA animation showing every node type
+//   in a long list and shifting between positions
+//   should go nicely with the vertical line highlighter.
 
-
-// TODO: add attributes to comments to JS for use in CI
+// add attributes to comments to JS for use in CI
 
 // collects comments from parser?
 function doComment(comments, accumulatedComments, token) {
@@ -16,27 +18,59 @@ function onComment(accumulatedComments, _, comment) {
 
 // pretty loose attribute parser, parses attribs with 1 or more params
 //  like @Function(myCustomBootstrap,doBootstrap)
-const MATCH_ATTRIBUTE = /@(add|remove)\s*\(\s*([^,\)]*?)\s*(,\s*[^,\)]*?\s*)*\)/i
+const MATCH_ATTRIBUTE = /@(\w)\s*\(\s*([^,\)]*?)\s*(,\s*[^,\)]*?\s*)*\)/i
 
 const TOP_HALF = [
 	doNode,
 	onAttributes,
 ]
 
+// I THINK THIS FULLY CAPTURES WHAT I WAS IMAGINING
+/* 
+this list above adds attributes via @add(@function,doFunction)
+		to abstractNode.attributes only once it loads this list.
+the loops below add call statements for attributes in the order of
+
+	using @function for example, but this runs the 
+			same for every symbol, ie.e @literal @identifier @codeblock
+			@add(@function, doOnce) - means run on attribute load - one time
+			@add(function, doFunction) - means run on every function node - this one is implied
+
+	- one time only for each node type
+			@add/@remove(@function, doCustomFunction) - runContext.attributes
+			@dev/@myCustomAttribute - abstractNode.attributes
+		push doFunctionAttribute  - first time only
+		push all on to stack (@function -> doCustomFunction)  - one time only
+
+	- runs every time for a node
+		push doNode - Evaluate
+		push doFunction
+		push all (abstractNode.attributes) i.e. @auth/@public
+		push all (runContext.attributes['function']) - without @ 
+																		means run on node, not run on attribute loading
+		
+	THIS ENSURES PROGRAMMATIC CONTROL OVER EVERY STEP USING CALLBACKS
+	basically:
+			@runFunction() callbacks - once
+			doFunctionAttribute()
+			runFunction callbacks - every node
+			@user @attributes - all user defined attributes for node every call
+			doFunction - load params / body
+			doNode - start on* callback events
+
+	TODO: add @before, @after as POC
+
+*/
 // TODO: write in a way we can add attribution to other things like MP3s
-function doAttribute(runContext, abstractNode) {
+function doAttributes(runContext, abstractNode) {
 	if(typeof runContext.attributes == 'undefined') {
 		runContext.attributes = []
 	}
-	/*
-	for(let i = 0; i < TOP_HALF.length; i++) {
-		runContext.programCallstack.push({
-			type: 'Evaluate',
-			value: TOP_HALF[i]
-					.bind(null, runContext, abstractNode)
-		})
-	}
-	*/
+	// TODO: look up attribs in library to figure out
+	//   what REPL functions to call for symbols, i.e.
+	//   one modest size function to handle all loop
+	//   types, @for,@do,@dowhile all on the doLoop()
+
 	if(typeof abstractNode.attributes == 'undefined') {
 		// this runs 1 time to load attributes for the 
 		//   statement for the whole program
@@ -55,7 +89,7 @@ function doAttribute(runContext, abstractNode) {
 			if(!match) {
 				continue
 			}
-			let attribName = match[1].type.toLocaleLowerCase()
+			let attribName = match[1].toLocaleLowerCase()
 					.replace(/^@/, '')
 			// TODO: load attributes from comments into nodes
 			// on instructions
@@ -65,13 +99,73 @@ function doAttribute(runContext, abstractNode) {
 			if(typeof runContext.attributes[attribName] == 'undefined') {
 				runContext.attributes[attribName] = []
 			}
-
+			runContext.attributes[attribName].push([
+				match[1], 
+				[match[2]].concat(match[3].split(',')
+					.map(function(attr) { return attr.trim() })),
+				[comments[abstractNode.loc.start][i]]
+					.concat(Array.from(match))
+			])
 		}
 
 		// TODO: add C# static Class loader feature here
 
+		// TODO: add / remove
+		for(let j = 0;
+			j < runContext.attributes[attribName].length) {
+
+			if( == 'add' || 'remove') {
+
+				// push onto runContext.attributes
+				continue
+			}
+
+			// push only abstractNode.attributes
+		}
+
+		TOP_HALF.push('do' + abstractNode.type + 'Attribute')
 	}
 
+	// add a bunch of defaults
+	let TOP_HALF = [
+		'doNode',
+		'do' + abstractNode.type,
+	]
+
+	for(let i = 0; i < TOP_HALF.length; i++) {
+		runContext.programCallstack.push({
+			type: 'Evaluate',
+			value: TOP_HALF[i]
+					.bind(null, runContext, abstractNode)
+		})
+	}
+
+	for(let k = 0;
+		k < abstractNode.attributes.length; 
+		k++) {
+		// TODO: lookup function in global
+
+		// TODO: lookup function in library
+
+		// TODO: weird, how to collapse and make @Identifier lookups
+		//   also use the same doLibraryLookup call here? is this
+		//   art abstract enough for everyone? lol
+	}
+
+	// TOP_HALF_TOPPER
+
+	for(let l = 0;
+		l < runContext.attributes[abstractNode.type.toLocaleLowerCase()]; 
+		l++) {
+		
+	}
+
+	// TODO: only 1 time, convenience for loading more attributes
+	for(let m = 0;
+		m < runContext.attributes['@'+abstractNode.type.toLocaleLowerCase()]; 
+		m++) {
+		
+	}
 }
 
 
