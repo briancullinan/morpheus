@@ -17,65 +17,35 @@ function onComment(accumulatedComments, _, comment) {
 //  like @Function(_bootstrap,doBootstrap)
 const MATCH_ATTRIBUTE = /@(add|remove)\s*\(\s*([^,\)]*?)\s*(,\s*[^,\)]*?\s*)*\)/i
 
+const TOP_HALF = [
+	doNode,
+	onAttributes,
+	doNodeAttribute,
+]
+
 
 // TODO: write in a way we can add attribution to other things like MP3s
 function doAttribute(
 		programCallstack, comments, abstractNode) {
-	// doStatus()
-	programCallstack.push({
-		type: 'Evaluate',
-		value: doNode
-				.bind(null, runContext, abstractNode)
-	})
 
-	// @Program attributes
-	programCallstack.push({
-		type: 'Evaluate',
-		value: onAttributes
-				.bind(null, runContext, abstractNode)
-	})
-
-	// @Program attributes
-	programCallstack.push({
-		type: 'Evaluate',
-		value: doNodeAttribute
-				.bind(null, runContext, abstractNode)
-	})
-}
-
-function doNodeAttribute() {
-	// TODO: micro manage call stack / return stack, that's all
-	// TODO: push Attributes to stack
-	// do instruction
-	for(let i = 0; 
-			i < comments[abstractNode.loc.start].length; 
-			++i) {
-		let match = MATCH_ATTRIBUTE.exec(
-				comments[abstractNode.loc.start][i])
+	for(let i = 0; i < TOP_HALF.length; i++) {
 		programCallstack.push({
 			type: 'Evaluate',
-			value: doNode
-					.bind(null, runContext, abstractNode)
+			value: TOP_HALF[i]
 		})
 	}
 
 }
 
+
 function doNode(runContext, abstractNode) {
 	// TODO:  if abstractNode has attributes
+
 	programCallstack.push({
 		type: 'Evaluate',
 		value: onNode
 				.bind(null, runContext, abstractNode)
 	})
-
-	if(typeof doStatus != 'undefined') {
-		programCallstack.push({
-			type: 'Evaluate',
-			value: doStatus
-					.bind(null, runContext, abstractNode)
-		})
-	}
 
 	if(typeof globalThis['do' + abstractNode.type]) {
 		programCallstack.push({
@@ -87,24 +57,68 @@ function doNode(runContext, abstractNode) {
 
 }
 
+
 function onAttributes() {
-	debugger
-	// on instructions
-	// actually to do the attribute thing
-	// TODO: @Node attribute also fires
-	//   doAttribute within the predicate frame
-	for(let i = 0; i <= comments.length; i++) {
-		let attribName
-		let params = []
-		if(i == comments.length) {
-			attribName = '@'+abstractNode.type.toLocaleLowerCase()
+
+	for(let i = 0; i < abstractNode.attributes.length; i++) {
+		// TODO: add attributes to statements
+		programCallstack.push({
+			type: 'Evaluate',
+			value: doNode
+					.bind(null, runContext, abstractNode)
+		})
+	}
+
+}
+
+
+function doNodeAttribute() {
+	// TODO: micro manage call stack / return stack, that's all
+	// TODO: push Attributes to stack
+	// do instruction
+	for(let i = 0; 
+			i < comments[abstractNode.loc.start].length; 
+			++i) {
+		let match = MATCH_ATTRIBUTE.exec(
+				comments[abstractNode.loc.start][i])
+		// TODO: load attributes from comments into nodes
+		// on instructions
+		// actually to do the attribute thing
+		// TODO: @Node attribute also fires
+		//   doAttribute within the predicate frame
+		for(let i = 0; i <= comments.length; i++) {
+			let attribName
+			let params = []
+			if(i == comments.length) {
+				attribName = '@'+abstractNode.type.toLocaleLowerCase()
+			}
 		}
 	}
 
 }
 
 
+
+
+
+// #################### BOTTOM_HALF
+
+
+const BOTTOM_HALF = [
+	onNodeAttribute,
+	doAttributes,
+	onNode
+]
+
 function onNode(runContext, abstractNode) {
+	// TODO: add BOTTOM_HALF
+	for(let i = 0; i < BOTTOM_HALF.length; i++) {
+		programCallstack.push({
+			type: 'Evaluate',
+			value: BOTTOM_HALF[i]
+		})
+	}
+
 	if(typeof globalThis['on' + abstractNode.type]) {
 		programCallstack.push({
 			type: 'Evaluate',
@@ -113,6 +127,20 @@ function onNode(runContext, abstractNode) {
 		})
 	}
 
+}
+
+function doAttributes() {
+	debugger
+
+	if(typeof doStatus != 'undefined') {
+		programCallstack.push({
+			type: 'Evaluate',
+			value: doStatus
+					.bind(null, runContext, abstractNode)
+		})
+	}
+
+	/*
 	programCallstack.push({
 		type: 'Evaluate',
 		value: onNodeAttribute
@@ -124,8 +152,10 @@ function onNode(runContext, abstractNode) {
 		value: globalThis['on' + abstractNode.type]
 				.bind(null, runContext, abstractNode)
 	})
+	*/
 
 }
+
 
 
 
