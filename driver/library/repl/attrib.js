@@ -16,14 +16,58 @@ function onComment(accumulatedComments, _, comment) {
 	accumulatedComments.push(comment)
 }
 
+// ENTRY INTO ATTRIBUTE SYSTEM
+function doNode(runContext, abstractNode) {
+
+	runContext.programCallstack.push({
+		type: 'Evaluate',
+		value: onNode
+				.bind(null, runContext, abstractNode)
+	})
+
+	runContext.programCallstack.push({
+		type: 'Evaluate',
+		value: doAttributes
+				.bind(null, runContext, abstractNode)
+	})
+
+	// CODE REVIEW, THIS IS A PRE-CURSOR TO LOADING THE CURRENT NODE'S ATTRIBUTES
+	//   LOAD THE ACTUAL ATTRIBUTES FROM COMMENTS INTO THE NODE OBJECT
+	if(typeof abstractNode.attributes == 'undefined') {
+		// this runs 1 time to load attributes for the 
+		//   statement for the whole program
+		//   i.e. if a function is called multiple times
+		//   it does not load it's own attributes multiple 
+		//   times, only once. if attributes need to change
+		//   every time a function is called, an attribute
+		//   should be created that changes the list of
+		//   runContext.attributes. i.e. @Add(@Function, _changeAttribs)
+		runContext.programCallstack.push({
+			type: 'Evaluate',
+			value: doNodeAttributes
+					.bind(null, runContext, abstractNode,
+							// for convenience
+							runContext.comments[abstractNode.loc.start])
+		})
+
+	}
+
+}
+
+// ENTRY INTO ATTRIBUTE SYSTEM
+function onNode(runContext, abstractNode) {
+
+	runContext.programCallstack.push({
+		type: 'Evaluate',
+		value: onAttributes
+				.bind(null, runContext, abstractNode)
+	})
+
+}
+
 // pretty loose attribute parser, parses attribs with 1 or more params
 //  like @Function(myCustomBootstrap,doBootstrap)
 const MATCH_ATTRIBUTE = /@(\w)\s*\(\s*([^,\)]*?)\s*(,\s*[^,\)]*?\s*)*\)/i
-
-const TOP_HALF = [
-	doNode,
-	onAttributes,
-]
 
 // I THINK THIS FULLY CAPTURES WHAT I WAS IMAGINING
 /* 
@@ -53,9 +97,11 @@ the loops below add call statements for attributes in the order of
 	basically:
 			@runFunction() callbacks - once
 			doFunctionAttribute()
+			
 			runFunction callbacks - every node
 			@user @attributes - all user defined attributes for node every call
 			doFunction - load params / body
+
 			doNode - start on* callback events
 
 	TODO: add @before, @after as POC
@@ -63,81 +109,21 @@ the loops below add call statements for attributes in the order of
 */
 // TODO: write in a way we can add attribution to other things like MP3s
 function doAttributes(runContext, abstractNode) {
-	if(typeof runContext.attributes == 'undefined') {
-		runContext.attributes = []
+
+	if(typeof globalThis['do' + abstractNode.type] == 'function') {
+		runContext.programCallstack.push({
+			type: 'Evaluate',
+			value: globalThis['do' + abstractNode.type]
+					.bind(null, runContext, abstractNode)
+		})
 	}
+
 	// TODO: look up attribs in library to figure out
 	//   what REPL functions to call for symbols, i.e.
 	//   one modest size function to handle all loop
 	//   types, @for,@do,@dowhile all on the doLoop()
 
-	if(typeof abstractNode.attributes == 'undefined') {
-		// this runs 1 time to load attributes for the 
-		//   statement for the whole program
-		//   i.e. if a function is called multiple times
-		//   it does not load it's own attributes multiple 
-		//   times, only once. if attributes need to change
-		//   every time a function is called, an attribute
-		//   should be created that changes the list of
-		//   runContext.attributes. i.e. @Add(@Function, _changeAttribs)
-		abstractNode.attributes = []
-		for(let i = 0; 
-			i < comments[abstractNode.loc.start].length; 
-			++i) {
-			let match = MATCH_ATTRIBUTE.exec(
-					comments[abstractNode.loc.start][i])
-			if(!match) {
-				continue
-			}
-			let attribName = match[1].toLocaleLowerCase()
-					.replace(/^@/, '')
-			// TODO: load attributes from comments into nodes
-			// on instructions
-			// actually to do the attribute thing
-			// TODO: @Node attribute also fires
-			//   doAttribute within the predicate frame
-			if(typeof runContext.attributes[attribName] == 'undefined') {
-				runContext.attributes[attribName] = []
-			}
-			runContext.attributes[attribName].push([
-				match[1], 
-				[match[2]].concat(match[3].split(',')
-					.map(function(attr) { return attr.trim() })),
-				[comments[abstractNode.loc.start][i]]
-					.concat(Array.from(match))
-			])
-		}
-
-		// TODO: add C# static Class loader feature here
-
-		// TODO: add / remove
-		for(let j = 0;
-			j < runContext.attributes[attribName].length) {
-
-			if( == 'add' || 'remove') {
-
-				// push onto runContext.attributes
-				continue
-			}
-
-			// push only abstractNode.attributes
-		}
-
-		TOP_HALF.push('do' + abstractNode.type + 'Attribute')
-	}
-
-	// add a bunch of defaults
-	let TOP_HALF = [
-		'doNode',
-		'do' + abstractNode.type,
-	]
-
 	for(let i = 0; i < TOP_HALF.length; i++) {
-		runContext.programCallstack.push({
-			type: 'Evaluate',
-			value: TOP_HALF[i]
-					.bind(null, runContext, abstractNode)
-		})
 	}
 
 	for(let k = 0;
@@ -166,6 +152,69 @@ function doAttributes(runContext, abstractNode) {
 		m++) {
 		
 	}
+}
+
+
+// CODE REVIEW, USING THESE LITTLE INTERNAL RECURSIVE LOOPS SHOULD SHOW
+//   UP AS LEAVES IN A CODE REVIEW TOOL, BUT IT ALLOWS THE FUNCTION ABOVE
+//   TO MAINTAIN ITS PURPOSE OF LOADING THE CURRENT NODES ATTRIBUTES ONTO STACK
+//   DESPITE HAVING A PRE-CURSOR TO THAT; I.E. ACTUALLY LOADING THE ATTRIBUTES
+function doNodeAttributes(runContext, abstractNode, comments) {
+
+	if(typeof runContext.attributes == 'undefined') {
+		runContext.attributes = []
+		// TODO: do
+	}
+
+	if(typeof abstractNode.attributes != 'undefined') {
+		return // prevent recursion
+	}
+
+
+	abstractNode.attributes = []
+	for(let i = 0; 
+		i < comments.length; 
+		++i) {
+		let match = MATCH_ATTRIBUTE.exec(
+				comments[abstractNode.loc.start][i])
+
+		if(!match) { continue }
+		let attribName = match[1].toLocaleLowerCase()
+				.replace(/^@/, '')
+		// TODO: load attributes from comments into nodes
+		// on instructions
+		// actually to do the attribute thing
+		// TODO: @Node attribute also fires
+		//   doAttribute within the predicate frame
+		if(typeof runContext.attributes[attribName] == 'undefined') {
+			runContext.attributes[attribName] = []
+		}
+		runContext.attributes[attribName].push([
+			match[1], 
+			[match[2]].concat(match[3].split(',')
+				.map(function(attr) { return attr.trim() })),
+			[comments[abstractNode.loc.start][i]]
+				.concat(Array.from(match))
+		])
+	}
+
+	// TODO: add C# static Class loader feature here
+
+	// TODO: add / remove
+	for(let j = 0;
+		j < runContext.attributes[attribName].length;
+		j++) {
+
+		if( == 'add' || 'remove') {
+
+			// push onto runContext.attributes
+			continue
+		}
+
+		// push only abstractNode.attributes
+	}
+
+	
 }
 
 

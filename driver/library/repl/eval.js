@@ -174,7 +174,7 @@ function onEval(runContext, resolve, reject) {
 	// queues up new instructions or pushes onto return stack
 	runContext.programCallstack.push({
 		type: 'Evaluate',
-		value: doAttributes.bind(null, runContext, abstractNode)
+		value: doNode.bind(null, runContext, abstractNode)
 	})
 	return onEval(runContext, resolve, reject)
 		// Format: @Program(__name, __callback)
