@@ -10,6 +10,45 @@
 // Lots of ways to run a process, abstraction makes it more reliable?
 
 
+function beforeSymbol(AST, programCallstack, frame, runContext) {
+	// TODO: add attribute modifiers
+	// TODO: VISUALIZING THIS SHOULD HELP DEBUG TOO LARGE PARAMETER PASSING
+	//   AND THE KIND OF PLACES THAT THINGS LIKE CLOJURE CAN TREE-FOLD OUT.
+	let nameStr = ''
+	if(AST.type == 'CallExpression') {
+		// TODO: need to recompile specific expressions for this purpose?
+		//   how to convert AST back to code without importing esprima?
+
+	} else 
+	if(AST.type == 'Evaluate') {
+
+	} else 
+	if(AST.type == 'Identifier') {
+		nameStr = ' . I-name: ' + AST.name
+	}
+	let rValues = ' . R-values: '
+	if(runContext.bubbleReturn.length == 1
+		&& typeof runContext.bubbleReturn[runContext.bubbleReturn.length-1] == 'undefined'
+		) {
+			rValues += 'void'
+	} else {
+		rValues +=  runContext.bubbleReturn.length
+	}
+
+	console.log('Thread ' + runContext.programTimer,
+		' . S-length: ' + programCallstack.length,
+		' . C-frame: ' + frame,
+		' . A-type: ' + AST.type,
+		rValues,
+		nameStr,
+		/*+ ', P-codes: ' + programCallstack
+		.slice(AST.frameStart, AST.frameEnd)
+		.map(function (symbol) {return symbol.type})
+		.join(' . ')
+		*/
+		)
+}
+
 function doConsole(...args) {
 	console.log(args)
 	sendMessage({
@@ -166,7 +205,7 @@ async function doAccessor(response) { // shouldn't need senderId with DI
 				script: response.script
 			}
 			try {
-				let result = await doEval(runContext.script)
+				let result = await doEval(runContext, runContext.script)
 				if(!runContext.bubbleReturn
 					|| !Object.is(result, runContext.bubbleReturn[0])) {
 					console.error('WARNING: not bubbling correctly: ' + response.script)

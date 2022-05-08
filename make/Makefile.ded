@@ -23,11 +23,11 @@ morph.ded.opt: morph.ded.wasm $(BUILD_DIR)/morph.ded.wasm
 #   I CAN USE A BLOB, OR CREATE SOME GENERIC IDBFS WORKER FOR BOTH SERVICE WORKER AND
 #   BACKGROUND WORKER THAT JUST LOADS WHATEVER LATEST .WASM DOWNLOADED FILE.
 
-WORKER_FILES  := $(wildcard driver/library/eval/*.js)      \
+WORKER_FILES  := $(wildcard driver/library/repl/*.js)      \
 	driver/utils/acorn.js driver/utils/acorn-loose.js        \
 	driver/utils/acorn-walk.js                               \
 	driver/utils/crypt.js driver/utils/jsencrypt.js          \
-	driver/library/repl.js driver/utils/remarkable.js
+	driver/utils/remarkable.js
 
 #	driver/utils/remarkable.min.js
 

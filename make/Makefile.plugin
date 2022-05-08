@@ -24,7 +24,7 @@ morph.zip: $(PLUGIN_BUILD_DIRS) backend.js frontend.js $(PLUGIN_FILES)
 	@:
 
 BACKEND_PLUGIN  := \
-	$(wildcard driver/library/eval/*.js) \
+	$(wildcard driver/library/repl/*.js) \
 	$(filter-out %/backend-worker.js,$(wildcard driver/repl/backend*.js)) \
 	driver/utils/acorn.js driver/utils/acorn-loose.js \
 	driver/utils/crypt.js driver/utils/jsencrypt.js
