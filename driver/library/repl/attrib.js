@@ -9,106 +9,134 @@ function doComment(comments, accumulatedComments, token) {
 	comments[token.start] = accumulatedComments.splice(0)
 	console.assert(comments[token.start].length == commentLength)
 }
+
 function onComment(accumulatedComments, _, comment) {
 	accumulatedComments.push(comment)
 }
 
 // pretty loose attribute parser, parses attribs with 1 or more params
-//  like @Function(_bootstrap,doBootstrap)
+//  like @Function(myCustomBootstrap,doBootstrap)
 const MATCH_ATTRIBUTE = /@(add|remove)\s*\(\s*([^,\)]*?)\s*(,\s*[^,\)]*?\s*)*\)/i
 
 const TOP_HALF = [
 	doNode,
 	onAttributes,
-	doNodeAttribute,
 ]
 
-
 // TODO: write in a way we can add attribution to other things like MP3s
-function doAttribute(
-		programCallstack, comments, abstractNode) {
-
+function doAttribute(runContext, abstractNode) {
+	if(typeof runContext.attributes == 'undefined') {
+		runContext.attributes = []
+	}
+	/*
 	for(let i = 0; i < TOP_HALF.length; i++) {
-		programCallstack.push({
+		runContext.programCallstack.push({
 			type: 'Evaluate',
 			value: TOP_HALF[i]
+					.bind(null, runContext, abstractNode)
 		})
+	}
+	*/
+	if(typeof abstractNode.attributes == 'undefined') {
+		// this runs 1 time to load attributes for the 
+		//   statement for the whole program
+		//   i.e. if a function is called multiple times
+		//   it does not load it's own attributes multiple 
+		//   times, only once. if attributes need to change
+		//   every time a function is called, an attribute
+		//   should be created that changes the list of
+		//   runContext.attributes. i.e. @Add(@Function, _changeAttribs)
+		abstractNode.attributes = []
+		for(let i = 0; 
+			i < comments[abstractNode.loc.start].length; 
+			++i) {
+			let match = MATCH_ATTRIBUTE.exec(
+					comments[abstractNode.loc.start][i])
+			if(!match) {
+				continue
+			}
+			let attribName = match[1].type.toLocaleLowerCase()
+					.replace(/^@/, '')
+			// TODO: load attributes from comments into nodes
+			// on instructions
+			// actually to do the attribute thing
+			// TODO: @Node attribute also fires
+			//   doAttribute within the predicate frame
+			if(typeof runContext.attributes[attribName] == 'undefined') {
+				runContext.attributes[attribName] = []
+			}
+
+		}
+
+		// TODO: add C# static Class loader feature here
+
 	}
 
 }
 
 
+// TODO: combine entire attribute feature into 2 functions just like doEval()
+
+
 function doNode(runContext, abstractNode) {
 	// TODO:  if abstractNode has attributes
-
-	programCallstack.push({
+	runContext.programCallstack.push({
 		type: 'Evaluate',
 		value: onNode
 				.bind(null, runContext, abstractNode)
 	})
 
+	// TODO: make this implicit using the look below?
 	if(typeof globalThis['do' + abstractNode.type]) {
-		programCallstack.push({
+		runContext.programCallstack.push({
 			type: 'Evaluate',
 			value: globalThis['do' + abstractNode.type]
 					.bind(null, runContext, abstractNode)
 		})
 	}
 
+	// this would be a good place to put `static` loaders
+	//   i.e. doFunctionAttribute() { attributes.push('static', loadLibraries) }
+	if(typeof globalThis['do' + abstractNode.type + 'Attribute']) {
+		programCallstack.push({
+			type: 'Evaluate',
+			value: globalThis['do' + abstractNode.type + 'Attribute']
+					.bind(null, runContext, abstractNode)
+		})
+	}
+
+
+	// This runs every time the call is hit
+	// CODE REVIEW, I DON'T LIKE USING `this.`
+
 }
 
 
-function onAttributes() {
 
+function onAttributes(runContext, abstractNode) {
+
+	attribName = '@'+abstractNode.type.toLocaleLowerCase()
 	for(let i = 0; i < abstractNode.attributes.length; i++) {
 		// TODO: add attributes to statements
 		programCallstack.push({
 			type: 'Evaluate',
-			value: doNode
-					.bind(null, runContext, abstractNode)
+			value: function () {}
 		})
 	}
 
 }
 
 
-function doNodeAttribute() {
-	// TODO: micro manage call stack / return stack, that's all
-	// TODO: push Attributes to stack
-	// do instruction
-	for(let i = 0; 
-			i < comments[abstractNode.loc.start].length; 
-			++i) {
-		let match = MATCH_ATTRIBUTE.exec(
-				comments[abstractNode.loc.start][i])
-		// TODO: load attributes from comments into nodes
-		// on instructions
-		// actually to do the attribute thing
-		// TODO: @Node attribute also fires
-		//   doAttribute within the predicate frame
-		for(let i = 0; i <= comments.length; i++) {
-			let attribName
-			let params = []
-			if(i == comments.length) {
-				attribName = '@'+abstractNode.type.toLocaleLowerCase()
-			}
-		}
-	}
-
-}
-
-
-
-
-
 // #################### BOTTOM_HALF
 
-
 const BOTTOM_HALF = [
-	onNodeAttribute,
+	onNode,
 	doAttributes,
-	onNode
+	onNodeAttribute,
 ]
+// TODO: micro manage call stack / return stack, that's all
+// TODO: push Attributes to stack
+// do instruction
 
 function onNode(runContext, abstractNode) {
 	// TODO: add BOTTOM_HALF
@@ -116,6 +144,7 @@ function onNode(runContext, abstractNode) {
 		programCallstack.push({
 			type: 'Evaluate',
 			value: BOTTOM_HALF[i]
+					.bind(null, runContext, abstractNode)
 		})
 	}
 
@@ -129,7 +158,8 @@ function onNode(runContext, abstractNode) {
 
 }
 
-function doAttributes() {
+// this runs every time the call is hit
+function doAttributes(runContext, abstractNode) {
 	debugger
 
 	if(typeof doStatus != 'undefined') {
@@ -157,10 +187,9 @@ function doAttributes() {
 }
 
 
-
-
+// this runs 1 time for each node in a program to load @After node functions
 // TODO: @After calls
-function onNodeAttribute() {
+function onNodeAttribute(runContext, abstractNode) {
 	// TODO: micro manage call stack / return stack, that's all
 	// TODO: push Attributes to stack
 	// do instruction
@@ -169,9 +198,14 @@ function onNodeAttribute() {
 			++i) {
 		let match = MATCH_ATTRIBUTE.exec(
 				comments[abstractNode.loc.start][i])
+	}
+
+	// this would be a good place to put `static` loaders
+	//   i.e. on
+	if(typeof globalThis['on' + abstractNode.type + 'Attribute']) {
 		programCallstack.push({
 			type: 'Evaluate',
-			value: doNode
+			value: globalThis['on' + abstractNode.type+ 'Attribute']
 					.bind(null, runContext, abstractNode)
 		})
 	}

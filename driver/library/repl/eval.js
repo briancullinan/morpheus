@@ -138,7 +138,7 @@ function onEval(runContext, resolve, reject) {
 	let abstractNode = runContext.programCallstack.pop()
 	if(abstractNode && abstractNode.type == 'Evaluate') {
 		// prevent recursion
-		return Promise.resolve(node.value())
+		return Promise.resolve(abstractNode.value())
 	}
 
 	if(runContext.programCallstack.length > runContext.frameId) {
