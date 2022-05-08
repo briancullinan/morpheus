@@ -6,13 +6,13 @@
 // remove these references for web and emulate
 const fs = require('fs')
 const path = require('path')
-const FS = require('../sys_fs.js')
+const FS = require('../../../engine/wasm/sys_fs.js')
 const {Sys_Mkdirp, ST_FILE} = FS
 const {
 	initProgram,
 	initAll,
 } = require('../sys_wasm.js')
-const {stringToAddress, addressToString} = require('../sys_std.js')
+const {stringToAddress, addressToString} = require('../../../engine/wasm/sys_std.js')
 
 
 let foundFiles = []
@@ -93,38 +93,7 @@ function Sys_Exit(e) {
 
 
 function parseCommandLine() {
-	let wasmFile
-	let startArgs = []
-	let runProgram = false
-	for(let i = 0; i < process.argv.length; i++) {
-		let a = process.argv[i]
-		if(a.match(__filename)) {
-			runProgram = true
-		} else if(a == '--') {
-			continue
-		} else if(a == 'node' || a.endsWith('/node')) {
-			continue
-		} else if(a.includes('.wasm')) {
-			if(fs.existsSync(a)) {
-				wasmFile = a
-			} else if (path.join(__dirname, '../../../build/release-wasm-js/', a)) {
-				wasmFile = path.resolve(path.join(__dirname, '../../../build/release-wasm-js/', a))
-			} else {
-				throw new Error('Wasm not found: ' + a)
-			}
-			startArgs.push(wasmFile)
-			foundFiles.push(wasmFile)
-		} else if (a) {
-			startArgs.push(a)
-			if(fs.existsSync(a) || (
-				path.dirname(a).length > 1 && fs.existsSync(path.dirname(a)))
-			) {
-				foundFiles.push(a)
-			} else {
-				//console.log('WARNING: File not found: ' + a)
-			}
-		}
-	}
+	
 
 
 	if(runProgram) {

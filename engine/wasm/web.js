@@ -487,7 +487,7 @@ for(let i = 0; i < process.argv.length; i++) {
 
 if(runServer) {
   const WebSocketServer = require('ws').Server
-  const {Server} = require('../lib/socks.server.js')
+  const {Server} = require('./lib/socks.server.js')
   const express = require('express')
   const app = express()
   const http = require('http')

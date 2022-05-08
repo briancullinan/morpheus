@@ -9,7 +9,9 @@
     "deploy:http": "gsutil -m rsync -r code/wasm/http/ gs://nightly.quake.games/",
     "deploy:game": "gsutil -m cp -r build/*/multigame/vm/*.qvm gs://nightly.quake.games/assets/multigame/vm/",
     "deploy:build": "gsutil -m cp -r build/release-wasm-js/*.wasm gs://nightly.quake.games/",
-    "deploy": "npm run deploy:assets && npm run deploy:http && npm run deploy:build && npm run deploy:game"
+    "deploy": "npm run deploy:assets && npm run deploy:http && npm run deploy:build && npm run deploy:game",
+    "make": "node -e \"require('./library/quine.js').emitMakefile()\"",
+    "cli": "node ./library/quine.js"
   },
   "bin": {
     "quakejs-content": "bin/content.js",
@@ -25,6 +27,11 @@
   "license": "MIT",
   "readmeFilename": "README.md",
   "dependencies": {
+  },
+  "devDependencies": {
+    "babel-cli": "^7.0.0",
+    "cli-progress": "^3.9.0",
+    "minimatch": "^3.0.4",
     "@babel/core": "^7.17.10",
     "@babel/plugin-transform-modules-amd": "^7.16.7",
     "@babel/plugin-transform-modules-commonjs": "^7.17.9",
@@ -44,10 +51,5 @@
     "uglify-js": "^3.15.3",
     "unionfs": "^4.4.0",
     "ws": "^7.4.4"
-  },
-  "devDependencies": {
-    "babel-cli": "^7.0.0",
-    "cli-progress": "^3.9.0",
-    "minimatch": "^3.0.4"
   }
 }

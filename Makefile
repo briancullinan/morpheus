@@ -76,74 +76,23 @@ HTTP_SOURCE    := $(WASM_SOURCE)/http
 SDL_SOURCE     := libs/SDL2-2.0.14
 Q3MAP2_SOURCE  := libs/quake3/q3map2
 
+# THIS IS WAY TO MUCH BS FOR 1 MAKEFILE
 
 # LAYOUT BUILD_DIRS UPFRONT
 BUILD_DIRS     := \
 	$(BUILD_DIR).mkdir \
 	$(filter $(MAKECMDGOALS),clean) 
 
-
-
-define MKDIR_SH
-	@if [ ! -d "./$1" ]; \
-		then $(MKDIR) "./$1";fi;
-endef
-
-$(BUILD_DIR).mkdir/%/:
-	$(call MKDIR_SH,$(subst .mkdir,,$@))
-
-$(BUILD_DIR).mkdir/:
-	$(call MKDIR_SH,$(subst .mkdir,,$@))
-
-#D_DIRS  := $(addprefix $(BUILD_DIR)/,$(WORKDIRS))
-D_FILES := $(shell find $(BUILD_DIR)/** -name '*.d' 2>/dev/null)
-ifneq ($(strip $(D_FILES)),)
-include $(D_FILES)
-endif
+# TODO: lol, make github actions to make commands to make a github
+#   actions quine that makes a github actions and the action runs
+#   make to make another github action. test messaging systems by
+#   making them stall from stack overflow?
 
 release: 
-	$(Q)$(MAKE) V=$(V) multigame \
-		plugin index build-tools \
-		BUILD_DIR="build/release-wasm-js" \
-		CFLAGS="$(RELEASE_CFLAGS)" \
-		LDFLAGS="$(RELEASE_LDFLAGS)"
 
 debug: 
-	$(Q)$(MAKE) V=$(V) multigame \
-		plugin index build-tools \
-		BUILD_DIR="build/debug-wasm-js" \
-		CFLAGS="$(DEBUG_CFLAGS)" \
-		LDFLAGS="$(DEBUG_LDFLAGS)"
 
-
-
-include make/Makefile.antlr
-include make/Makefile.ded
-include make/Makefile.engine
-include make/Makefile.index
-include make/Makefile.jsdom
-include make/Makefile.local
-include make/Makefile.platform
-include make/Makefile.plugin
-include make/Makefile.q3lcc
-include make/Makefile.q3map2
-include make/Makefile.vms
-
-
-
-deploy: engine plugin build-tools
-	@:
-
-ifdef BUILD_DIR
-ifneq ($(BUILD_DIR),)
+deploy: 
 
 clean:
-	-rm ./$(BUILD_DIR)/*/*.o ./$(BUILD_DIR)/*/*.d
-	-rm ./$(BUILD_DIR)/*/*/*.o ./$(BUILD_DIR)/*/*/*.d
-	-rm ./$(BUILD_DIR)/*/*/*/*.o ./$(BUILD_DIR)/*/*/*/*.d
-	-rm ./$(BUILD_DIR)/*.wasm $(BUILD_DIR)/*.html
-
-endif
-endif
-
 

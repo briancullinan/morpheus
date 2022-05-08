@@ -11,18 +11,18 @@ DED_FILES    := $(wildcard $(ENGINE_SOURCE)/botlib/*.c) \
 	$(filter-out %/sys_snd.c,$(wildcard $(ENGINE_SOURCE)/wasm/*.c))
 DED_OBJS     := $(addprefix $(BUILD_DIR)/ded/,$(notdir $(DED_FILES:.c=.o)))
 
-morph.ded.wasm: $(DED_BUILD_DIRS) $(DED_FILES) $(DED_OBJS)
-	$(call DO_ENGINE_LD,$@,$(DED_OBJS))
-
-morph.ded.opt: morph.ded.wasm $(BUILD_DIR)/morph.ded.wasm
-	$(call DO_ENGINE_OPT,$(BUILD_DIR)/morph.ded.opt,$(BUILD_DIR)/morph.ded.wasm)
-
 # OKAY THIS IS BASICALLY THE PART THAT COULD BENEFIT IF MAKEFILE RAN IN THE BROWSER
 # TODO: I COULD COMPRESS ALL THE CODE FILES IN WINDOW.PREFS, MAKE INDEX.HTML ON 
 #   LOAD JUST LIKE BUSYBOX SELF EXTRACTING IMAGE. THEN WHEN I MAKE THE SYS_WORKER.JS
 #   I CAN USE A BLOB, OR CREATE SOME GENERIC IDBFS WORKER FOR BOTH SERVICE WORKER AND
 #   BACKGROUND WORKER THAT JUST LOADS WHATEVER LATEST .WASM DOWNLOADED FILE.
 
+# TODO: USE MAKEFILE -n TO HIGHLIGHT FILE TREE WHEN HOVERING OVER BUILD COMMANDS?
+
+# these will be embedded as virtual filesystem files
+LIBRARY_FILES    := $(wildcard driver/library/*.js)
+
+# BOOTSTRAP CODE?
 WORKER_FILES  := $(wildcard driver/library/repl/*.js)      \
 	driver/utils/acorn.js driver/utils/acorn-loose.js        \
 	driver/utils/acorn-walk.js                               \
@@ -31,48 +31,15 @@ WORKER_FILES  := $(wildcard driver/library/repl/*.js)      \
 
 #	driver/utils/remarkable.min.js
 
-# // BOOTSTRAP CODE?
-$(BUILD_DIR)/sys_worker.js: dedicated $(BUILD_DIR)/morph.ded.wasm $(WORKER_FILES) 
-	echo "\nglobalThis.window = globalThis;\n" > $@
-	node -e "require('./engine/wasm/bin/make').normalFormatAll( \
-		'$@', 'driver/library', 'driver/library/', 'library/')"
-	node -e "console.log( \
-		require('./$(WASM_SOURCE)/sys_idbfs.js').readPreFS + '\n' \
-		+ require('./$(WASM_SOURCE)/sys_idbfs.js')._base64ToArrayBuffer + '\n' \
-		+ require('./driver/library/auth.js').getRunId + '\n' \
-		+ require('./driver/library/middleware.js').asyncTriggerMiddleware + '\n' \
-		+ require('./driver/library/quine.js').encryptedResponseMiddleware + '\n' \
-		+ require('./driver/library/quine.js').workerMessageResponseMiddleware + '\n'  \
-		+ require('./driver/library/quine.js').installEncryptedAsyncMiddleware \
-		+ '\nworkerMessageResponseMiddleware();\n' );" >> $@
-	$(Q)cat $(WORKER_FILES) >> $@
-#	node -e "console.log(require('./engine/wasm/bin/make').formatForVFS( \
-#		'$(BUILD_DIR)/morph.ded.wasm', 'morph.ded.wasm' ))" >> $@
-# TOO DIFFICULT TO DEBUG REPL LIKE THIS
-#	node -e "console.log(require('./engine/wasm/bin/make').formatForVFS( \
-#		'./driver/library/repl.js', 'library/repl.js' ))" >> $@
-
-$(BUILD_DIR)/morph.ded.wasm:
-	@: 
-
 # TODO: move this to service_worker.js, lol, stupid chrome debugger
-dedicated: morph.ded.wasm morph.ded.opt # q3map2.wasm for MemoryMaps
-	@: 
 
-$(BUILD_DIR)/ded/%.o: $(ENGINE_SOURCE)/botlib/%.c
-	$(echo_cmd) "BOTLIB_CC $<"
-	$(Q)$(CC) -o $@ -DDEDICATED=1 -DBOTLIB=1 $(ENGINE_CFLAGS) -c $<
+# TODO: BUILD A MICRO-MANAGED FORK OF Q3E FROM SOURCES
+#   MERGE OUR #IFDEF __WASM__ TAGS ONLY IN THE CODE
+#   GIT DELETE SO HAS A NICE FORMAT LIKE /ENGINE/ DOES NOW
+#   REPLACE /ENGINE/ WITH MICRO-MANAGED SUBMODULE.
 
-$(BUILD_DIR)/ded/%.o: $(ENGINE_SOURCE)/qcommon/%.c
-	$(echo_cmd) "COMMON_CC $<"
-	$(Q)$(CC) -o $@ -DDEDICATED=1 $(ENGINE_CFLAGS) -c $<
+# TODO: BUILD WASM DEDICATED SERVER ONLY USING CFLAGS OR W/E PARAMETER
+#    PASS PARAMS FROM OUR SPECIAL PLATFORM_WASM.MAKE FROM PLANET_QUAKE
 
-$(BUILD_DIR)/ded/%.o: $(ENGINE_SOURCE)/server/%.c
-	$(echo_cmd) "SERVER_CC $<"
-	$(Q)$(CC) -o $@ -DDEDICATED=1 $(ENGINE_CFLAGS) -c $<
-
-$(BUILD_DIR)/ded/%.o: $(ENGINE_SOURCE)/wasm/%.c
-	$(echo_cmd) "WASM_CC $<"
-	$(Q)$(CC) -o $@ -DDEDICATED=1 $(ENGINE_CFLAGS) -c $<
 
 
