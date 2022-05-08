@@ -10,6 +10,19 @@ function expressMessageResponseMiddleware() {
 
 }
 
+
+// emit tooling for making web.js work
+function websocketMessageResponseMiddleware() {
+
+}
+
+
+// NO NEED TO REINVENT THE WHEEL, NODEJS ALREADY PROVIDES
+//   HTTP INTERFACES. WHAT PROGRAM NEEDS DIRECT HTTP ACCESS?
+//   AN HTTP MONITORING PROGRAM CAN PROVIDE IT'S OWN MIDDLEWARE.
+//   THESE ARE ONLY FOR CONNECTING TO THE SERVICE WE NEED TO SELF-HOST.
+//function expressMessageResponseMiddleware() {}
+
 // TODO: copy from jupyter notebook but remove even the 
 //   notebook part and just handle the request data
 function googleMessageResponseMiddleware() {
@@ -29,7 +42,7 @@ function amazonMessageResponseMiddleware() {
 }
 
 const MIDDLEWARE_REPL = [
-	'replAccessorMiddleware',
+	'replEvalMiddleware',
 	'readPreFS',
 	'_base64ToArrayBuffer',
 ]

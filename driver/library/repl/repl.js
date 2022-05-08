@@ -1,5 +1,15 @@
 // inject repl service with utilities attached into any page
 
+// this adds only 1 level on complexity to messages
+//   it encodes responses as 
+/*
+return {
+	type: 'number',
+	number: 0,
+}
+*/
+
+
 // I'm not going to try and run all of ace inside my custom evaluator
 // Runtime.evaluate is a real one, so that's a big sink
 // Then obviously anything I can build or assemble as plain
@@ -8,6 +18,64 @@
 // or backend/frontend plugin or even a hack to communicate 
 // with browser caching for offline content.
 // Lots of ways to run a process, abstraction makes it more reliable?
+
+function replEvalMiddleware(onRequest, doResponse) {
+	// TODO: do an execute, start a timer that does a little dot
+	//   for use in like browser or something
+	//   wait for the response from the other end 
+	//   but using the same endpoints here for both ends.
+	//   client and server, check the runContext.threads
+	//   and response with status message, try to pack all
+	//   kernel communication into a single 50 LOC function.
+
+	return {
+		doExecute,
+		onEvalComplete,
+	}
+}
+
+// TODO: do everything else (i.e. onStatus()) using contextual attributes
+
+function doExecute(request) {
+	try {
+		// will send a result, async, error response
+		let runContext = {
+			script: request.script,
+		}
+		if (typeof runContext.script == 'undefined') {
+			throw new Error('No program!')
+		}
+		if(typeof doEval == 'undefined') {
+			throw new Error('REPL engine does not exist.')
+		}
+		let result = await doEval(runContext, runContext.script)
+		// TODO: set these using attributes
+		if(runContext.ended) {
+			return { // ahhh same as somewhere else in doAccessor
+				stopped: await onAccessor(result),
+			}
+		} else if (runContext.async) {
+			return { 
+				async: getThreads(),
+			}
+		} else {
+			return { 
+				result: await onAccessor(result),
+			}
+		}
+	} catch(e) {
+		return {
+			fail: e.message,
+			stack: e.stack.split(/\s*\n\s*/g),
+		}
+	}
+
+}
+
+
+
+/*
+
 
 
 function beforeSymbol(AST, programCallstack, frame, runContext) {
@@ -41,11 +109,11 @@ function beforeSymbol(AST, programCallstack, frame, runContext) {
 		' . A-type: ' + AST.type,
 		rValues,
 		nameStr,
-		/*+ ', P-codes: ' + programCallstack
+		+ ', P-codes: ' + programCallstack
 		.slice(AST.frameStart, AST.frameEnd)
 		.map(function (symbol) {return symbol.type})
 		.join(' . ')
-		*/
+		
 		)
 }
 
@@ -182,67 +250,7 @@ async function onAccessor(response) {
 //   used to lookup library functions, inject scripts 
 //   into other pages
 async function doAccessor(response) { // shouldn't need senderId with DI
-	if (!response) {
-		throw new Error('Protocol error.')
-	} else 
-	if(typeof response.fail != 'undefined') {
-		throw new Error('Member access error: ' + response.fail)
-	} else
-
-	if(typeof response.object != 'undefined') {
-		let memberName = response.object.name + '.' + response.property.name
-		response =  await sendMessage({
-			accessor: memberName
-		})
-		// TODO: return doAccessor(memberAccess) ? convert string func to RPC
-	}
 	
-
-	if (typeof response.script != 'undefined') {
-		if(typeof doEval != 'undefined') {
-			// will send a result, async, error response
-			let runContext = {
-				script: response.script
-			}
-			try {
-				let result = await doEval(runContext, runContext.script)
-				if(!runContext.bubbleReturn
-					|| !Object.is(result, runContext.bubbleReturn[0])) {
-					console.error('WARNING: not bubbling correctly: ' + response.script)
-					if(runContext.bubbleReturn) {
-						result = runContext.bubbleReturn[0]
-					}
-				}
-				if(runContext.ended) {
-					return { // ahhh same as somewhere else in doAccessor
-						stopped: await onAccessor(result),
-					}
-				} else if (runContext.async) {
-					return { 
-						async: getThreads(),
-					}
-				} else {
-					return { 
-						result: await onAccessor(result),
-					}
-				}
-			} catch(e) {
-				return {
-					fail: e.message,
-					stack: e.stack,
-				}
-			}
-
-		} else if (typeof WorkerGlobalScope !== 'undefined'
-				&& self instanceof WorkerGlobalScope ) {
-			debugger
-			throw new Error('Don\'t know what to do!')
-		} else {
-			let value = await Promise.resolve(
-				eval('(function (){\n' + response.script + '\n})()'))
-			// format for network response in an object
-			return await onAccessor(value)
-		}
 	} else 
 	if(typeof response.library != 'undefined') {
 		try {
@@ -346,7 +354,7 @@ function doLibraryLookup(functionName) {
 				file: libraryFiles[i],
 				// TODO: a hash value? code signing?
 			}
-		} /* else {
+		} else {
 			let currentSession = window.ace.getValue()
 			if (currentSession.includes('function ' + functionName)) {
 				return {
@@ -355,7 +363,7 @@ function doLibraryLookup(functionName) {
 					// TODO: a hash value?
 				}
 			}
-		} */ // CODE REVIEW, this is why we need different contexts, for Live editing
+		} // CODE REVIEW, this is why we need different contexts, for Live editing
 	}
 }
 
@@ -467,5 +475,7 @@ if(typeof module != 'undefined') {
 		doLibraryLookup,
 	}
 }
+
+*/
 
 

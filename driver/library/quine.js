@@ -59,6 +59,10 @@ if(typeof module != 'undefined') {
 
 	}
 }
+if (typeof WorkerGlobalScope !== 'undefined'
+		&& self instanceof WorkerGlobalScope ) {
+	emitService()
+}
 
 function emitPlugin() {
 	// MAKE PLUGIN
