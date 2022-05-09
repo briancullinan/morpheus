@@ -53,7 +53,7 @@ if(typeof module != 'undefined') {
 	module.exports = {
 		... {
 			emitCLI,
-		} = require('./stacks.cli'),
+		} = require('./stacks/cli.js'),
 		emitWeb,
 		emitService,
 
@@ -78,6 +78,10 @@ function emitService() {
 
 function emitBuild() {
 	// MAKE PLUGIN
+}
+
+function emitEmitters() {
+	
 }
 
 
@@ -150,6 +154,7 @@ const MIDDLEWARE_DEPENDENCIES = [
 if(typeof module != 'undefined') {
 	module.exports = {
 		emitDownload,
+		emitMakefile,
 	}
 }
 

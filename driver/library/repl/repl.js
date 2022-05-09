@@ -28,41 +28,53 @@ function replEvalMiddleware(onRequest, doResponse) {
 	//   and response with status message, try to pack all
 	//   kernel communication into a single 50 LOC function.
 
+	// this is the part I was getting all mixed up with 
+	//   plugins/eval/accessors all because I couldn't think 
+	//   about the abstraction during so much planning.
+
+	function doExecute(request) {
+		// TODO: start timer
+		Promise.resolve()
+	}
+
+	// TODO: doStatus
+
+	// TODO: doResult
+
+
 	return {
 		doExecute,
-		onEvalComplete,
+		onResult,
 	}
 }
 
 // TODO: do everything else (i.e. onStatus()) using contextual attributes
 
-function doExecute(request) {
+async function doExecute(request) {
 	try {
+		// CODE REVIEW, stacking pre-requisits?
+		if (!runContext.script || !doEval) {
+			throw new Error(!runContext.script
+					? 'No program!'
+					: 'REPL engine does not exist.')
+		}
 		// will send a result, async, error response
 		let runContext = {
 			script: request.script,
-		}
-		if (typeof runContext.script == 'undefined') {
-			throw new Error('No program!')
-		}
-		if(typeof doEval == 'undefined') {
-			throw new Error('REPL engine does not exist.')
+			attributes: {
+				'@node': [
+					
+				]
+			}
 		}
 		let result = await doEval(runContext, runContext.script)
-		// TODO: set these using attributes
-		if(runContext.ended) {
-			return { // ahhh same as somewhere else in doAccessor
-				stopped: await onAccessor(result),
-			}
-		} else if (runContext.async) {
-			return { 
-				async: getThreads(),
-			}
-		} else {
-			return { 
-				result: await onAccessor(result),
-			}
-		}
+		let response = {}
+		// TODO: make runContext.result = 'ended', 'fail' match here using attributes
+		response.type = runContext.result
+		// this way multiple description can be unfolded 
+		//   on the receiving end, i.e. response.type, by the same code below
+		response[runContext.result] = onResult(result)
+		return response
 	} catch(e) {
 		return {
 			fail: e.message,
@@ -73,6 +85,76 @@ function doExecute(request) {
 }
 
 
+// usually performed on "receiving" end
+function onResult(response) {
+	if(response && typeof response.fail != 'undefined') {
+		throw new Error('Member access error: ' + response.fail)
+	} else
+
+	if(response && typeof response.type != 'undefined') {
+		return response[response.type]
+	}
+
+	// convert response to compatible output
+	let value = response
+	let type = typeof value
+	// TODO: move to rpc middleware? this is the new RPC middleware?
+	if(type == 'function') {
+		value = value + ''
+	} else if (type == 'object') {
+		value = JSON.stringify(Object.assign({
+			_accessor: true
+		}, value || {}))
+	} else {
+		value = JSON.stringify(value)
+	}
+	let result = {
+		type: type,
+	}
+	result[type] = value
+	return result
+
+}
+
+
+// TODO: this is ugly
+function doLibraryLookup(functionName) {
+	let libraryFiles = Object.keys(FS.virtual)
+	for(let i = 0; i < libraryFiles.length; i++) {
+		if(!libraryFiles[i].startsWith('library/')) {
+			continue
+		}
+		let libraryCode = Array.from(FS.virtual[libraryFiles[i]].contents)
+			.map(function (c) { return String.fromCharCode(c) })
+			.join('')
+		// TODO: make these tokens instead of function for cross language support
+		if(libraryCode.match(new RegExp(
+				'function\\s' + functionName + '.*?\\{'))) {
+			return {
+				// TODO: responseId
+				library: libraryCode,
+				name: functionName,
+				file: libraryFiles[i],
+				// TODO: a hash value? code signing?
+			}
+		} else {
+			let currentSession = window.ace.getValue()
+			if (currentSession.includes('function ' + functionName)) {
+				return {
+					library: currentSession,
+					name: '<eval>',
+					// TODO: a hash value?
+				}
+			}
+		} // CODE REVIEW, this is why we need different contexts, for Live editing
+	}
+}
+
+if(typeof module != 'undefined') {
+	module.exports = {
+		replEvalMiddleware,
+	}
+}
 
 /*
 
@@ -217,32 +299,7 @@ function onError(error) {
 
 async function onAccessor(response) {
 
-	if(response && typeof response.fail != 'undefined') {
-		throw new Error('Member access error: ' + response.fail)
-	} else
-
-	if(response && typeof response.type != 'undefined') {
-		return response[response.type]
-	}
-
-	// convert response to compatible output
-	let value = response
-	let type = typeof value
-	if(type == 'function') {
-		value = value + ''
-	} else if (type == 'object') {
-		value = JSON.stringify(Object.assign({
-			_accessor: true
-		}, value || {}))
-	} else {
-		value = JSON.stringify(value)
-	}
-	let result = {
-		type: type,
-	}
-	result[type] = value
-	return result
-
+	
 }
 
 
@@ -333,39 +390,6 @@ async function doAccessor(response) { // shouldn't need senderId with DI
 
 }
 
-
-
-function doLibraryLookup(functionName) {
-	let libraryFiles = Object.keys(FS.virtual)
-	for(let i = 0; i < libraryFiles.length; i++) {
-		if(!libraryFiles[i].startsWith('library/')) {
-			continue
-		}
-		let libraryCode = Array.from(FS.virtual[libraryFiles[i]].contents)
-			.map(function (c) { return String.fromCharCode(c) })
-			.join('')
-		// TODO: make these tokens instead of function for cross language support
-		if(libraryCode.match(new RegExp(
-				'function\\s' + functionName + '.*?\\{'))) {
-			return {
-				// TODO: responseId
-				library: libraryCode,
-				name: functionName,
-				file: libraryFiles[i],
-				// TODO: a hash value? code signing?
-			}
-		} else {
-			let currentSession = window.ace.getValue()
-			if (currentSession.includes('function ' + functionName)) {
-				return {
-					library: currentSession,
-					name: '<eval>',
-					// TODO: a hash value?
-				}
-			}
-		} // CODE REVIEW, this is why we need different contexts, for Live editing
-	}
-}
 
 
 

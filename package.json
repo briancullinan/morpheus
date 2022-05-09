@@ -10,8 +10,8 @@
     "deploy:game": "gsutil -m cp -r build/*/multigame/vm/*.qvm gs://nightly.quake.games/assets/multigame/vm/",
     "deploy:build": "gsutil -m cp -r build/release-wasm-js/*.wasm gs://nightly.quake.games/",
     "deploy": "npm run deploy:assets && npm run deploy:http && npm run deploy:build && npm run deploy:game",
-    "make": "node -e \"require('./library/quine.js').emitMakefile()\"",
-    "cli": "node ./library/quine.js"
+    "make": "node -e \"require('./driver/library/quine.js').emitMakefile()\"",
+    "cli": "node ./driver/library/quine.js"
   },
   "bin": {
     "quakejs-content": "bin/content.js",

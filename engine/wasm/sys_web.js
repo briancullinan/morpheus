@@ -54,16 +54,7 @@ function getQueryCommands() {
 			'+set', 'fs_game', 'lobby',
 		])
 	}
-	var search = /([^&=]+)/g
-	var query  = window.location.search.substring(1)
-	var match
-	while (match = search.exec(query)) {
-		var val = decodeURIComponent(match[1])
-		val = val.split(' ')
-		val[0] = (val[0][0] != '+' ? '+' : '') + val[0]
-		startup.push.apply(startup, val)
-	}
-	return startup
+	
 }
 
 

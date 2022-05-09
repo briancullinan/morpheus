@@ -48,9 +48,7 @@ const MIDDLEWARE_REPL = [
 ]
 
 // TODO: wire up express back to ourselves own REPL service
-function rpcMessageResponseMiddleware() {
-
-}
+// REPL? function rpcMessageResponseMiddleware() {}
 
 // TODO: wire up status, execute, meta kernel to same frontend
 function jupyterMessageResponseMiddleware() {
