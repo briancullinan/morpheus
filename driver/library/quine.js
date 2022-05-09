@@ -63,20 +63,6 @@ if (meetsPermissions(module)) return jsloader.apply(this, arguments);
 
 // TODO: doMiddleware(onMessage, sendRequest)
 
-function emitQuine(entryFunction) {
-	if(typeof entryFunction == 'function') {
-		return emitQuine(entryFunction.toString())
-	} else
-	if(typeof entryFunction == 'undefined') {
-		return emitQuine
-	} else
-	if(entryFunction.toString().includes('native code')) {
-		throw new Error('Include the native quine.')
-	} else {
-		return eval(`(${entryFunction})`)
-	}
-}
-
 // THIS IS BASICALLY ALL WEBPACK / require() DOES.
 function modulizeQuine(entryFunction, libCode) {
 	let libFunctions = listFunctions(libCode)
@@ -88,20 +74,186 @@ function modulizeQuine(entryFunction, libCode) {
 	return newModule
 }
 
-// this is some nice distilling
-function templateQuine(templateString, params) {
+// OKAY, THEORY, THE BASIS BEHIND ALL MUSTACHE / LATEX / RAZOR / SCSS
+//   TEMPLATING ENGINES IS THE ABILITY TO REPLACE STRINGS.
+//   TO REPLACE STRINGS IN CODE WITH STRINGS OF OTHER CODES.
+//   SO TO GENERALIZE THIS, BUILDING A TYPED-QUINE 
+//   (TYPED QUINE - 1-LEVEL OF COMPLEXITY MORE THAN A QUINE
+//   IT OUTPUTS ITSELF IN THE NEXT PHASE, FUNCTION -> STRING,
+//   STRING -> FUNCTION. I.E. A COMPILER-QUINE WOULD BE 
+//   COMPILER -> PROGRAM, PROGRAM -> STRING, STRING -> COMPILER
+//   TO MAKE A SELF HOSTED QUINE, I WOULD INCLUDE THIS QUINE 
+//   INSIDE A COMPILER QUINE ALONG SIDE THE EXISTING COMPILER CODE.
+//   THIS WOULD AUTOMATICALLY SPIT OUT A SELF-HOSTED COMPILER WITH 
+//   ZERO UPDATES, SO IT SELF-HOSTS ITSELF INSTEAD OF THE PREVIOUS
+//   VERSION.
+function templateQuine(templateString) {
+	// TODO: the emitQuine does 1 pass rotation on return types
+	//   i.e. function -> string, string -> function
+	// Here, object -> template function, template -> object
+	//   function -> string, string -> object something like that
+	// helper function for below statements
+	// BASIC TEMPLATE SYSTEM, find and replace tokens
+	if(typeof templateString == 'string') {
+		
+	} else 
+	// MUSTACHE STYLE
+	// IT'S A WRAPPER TEMPLATE CREATOR
+
+	if(typeof templateString == 'object') {
+		// do default template
+		// ALL THIS WORK JUST SO I NEVER HAVE TO WRITE JAVASCRIPT IN A STRING
+		return wrapperQuine.bind(null, templateString)
+
+		// TODO: this should generate a function that takes a string 
+		//   as an argument and generates a function body inside 
+		//   the previously configured context that create the function.
+		// TODO: this will make it super easy for my to polyfill any runContext
+		//   with different evironments as I reload the lib code multiple times
+		//   lib code could even be loaded in multiple places used like a template
+
+		// TODO: this kind of feels more like an functionQuine thing to do.
+		//		.bind.apply(preparedFunction, [this]
+		//				.concat())
+	} else
+	if(typeof templateString == 'function'
+			&& typeof arguments[1] == 'object') { {
+		// TODO: same as object quine but replacing template
+		/*
+		i.e. templateQuine(middlewareTemplate, {
+				request: onMessage,
+				response: sendMessage,
+		}) 
+		*/
+		// now all middlewares can use the same event names
+		//   because the attribute system will replay the context
+		//   before templateQuine() runs again, so it will inject
+		//   different functions depending on context.
+		// TODO: GET REPL WORKING NOW THAT TEMPLATES WORK
+	}
+
+	// TODO: connect REPL node visitor to do template ${var} 
+	//   replacements anywhere in the code, coming full circle
+
+	// TODO: automatically fold parameters from a template into
+	//   object names?
   //const names = Object.keys(params);
   //const vals = Object.values(params);
-	const baseTemplate = function(templateString) {
-		return `${templateString}`
+	
+	// TODO: keep returning templates until we can replace
+	//   all the bootstrap parts of a function, or
+	//   return a template to replace middleware components
+}
+
+function interpolateTemplate(params) {
+	String.prototype.interpolate = function(params) {
+		const names = Object.keys(params);
+		const vals = Object.values(params);
+		return new Function(...names, `return \`${this}\`;`)(...vals);
 	}
-  return baseTemplate(baseTemplate.toString().replace(
-		'templateString', '${templateParams}'
-	));
+
+}
+
+function wrapperQuine(object, functionBody) {
+	let baseTemplate = replaceParameters(
+		'(' + wrapperTemplate.toString() + ')', {
+			templateParams: Object.keys(object).join(' , '),
+			functionBody: functionBody
+		})
+	let bindTemplate = replaceParameters(
+		'(' + eval(baseTemplate)().toString() + ').bind(null, templateValues)', {
+			templateValues: JSON.stringify(Object.values(object))
+		})
+
+	return bindTemplate
+}
+
+function replaceParameters(templateString, object) {
+	let params = Object.keys(object)
+	let values = Object.values(object)
+	for(let i = 0; i < params.length; i++) {
+		templateString =
+				templateString.replace(
+						new RegExp(params[i], 'g'), values[i])
+	}
+	return templateString
 }
 
 
-function requireQuine(library, dirname, libRequire) {
+
+function evalQuine() {
+	// TODO: recursively replace eval() with onEval() polyfill
+}
+
+function functionQuine(entryFunction) {
+	if(typeof entryFunction == 'function') {
+		return entryFunction.toString()
+	} else
+	if(typeof entryFunction == 'undefined') {
+		return functionQuine
+	} else
+	if(entryFunction.toString().includes('native code')) {
+		throw new Error('Include the native quine.')
+	} else {
+		return eval(`(${entryFunction.toString()})`)
+	}
+	// TODO: include a list of functions in winding
+	//   convert an object like module exports to 
+	//   functional names, templateQuine and functionQuine
+	//   can be used together
+}
+
+
+// TODO: use template quine to convert this so I never
+//   have to write middleware again
+// TODO: now I only have to write 
+/*
+```
+templateQuine({
+	doRequest: sendMessage,
+	doResponse: onResponse,
+	doInit: initMessageResponse,
+})
+
+// OR:
+
+middlewareQuine(sendMessage, onResponse, initMessageResponse)
+```
+*/
+
+function wrapperTemplate() {
+	return (function (templateParams) {
+		functionBody
+	})
+}
+
+function middlewareTemplate(request, response) {
+
+	function doRequest() {
+		if(condition) {
+			return request()
+		}
+		return request()
+	}
+
+	function doResponse() {
+		if(condition) {
+			return response()
+		}
+		return response()
+	}
+
+	doInit()
+
+	return {
+		doRequest,
+		doResponse,
+	}
+
+}
+
+
+function requireTemplate(library, dirname, libRequire) {
 	let path = require('path')
 	let requireRealpath = path.join(
 			path.relative(library, dirname), 
@@ -111,12 +263,22 @@ function requireQuine(library, dirname, libRequire) {
 	})('something else')
 }
 
-function evalQuine() {
-	// TODO: recursively replace eval() with onEval() polyfill
-}
-
 function logQuine(entryFunction) {
-	console.log('output: ', templateQuine(__dirname))
+	/*
+	// how I want templateQuine({}) to work
+	eval(function (functionBody) {
+		return "function (__dirname, __filename, etc) {
+			functionBody
+		}"
+	})(__dirname, __filename, etc)
+	*/
+	let env = {
+		__dirname: __dirname,
+		__filename: __filename,
+		__library: __dirname,
+	}
+	let envCreator = templateQuine(env)
+	console.log('output: ', envCreator('return a + b'))
 
 }
 
@@ -204,6 +366,7 @@ function emitEmitters() {
 
 }
 
+// this is some nice distilling
 // Source: https://stackoverflow.com/questions/29182244/convert-a-string-to-a-template-string
 String.prototype.interpolate = function(params) {
   const names = Object.keys(params);
