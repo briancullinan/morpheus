@@ -363,15 +363,3 @@ for(let j = 0; j < maths.length; j++) {
   MATHS[maths[j]] = Math[maths[j]]
 }
 
-if(typeof module != 'undefined') {
-  module.exports = {
-    MATHS,
-		STD,
-		DATE,
-    stringToAddress,
-    addressToString,
-    stringsToMemory
-  }
-}
-
-

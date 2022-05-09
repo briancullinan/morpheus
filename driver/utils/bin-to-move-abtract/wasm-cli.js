@@ -134,9 +134,5 @@ function parseCommandLine() {
 }
 
 
-if(typeof module != 'undefined') {
-	parseCommandLine()
-}
-
 
 module.exports = initProgram

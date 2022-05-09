@@ -3,19 +3,6 @@
 //   in a long list and shifting between positions
 //   should go nicely with the vertical line highlighter.
 
-// add attributes to comments to JS for use in CI
-
-// collects comments from parser?
-function doComment(comments, accumulatedComments, token) {
-	let commentLength = accumulatedComments.length
-	comments[token.start] = accumulatedComments.splice(0)
-	console.assert(comments[token.start].length == commentLength)
-}
-
-function onComment(accumulatedComments, _, comment) {
-	accumulatedComments.push(comment)
-}
-
 // ENTRY INTO ATTRIBUTE SYSTEM
 function doNode(runContext, abstractNode) {
 

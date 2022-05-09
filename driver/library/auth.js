@@ -26,12 +26,8 @@ function generateRunId() {
 	}
 }
 
-if(typeof module != 'undefined') {
-	module.exports = {
-		getRunId,
-		generateRunId,
-	}
-}
+
+
 
 // THIS IS THE KITCHEN SINK. AND ANYWHERE THAT USES "CRYPT(" AND "TEMPORARYENCRYPTOR("
 

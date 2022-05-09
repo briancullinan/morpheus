@@ -116,51 +116,91 @@ function onResult(response) {
 
 }
 
+/*
+// lol just kidding, the one above is a polyfill
+func nodeReadFile(pathname) {
+	let fs = require('fs')
+	return fs.readFileSync(pathname)
+}
+*/
+
 
 // TODO: this is ugly
 function doLibraryLookup(functionName) {
-	let libraryFiles = Object.keys(FS.virtual)
+	/*
+	let {
+		readDir,
+		readFile,
+	} = 
+	*/
+	let libraryFiles = readDir(__library, true)
 	for(let i = 0; i < libraryFiles.length; i++) {
-		if(!libraryFiles[i].startsWith('library/')) {
-			continue
-		}
-		let libraryCode = Array.from(FS.virtual[libraryFiles[i]].contents)
-			.map(function (c) { return String.fromCharCode(c) })
-			.join('')
-		// TODO: make these tokens instead of function for cross language support
-		if(libraryCode.match(new RegExp(
-				'function\\s' + functionName + '.*?\\{'))) {
-			return {
-				// TODO: responseId
-				library: libraryCode,
-				name: functionName,
-				file: libraryFiles[i],
-				// TODO: a hash value? code signing?
-			}
-		} else {
-			let currentSession = window.ace.getValue()
-			if (currentSession.includes('function ' + functionName)) {
-				return {
-					library: currentSession,
-					name: '<eval>',
-					// TODO: a hash value?
+		let libraryCode = readFile(libraryFiles[i])
+		// make these tokens instead of function for cross language support
+		return {
+			type: 'File',
+			name: libraryFiles[i],
+			script: libraryCode,
+			format: 'javascript',
+			body: {
+				type: 'Program',
+				body: {
+
 				}
 			}
-		} // CODE REVIEW, this is why we need different contexts, for Live editing
+		}
 	}
 }
 
-if(typeof module != 'undefined') {
-	module.exports = {
-		replEvalMiddleware,
-	}
+
+// add attributes to comments to JS for use in CI
+
+// collects comments from parser?
+function doComment(comments, accumulatedComments, token) {
+	let commentLength = accumulatedComments.length
+	comments[token.start] = accumulatedComments.splice(0)
+	console.assert(comments[token.start].length == commentLength)
+}
+
+function onComment(accumulatedComments, _, comment) {
+	accumulatedComments.push(comment)
+}
+
+function findFunctions(lib) {
+	// TODO: get comments with attribute API?
+	let comments = []
+	let accumulatedComments = []
+	let functionNames = []
+	acorn.walk.full(acorn.parse.loose(lib, {	
+		ecmaVersion: 2020, locations: true, 
+		onToken: doComment.bind(null, 
+				comments, accumulatedComments),
+		onComment: onComment.bind(null, 
+				accumulatedComments),
+	}), {
+		FunctionDeclaration(node) {
+			debugger
+			if(!node.name || !node.params || node.start < blockCount) {
+				return
+			}
+			functionNames.push(node.name)
+			for(let i = 0; i < node.params.length; i++) {
+
+			}
+		},
+		BlockStatement(node) {
+			debugger
+			blockCount += node.end
+		},
+	})
+
 }
 
 /*
 
 
 
-function beforeSymbol(AST, programCallstack, frame, runContext) {
+func beforeSymbol(AST, programCallstack, frame, runContext) {
 	// TODO: add attribute modifiers
 	// TODO: VISUALIZING THIS SHOULD HELP DEBUG TOO LARGE PARAMETER PASSING
 	//   AND THE KIND OF PLACES THAT THINGS LIKE CLOJURE CAN TREE-FOLD OUT.
@@ -193,31 +233,31 @@ function beforeSymbol(AST, programCallstack, frame, runContext) {
 		nameStr,
 		+ ', P-codes: ' + programCallstack
 		.slice(AST.frameStart, AST.frameEnd)
-		.map(function (symbol) {return symbol.type})
+		.map(func (symbol) {return symbol.type})
 		.join(' . ')
 		
 		)
 }
 
-function doConsole(...args) {
+func doConsole(...args) {
 	console.log(args)
 	sendMessage({
     console: args.map(a => doProperty(a)).join ('\n') 
   })
 }
 
-function onConsole(message) {
+func onConsole(message) {
   console.log(message.console)
   showConsole(message.console, message.line) // exercising least privilage
 }
 
-function doProperty() {
+func doProperty() {
 
 }
 
 let oldRunTimer
 
-function createEnvironment(runContext) {
+func createEnvironment(runContext) {
   let declarations = {
     // include our own API so we can use it from code elsewhere
     runBody: runBody,
@@ -239,7 +279,7 @@ function createEnvironment(runContext) {
 }
 
 
-function createRunContext(env) {
+func createRunContext(env) {
 	Object.assign(env, {
 		timers: {},
 		//bubbleStack: [['inline func 0', '<eval>', 0]],
@@ -252,7 +292,7 @@ function createRunContext(env) {
 		paused: false,
 		continue: false,  // TODO: implement continuations / long jumps for debugger
 		// I think by pushing runStatement(AST[i]) <- i onto a stack and restoring for()?
-		// TODO: continuations, check for anonymous functions, variable/function declarations
+		// TODO: continuations, check for anonymous funcs, variable/func declarations
 		// TODO: allow moving cursor to any symbol using address of symbol in AST
 		// OR: WAIT IN STILLRUNNING() FOR UNPAUSE
 	})
@@ -260,11 +300,11 @@ function createRunContext(env) {
 }
 
 
-function doError(err) {
+func doError(err) {
 	try {
 		sendMessage({ 
 			error: err.message + '',
-			// always subtract 1 because code is wrapping in a 1-line function above
+			// always subtract 1 because code is wrapping in a 1-line func above
 			line: currentContext.bubbleLine - 1,
 			file: currentContext.bubbleStack[currentContext.bubbleStack.length-1][1],
 			stack: currentContext.bubbleStack,
@@ -290,29 +330,29 @@ function doError(err) {
 }
 
 
-function onError(error) {
+func onError(error) {
   // TODO: some generic reporting?
   console.log(error)
   showError(error)
 }
 
 
-async function onAccessor(response) {
+async func onAccessor(response) {
 
 	
 }
 
 
 // access info from another remote, or another context
-//   used to lookup library functions, inject scripts 
+//   used to lookup library funcs, inject scripts 
 //   into other pages
-async function doAccessor(response) { // shouldn't need senderId with DI
+async func doAccessor(response) { // shouldn't need senderId with DI
 	
 	} else 
 	if(typeof response.library != 'undefined') {
 		try {
 			let AST = acorn.parse(
-				'(function () {\n' + response.library + '\nreturn ' + response.name + ';\n})()\n'
+				'(func () {\n' + response.library + '\nreturn ' + response.name + ';\n})()\n'
 				, {ecmaVersion: 2020, locations: true, onComment: []})
 			currentContext.script = response.library
 			currentContext.bubbleFile = response.file
@@ -337,11 +377,11 @@ async function doAccessor(response) { // shouldn't need senderId with DI
 		return JSON.parse(response.object)
 	} else
 
-	if(typeof response.function != 'undefined') {
+	if(typeof response.func != 'undefined') {
 		if(response.value) {
 			return response.value
 		} else {
-			response.value = (async function (request, ...params) {
+			response.value = (async func (request, ...params) {
 				// TODO: add paramerters
 				let result = await sendMessage({
 					script: '\nreturn ' + response.name + '();\n'
@@ -353,7 +393,7 @@ async function doAccessor(response) { // shouldn't need senderId with DI
 	} else
 
 	if(typeof response._accessor != 'undefined') {
-		response._accessor = async function (i, left, right, ctx) {
+		response._accessor = async func (i, left, right, ctx) {
 			let prop = ctx.bubbleProperty
 			ctx.bubbleProperty = ''
 			if(left && left[0] 
@@ -396,9 +436,9 @@ async function doAccessor(response) { // shouldn't need senderId with DI
 let threads = {}
 
 // SINK
-function getThreads() {
+func getThreads() {
 	return JSON.stringify(Object.keys(threads)
-		.map(function (runId) {
+		.map(func (runId) {
 			return [
 				runId[0] + '******' + runId[runId.length-1],
 				threads[runId].bubbleTime
@@ -408,7 +448,7 @@ function getThreads() {
 
 const THREAD_SAVE_TIME = 3 * 1000 // * 60
 
-function pruneOldRuns() {
+func pruneOldRuns() {
 	// i just thought maybe a transpiler converted code to var which changes scope and
 	//   could make it vulnerable?
 	let runIds = Object.keys(threads)
@@ -427,13 +467,13 @@ function pruneOldRuns() {
 }
 
 
-async function doStatus(doSleep) {
+async func doStatus(doSleep) {
 	return
 	if(typeof currentContext == 'undefined') {
 	}
 	try {
 		let statusUpdate = { 
-			// always subtract 1 because code is wrapping in a 1-line function above
+			// always subtract 1 because code is wrapping in a 1-line func above
 			line: currentContext.bubbleLine - 1,
 			stack: currentContext.bubbleStack,
 			file: currentContext.bubbleStack[currentContext.bubbleStack.length-1][1],
@@ -447,7 +487,7 @@ async function doStatus(doSleep) {
 		}
 		sendMessage(statusUpdate);
 		//console.log(currentContext.bubbleLine)
-		// don't sleep on library functions
+		// don't sleep on library funcs
 		if(doSleep && currentContext.bubbleFile == '<eval>') {
 			console.log('DELAYING! ' + currentContext.bubbleLine)
 			debugger
@@ -462,7 +502,7 @@ async function doStatus(doSleep) {
 	}
 }
 
-function getLocals(ctx) {
+func getLocals(ctx) {
 	let result = ctx.localVariables
 	if(typeof ctx.localDeclarations == 'undefined') {
 		return {}
@@ -491,14 +531,6 @@ function getLocals(ctx) {
 }
 
 
-// BOOTSTRAP CODE?
-if(typeof module != 'undefined') {
-	module.exports = {
-		doAccessor,
-		onAccessor,
-		doLibraryLookup,
-	}
-}
 
 */
 

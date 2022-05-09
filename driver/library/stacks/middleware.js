@@ -85,9 +85,3 @@ function asyncTriggerMiddleware(onMessage, sendMessage) {
 }
 
 
-
-if(typeof module != 'undefined') {
-	module.exports = {
-		asyncTriggerMiddleware,
-	}
-}

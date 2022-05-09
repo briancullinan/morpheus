@@ -119,11 +119,3 @@ function showError(request) {
 // TODO: INJECT CKEDITOR INSTEAD
 */
 
-if(typeof module != 'undefined') {
-	module.exports = {
-		ACE
-	}
-} else if (typeof window != 'undefined') {
-	window.ACE = ACE
-}
-

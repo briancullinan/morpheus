@@ -1,50 +1,11 @@
 
 // have to do this to build
-const MIDDLEWARE_CLI = [
-	stdioMiddleware,
-	cliArgumentsMiddelware,
-]
-
-function stdioMiddleware(env) {
-	let fs
-	// TODO: at least send signal
-
-	// TODO: STDIN REPL, this will be neat because when antlr is
-	//   added, I an instantly turn any language into a REPL 
-	//   similar to `node -e "code..."` or bash, but any language, even MATLAB
-	// Connecting R to fuse-fs would be weird. Or using MATLAB's interface
-	//   for validating 3D scenes, or picking something out demo-files?
-	if(typeof FS != 'undefined') {
-		fs = {
-			existsSync: function () {
-				return typeof FS.virtual[localName] != 'undefined'
-			}
-		}
-	}
-
-	// TODO: stdioMiddleware
-	// CODE REVIEW, decent format for combining APIs between languages?
-	if(typeof require != 'undefined') {
-		try { 
-			let { existsSync } = require('fs') // stdioMiddleware
-			let { cwd: getCwd } = require('process')
-			fs = {existsSync, getCwd}
-		} catch (e) {
-			if(!e.message.includes('find module')) {
-				throw e
-			}
-		}
-	}
-
-	// TODO: memFS
-
-	return fs
-}
-
 
 function cliArgumentsMiddelware(onArguments) {
-	let yargs
-	let fs
+	let stdioMiddleware
+	if(typeof require != 'undefined') {
+		stdioMiddleware = require('./../repl/env.js').stdioMiddleware
+	}
 	// TODO: somehow recursively pull environment 
 	//   arguments from somewhere else like xargs? implied -e? jupyter_ops?
 	if(typeof require != 'undefined') {
@@ -60,53 +21,6 @@ function cliArgumentsMiddelware(onArguments) {
 		existsSync, getCwd
 	} = stdioMiddleware() // auto-detect
 
-	function onArg() {
-
-	}
-	
-	function getArguments(args) {
-		if(typeof args == 'undefined') {
-			if(typeof process != 'undefined') {
-				args = getNativeQuery()
-			}
-			if(typeof window != 'undefined') {
-				args = getWebQuery
-			}
-		}
-		return args
-	}
-
-	function runArguments(args) {
-		let foundFiles = []
-		let runProgram = false
-		if(typeof process != 'undefined') {
-			let path = require('path')
-			for(let i = 0; i < args.length; i++) {
-				if(!args[i] || args[i] == '--') { continue } // calls from NPM
-				else if(args[i].includes(__filename) 
-						|| args[i].includes('quine')) {
-					runProgram = true
-				} else
-				if(existsSync(path.join(getCwd(), args[i]))) {
-					foundFiles.push(getCwd(), args[i])
-				} else
-				if(existsSync(args[i])) {
-					foundFiles.push(args[i])
-				} else
-				if(existsSync(path.join(__dirname, args[i]))) {
-					foundFiles.push(__dirname, args[i])
-				} else
-				if(args[i] == '-e') {
-					runProgram = args[++i]
-				}
-			}
-		}
-		return {
-			foundFiles,
-			runProgram,
-		}
-	}
-
 	// TODO: in my jupter_ops I automatically converted function parameters to
 	//   the same name on the command, would be neat to automatically parse
 	//   aliases and descripts from code comments as a proof of concept here.
@@ -118,6 +32,53 @@ function cliArgumentsMiddelware(onArguments) {
 	}
 }
 
+
+function onArg() {
+
+}
+
+function getArguments(args) {
+	if(typeof args == 'undefined') {
+		if(typeof process != 'undefined') {
+			args = getNativeQuery()
+		}
+		if(typeof window != 'undefined') {
+			args = getWebQuery
+		}
+	}
+	return args
+}
+
+function runArguments(args) {
+	let foundFiles = []
+	let runProgram = false
+	if(typeof process != 'undefined') {
+		let path = require('path')
+		for(let i = 0; i < args.length; i++) {
+			if(!args[i] || args[i] == '--') { continue } // calls from NPM
+			else if(args[i].includes(__filename) 
+					|| args[i].includes('quine')) {
+				runProgram = true
+			} else
+			if(existsSync(path.join(getCwd(), args[i]))) {
+				foundFiles.push(getCwd(), args[i])
+			} else
+			if(existsSync(args[i])) {
+				foundFiles.push(args[i])
+			} else
+			if(existsSync(path.join(__dirname, args[i]))) {
+				foundFiles.push(__dirname, args[i])
+			} else
+			if(args[i] == '-e') {
+				runProgram = args[++i]
+			}
+		}
+	}
+	return {
+		foundFiles,
+		runProgram,
+	}
+}
 
 // OKAY, REPL ADDS ONE COMPLEXITY IN ENCODING OBJECTS AND
 //   MAKING STATUS CALLS. IT SEEMS ONLY REASONABLE THAT CLI
@@ -184,7 +145,7 @@ function emitCLI(something) {
 			doHelp()
 		}
 	} else {
-		return MIDDLEWARE_CLI
+		return emitCLI
 	}
 }
 
@@ -192,21 +153,24 @@ function emitCLI(something) {
 // TODO: use on mock web console to 
 //   send web-worker CLI commands?
 
-if(typeof module != 'undefined') {
-	module.exports = {
-		... MIDDLEWARE_CLI,
-		emitCLI,
-	}
-}
-
-if(typeof process != 'undefined') {
-	emitCLI() // will decide if this is a tty
-}
 
 
+// just like Makefile?
+/*
+help: eval-commands ## print help docs in Makefile
+	@echo Please see docs: https://github.com/briancullinan/planet_quake/blob/master/docs/make.md
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n $(subst \space, ,$(addsuffix \n,$(MAKES))) \033[36m\033[0m\n"} /^${subst (|,(,$(HELPFILTER)}[a-zA-Z0-9_-]*:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MKFILE)
+*/
+// BUT WE DON'T HAVE AWK SO USE REPL INSTEAD
 function doHelp() {
 	// TODO: source arguments from code
+	if(typeof doLibraryLookup != 'undefined') {
+		let lib = doLibraryLookup()
+		let blockCount = 0
+	}
+
 	// TODO: use yargs or use function parser from jupyter?
+
 }
 
 /*

@@ -54,12 +54,6 @@ function workerMessageResponseMiddleware() {
 	}
 
 
-function readFile(filename) {
-	return Array.from(FS.virtual[filename].contents)
-		.map(function (c) { return String.fromCharCode(c) })
-		.join('')
-}
-
 	/*
 	var md = new Remarkable('full', {
 		html:         false,        // Enable HTML tags in source

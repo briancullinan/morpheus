@@ -49,20 +49,79 @@ function emitDownload(fileName, fileData, contentType) {
 //   and then convert seperate files and comments back into notebooks
 //   then wind it up as an RPC service.
 
-if(typeof module != 'undefined') {
-	module.exports = {
-		... {
-			emitCLI,
-		} = require('./stacks/cli.js'),
-		emitWeb,
-		emitService,
+// javascript has a global context, not every language has
+//   this feature, might as well take advantage of it here
 
+// I ALWAYS HATED MODULE.EXPORTS, REQUIRE, IMPORT, LET'S APPEND
+//   THE REQUIRE COMMAND SO THAT ALL INCLUDES AFTER ARE IMPLIED
+/*
+require.extensions['.ipynb'] = function(module, filename) {
+if (meetsPermissions(module)) return jsloader.apply(this, arguments);
+	throw new Error("You don't have the necessary permissions");
+}
+*/
+
+// TODO: BOOTSTRAP?
+if(typeof require != 'undefined'
+	&& typeof module != 'undefined'
+	&& typeof module.exports.require == 'undefined') {
+	function listFunctions(libCode) {
+		let result = []
+		y = (/function\s+([a-z]+[ -~]*)\s*\(/gi);
+		while(null != (z=y.exec(libCode))) {
+			result.push(z[1])
+		}
+		return result
+	}
+
+	function newRequire(__library, __dirname, __filename, libFile) {
+		let path = require('path')
+		let fs = require('fs')
+		let realPath = path.resolve(__dirname, libFile)
+		debugger
+		if(!fs.existsSync(realPath)
+				|| !path.resolve(realPath)
+						.includes(path.resolve(__library))
+		) {
+			// TODO: CODE REVIEW, weird how similar this looks to lower lines
+			let moduleResults = require(libFile)
+			Object.assign(globalThis, moduleResults)
+			return moduleResults
+		}
+		let libCode = fs.readFileSync(realPath, 'utf-8')
+		moduleTemplate = `
+				(function (require, __dirname, __filename) {
+					${libCode}
+					let moduleResults = {
+							${listFunctions(libCode).join(',')}		}
+					Object.assign(globalThis, module.exports, moduleResults)
+					return moduleResults
+				}).bind(this, (${newRequire.toString()})
+							.bind(this, '${__library}',
+							'${path.dirname(realPath)}',
+							'${realPath}'))`
+		//
+		return eval(moduleTemplate)(
+				path.dirname(realPath), path.basename(realPath))
 	}
 }
+
+if(typeof module != 'undefined'
+	&& typeof process != 'undefined') {
+	globalThis.acorn = require('acorn')
+	globalThis.acorn.walk = require('acorn-walk')
+	globalThis.acorn.loose = require('acorn-loose')
+	newRequire(__dirname, __dirname, __filename, './stacks/cli.js')
+	emitCLI()
+}
+
 if (typeof WorkerGlobalScope !== 'undefined'
 		&& self instanceof WorkerGlobalScope ) {
 	emitService()
 }
+
+
+
 
 function emitPlugin() {
 	// MAKE PLUGIN
@@ -81,7 +140,16 @@ function emitBuild() {
 }
 
 function emitEmitters() {
+	/*
+	*/
+
+	const MIDDLEWARE_FRONTEND = [
+		'onFrontend',
+		'emitDownload',
+		'domMessageResponseMiddleware',
+	].concat(MIDDLEWARE_DEPENDENCIES)
 	
+
 }
 
 
