@@ -61,49 +61,101 @@ if (meetsPermissions(module)) return jsloader.apply(this, arguments);
 }
 */
 
+// TODO: doMiddleware(onMessage, sendRequest)
+
+function emitQuine(entryFunction) {
+	if(typeof entryFunction == 'function') {
+		return emitQuine(entryFunction.toString())
+	} else
+	if(typeof entryFunction == 'undefined') {
+		return emitQuine
+	} else
+	if(entryFunction.toString().includes('native code')) {
+		throw new Error('Include the native quine.')
+	} else {
+		return eval(`(${entryFunction})`)
+	}
+}
+
+// THIS IS BASICALLY ALL WEBPACK / require() DOES.
+function modulizeQuine(entryFunction, libCode) {
+	let libFunctions = listFunctions(libCode)
+	let newModule = {}
+	for(let i = 0; i < libFunctions; i++) {
+		newModule[libFunctions[i]] = globalThis[libFunctions[i]]
+	}
+	Object.assign(globalThis, module.exports, moduleResults)
+	return newModule
+}
+
+// this is some nice distilling
+function templateQuine(templateString, params) {
+  //const names = Object.keys(params);
+  //const vals = Object.values(params);
+	const baseTemplate = function(templateString) {
+		return `${templateString}`
+	}
+  return baseTemplate(baseTemplate.toString().replace(
+		'templateString', '${templateParams}'
+	));
+}
+
+
+function requireQuine(library, dirname, libRequire) {
+	let path = require('path')
+	let requireRealpath = path.join(
+			path.relative(library, dirname), 
+			path.dirname(libRequire))
+	return (function (entryFunction = `${defaultFunction}`) {
+		return `${entryFunction}`
+	})('something else')
+}
+
+function evalQuine() {
+	// TODO: recursively replace eval() with onEval() polyfill
+}
+
+function logQuine(entryFunction) {
+	console.log('output: ', templateQuine(__dirname))
+
+}
+
+function fileQuine() {
+	// TODO: convert Makefile / make.js reliance into this function for 
+	//   combining files into the output
+}
+
+function replQuine() {
+	// TODO: recursively convert back and forth to `{type:}`
+	//   objects and finalized objects i.e. `{error.fail} -> throw error`
+
+}
+
+/*
+String.prototype.interpolate = templateString
+const template = 'Example text: ${text}';
+const result = template.interpolate({
+  text: 'Foo Boo'
+});
+*/
+
+function listFunctions(libCode) {
+	let result = []
+	y = (/function\s+([a-z]+[ -~]*)\s*\(/gi);
+	while(null != (z=y.exec(libCode))) {
+		result.push(z[1])
+	}
+	return result
+}
+
 // TODO: BOOTSTRAP?
 if(typeof require != 'undefined'
 	&& typeof module != 'undefined'
 	&& typeof module.exports.require == 'undefined') {
-	function listFunctions(libCode) {
-		let result = []
-		y = (/function\s+([a-z]+[ -~]*)\s*\(/gi);
-		while(null != (z=y.exec(libCode))) {
-			result.push(z[1])
-		}
-		return result
-	}
+	
 
-	function newRequire(__library, __dirname, __filename, libFile) {
-		let path = require('path')
-		let fs = require('fs')
-		let realPath = path.resolve(__dirname, libFile)
-		debugger
-		if(!fs.existsSync(realPath)
-				|| !path.resolve(realPath)
-						.includes(path.resolve(__library))
-		) {
-			// TODO: CODE REVIEW, weird how similar this looks to lower lines
-			let moduleResults = require(libFile)
-			Object.assign(globalThis, moduleResults)
-			return moduleResults
-		}
-		let libCode = fs.readFileSync(realPath, 'utf-8')
-		moduleTemplate = `
-				(function (require, __dirname, __filename) {
-					${libCode}
-					let moduleResults = {
-							${listFunctions(libCode).join(',')}		}
-					Object.assign(globalThis, module.exports, moduleResults)
-					return moduleResults
-				}).bind(this, (${newRequire.toString()})
-							.bind(this, '${__library}',
-							'${path.dirname(realPath)}',
-							'${realPath}'))`
-		//
-		return eval(moduleTemplate)(
-				path.dirname(realPath), path.basename(realPath))
-	}
+	logQuine()
+
 }
 
 if(typeof module != 'undefined'
@@ -152,6 +204,12 @@ function emitEmitters() {
 
 }
 
+// Source: https://stackoverflow.com/questions/29182244/convert-a-string-to-a-template-string
+String.prototype.interpolate = function(params) {
+  const names = Object.keys(params);
+  const vals = Object.values(params);
+  return new Function(...names, `return \`${this}\`;`)(...vals);
+}
 
 // https://github.com/briancullinan/c2make-babel-transpiler
 function emitMakefile() {
