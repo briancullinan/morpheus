@@ -65,7 +65,6 @@ function wrapperTemplate() {
 //   variables like process, fs, path, in this function to
 //   run the same exact code in a different context.
 
-// IT'S A WRAPPER TEMPLATE CREATOR
 // DONE! how I want wrapperQuine({}) to work
 /*
 eval(function wrapperTemplate(functionBody) {
@@ -83,7 +82,7 @@ function wrapperQuine(object, functionBody) {
 	let baseTemplate = replaceParameters(
 		'(' + wrapperTemplate.toString() + ')', {
 			templateParams: Object.keys(object).join(', '),
-			functionBody: functionBody
+			functionBody: functionBody.toString()
 		})
 		
 	// TODO: this kind of feels more like an functionQuine thing to do.
@@ -95,11 +94,17 @@ function wrapperQuine(object, functionBody) {
 				+ ').bind(null, templateValues)', {
 			// automatically fold parameters from a template into
 			//   object names
-			templateValues: JSON.stringify(Object.values(object), null, 2)
+			templateValues: '[' + Object.values(object)
+					.map(convertFunctions).join(',\n\t') + ']'
 		})
 	return bindTemplate
 }
 
+function convertFunctions(v) {
+	return typeof v == 'function' 
+			? v.toString() 
+			: JSON.stringify(v + '')
+}
 
 // this is fairly meaningless code, but it proves a single concept
 //   that less code can be used to generate more code.
@@ -111,20 +116,51 @@ function wrapperQuine(object, functionBody) {
 	"/Users/briancullinan/morpheus/driver/library",
 	"/Users/briancullinan/morpheus/driver/library/quine.js",
 	"/Users/briancullinan/morpheus/driver/library"])
-
-
-
+	
 // TODO: this combined with @Attributes will make it super 
 //   easy for me to polyfill any runContext, with any language feature,
 //   with different evironments, as I reload the library code multiple times
 //   lib code could even be loaded in multiple places used like a template.
 //   i.e. in a worker it uses both virtualFS and some remote cloud FS.
-function logQuine(entryFunction) {
-	// FINALLY, these 3 lines of code generate the much wordyer function above
-	let envCreator = wrapperQuine({__dirname, __filename,
-			__library: __dirname }, 'return a + b')
+// FINALLY, these 3 lines of code generate the much wordyer function above
+//	console.log('output: ', wrapperQuine({
+//			__dirname, __filename, __library: __dirname }, 'return a + b'))
 
-	console.log('output: ', envCreator)
+
+// It might be nice if I could just arbitrarily include code
+//   in my page without like having to write <script src="" />
+// TODO: SCSS compiler is/was native C, by now it's probably WASM.
+//   but it might be nice to use that in templates with needing
+//   `npm install scss` and 100,000 LoC with webpack. maybe a 
+//   wrapper to convert basic SCSS structures to their output.
+
+// TODO: auto-detect some language features and output a module
+//   that can be run in different contexts. i.e. Makefile / doEval('./Makefile')
+//   all could pass through a single require statement.
+// but how to define it?
+/*
+
+*/
+function requireTemplate(library, libraryFile) {
+	let requireLibrary = wrapperQuine({
+		__library: library,
+	}, modulizeLibrary)
+
+// '(' + .toString() + ')'
+	let customRequire = wrapperQuine({
+		// provide a relative path to lib files in case
+		//   lib code wants to refer to itself
+		__library: library,
+		__dirname: libraryFile.replace(/\/[^\/]*?$/, ''),
+		__filename: libraryFile,
+	}, 'return a + b')
+	
+	console.log(requireLibrary)
+
+
+	// TODO: keep returning templates until we can replace
+	//   all the bootstrap parts of a function, or
+	//   return a template to replace middleware components
 
 }
 
@@ -132,6 +168,7 @@ function logQuine(entryFunction) {
 // #####################  \/ IN PROGRESS
 
 
+// IT'S A WRAPPER TEMPLATE CREATOR
 function templateQuine(templateString) {
 	// TODO: same as `wrapperQuine` quine but replacing template
 	// TODO: this should generate a function that takes a string 
@@ -155,22 +192,8 @@ function templateQuine(templateString) {
 
 
 
-// TODO: keep returning templates until we can replace
-//   all the bootstrap parts of a function, or
-//   return a template to replace middleware components
-function requireTemplate(library, dirname, libRequire) {
-	let path = require('path')
-	let requireRealpath = path.join(
-			path.relative(library, dirname), 
-			path.dirname(libRequire))
-	return (function (entryFunction = `${defaultFunction}`) {
-		return `${entryFunction}`
-	})('something else')
-}
-
-
 // THIS IS BASICALLY ALL WEBPACK / require() DOES.
-function modulizeQuine(entryFunction, libCode) {
+function modulizeLibrary(entryFunction, libCode) {
 	let libFunctions = listFunctions(libCode)
 	let newModule = {}
 	for(let i = 0; i < libFunctions; i++) {
@@ -179,6 +202,7 @@ function modulizeQuine(entryFunction, libCode) {
 	Object.assign(globalThis, module.exports, moduleResults)
 	return newModule
 }
+
 
 
 // TODO: do this thing where the notebooks export to seperate files
@@ -306,8 +330,10 @@ if(typeof require != 'undefined'
 	&& typeof module != 'undefined'
 	&& typeof module.exports.require == 'undefined') {
 	
-
-	logQuine()
+	let path = require('path')
+	requireTemplate(path.relative(
+		path.resolve(path.join(__dirname, './repl')),
+		path.resolve(__dirname)), './repl/eval.js')
 
 }
 
