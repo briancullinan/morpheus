@@ -144,25 +144,10 @@ function convertFunctions(v) {
 function bootstrapRequire(library, libraryFile) {
 	// TODO: move require and __library down below libraryLookup
 	if(typeof require != 'undefined') {
-		let {nodeReadDir} = require('./repl')
-		let libraryFiles = nodeReadDir(library, true)
-		// TODO: INTERESTING IDEA, REPLACE GLOBALTHIS WITH 
-		//   PLACEHOLDER FUNCTIONS FOR EVERYTHING IN THE LIBRARY,
-		//   THE FIRST TIME THE FUNCTION IS USED, BOOT UP A CLOUD
-		//   SERVICE TO HOST IT, REPLACE THE CALL IN GLOBALTHIS WITH
-		//   THE NEW `RENDERED` FUNCTION.
-		for(let i = 0; i < libraryFiles.length; i++) {
-			if(!libraryFiles[i].endsWith('.js')) {
-				continue
-			}
-			let libCode = require('fs').readFileSync(libraryFiles[i])
-			let y = (/function\s+([a-z]+[ -~]*)\s*\(/gi);
-			let libFunctions = []
-			while(libFunctions.push((y.exec(libCode) || []).pop())
-				&& libFunctions[libFunctions.length-1]) {}
-			libFunctions.pop()
-			console.log(libFunctions)
-
+		let {cacheLibrary} = require('./cache.js')
+		let libCache = cacheLibrary(library)
+		for(let i = 0; i < libCache.length; i++) {
+			
 		}
 	} // TODO: alternate require
 
@@ -180,10 +165,6 @@ function bootstrapRequire(library, libraryFile) {
 
 }
 
-
-function cacheLibrary() {
-
-}
 
 
 // #####################  \/ IN PROGRESS
@@ -340,7 +321,7 @@ if(typeof module != 'undefined') {
 			path.resolve(process.cwd()),
 			path.resolve(__dirname))
 
-		bootstrapRequire(relativePath, './repl/eval.js')
+		bootstrapRequire(relativePath)
 	}
 
 	if(typeof process != 'undefined') {
