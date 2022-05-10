@@ -9,69 +9,26 @@
 // CODE REVIEW: I'VE COMBINED DEPENDENCY INJECTION FROM MY MAKEFILE
 //   WITH EXPRESS STYLE MIDDLEWARES FOR FEATURE SPECIFICS.
 
-// THIS IS KIND OF FUNNY, FOR CODE REVEIW, I TOOK THIS CLIENT FUNCTION
-//   AND MAKE IT WORK REMOTELY IN ANY WINDOW SO BOTH CLIENT AND SCRIPT
-//   CAN CALL IT. MULTISOURCE FUNCTIONS AS CODE-LEAVES? FORCE DEPENDENCY 
-//   INJECTION ON MODULES THAT AREN'T NECESSARILY DESIGNED FOR DI?
-// TODO: MAKE IT LOOK LIKE DOWNLOAD REQUEST CAME FROM REMOTE, NOT CONTROL
-//   THIS IS COOL BECAUSE THEN WHEN I RUN GET createLibrary() I CAN SEND
-//   LIBRARY CODE TO ANY CLIENT WINDOW FOR COMMANDEERING.
-function emitDownload(fileName, fileData, contentType) {
-	//if(typeof fileData == 'string') {
-	//	fileData = fileData.split('').map(function (c) { return c.charCodeAt(0) })
-	//}
-	//let file = FS.virtual['morph-plugin.crx'].contents
-	if(typeof ACE != 'undefined') {
-		ACE.downloaded = true
-	}
-	if(!fileName) {
-		return
-	}
-	let blob = new Blob([fileData], {type: contentType})
-	let exportUrl = URL.createObjectURL(blob);
-	const tempLink = document.createElement('A');
-	tempLink.style.display = 'none';
-	tempLink.href = exportUrl;
-	tempLink.setAttribute('download', fileName);
-	document.body.appendChild(tempLink);
-	tempLink.click();
-	URL.revokeObjectURL(exportUrl);
-
+// this is some nice distilling
+// BASIC TEMPLATE SYSTEM, find and replace tokens
+// Source: https://stackoverflow.com/questions/29182244/convert-a-string-to-a-template-string
+String.prototype.interpolate = function interpolateTemplate(params) {
+  const names = Object.keys(params);
+  const vals = Object.values(params);
+  return new Function(...names, `return \`${this}\`;`)(...vals);
 }
 
-// TODO: NEARLY TO THE POINT OF EMITTING TO THE CLOUD,
-//   ALSO EMIT A RELOADER EXTENSION DURING DEVELOPMENT
-//   https://github.com/arikw/chrome-extensions-reloader/blob/master/background.js
-// INSTALL, RELOAD OUR OWN, UNINSTALL RELOADER
-//   IF I DO THIS FROM LIBRARY/ THEN IT'S RECURSIVE.
 
-// TODO: do this thing where the notebooks export to seperate files
-//   and then convert seperate files and comments back into notebooks
-//   then wind it up as an RPC service.
-
-// javascript has a global context, not every language has
-//   this feature, might as well take advantage of it here
-
-// I ALWAYS HATED MODULE.EXPORTS, REQUIRE, IMPORT, LET'S APPEND
-//   THE REQUIRE COMMAND SO THAT ALL INCLUDES AFTER ARE IMPLIED
-/*
-require.extensions['.ipynb'] = function(module, filename) {
-if (meetsPermissions(module)) return jsloader.apply(this, arguments);
-	throw new Error("You don't have the necessary permissions");
-}
-*/
-
-// TODO: doMiddleware(onMessage, sendRequest)
-
-// THIS IS BASICALLY ALL WEBPACK / require() DOES.
-function modulizeQuine(entryFunction, libCode) {
-	let libFunctions = listFunctions(libCode)
-	let newModule = {}
-	for(let i = 0; i < libFunctions; i++) {
-		newModule[libFunctions[i]] = globalThis[libFunctions[i]]
+// BASIC TEMPLATE SYSTEM, find and replace tokens
+function replaceParameters(templateString, object) {
+	let params = Object.keys(object)
+	let values = Object.values(object)
+	for(let i = 0; i < params.length; i++) {
+		templateString =
+				templateString.replace(
+						new RegExp(params[i], 'g'), values[i])
 	}
-	Object.assign(globalThis, module.exports, moduleResults)
-	return newModule
+	return templateString
 }
 
 // OKAY, THEORY, THE BASIS BEHIND ALL MUSTACHE / LATEX / RAZOR / SCSS
@@ -87,104 +44,159 @@ function modulizeQuine(entryFunction, libCode) {
 //   THIS WOULD AUTOMATICALLY SPIT OUT A SELF-HOSTED COMPILER WITH 
 //   ZERO UPDATES, SO IT SELF-HOSTS ITSELF INSTEAD OF THE PREVIOUS
 //   VERSION.
-function templateQuine(templateString) {
-	// TODO: the emitQuine does 1 pass rotation on return types
-	//   i.e. function -> string, string -> function
+
+// The basic layout of a function is like this
+function basicFunction(templateParams) {
+	functionBody
+}
+
+// I didn't decide on this, ECMA did.
+// Then, to import functions from other places and create `module`
+//   they wrap the module in a function that give the code path
+//   and filename context.
+function wrapperTemplate() {
+	return (function (templateParams) {
+		functionBody
+	})
+}
+
+// That is pretty cool because then if you have a function
+//   like doWeb(), or doServer(), you can wrap the environment
+//   variables like process, fs, path, in this function to
+//   run the same exact code in a different context.
+
+// IT'S A WRAPPER TEMPLATE CREATOR
+// DONE! how I want wrapperQuine({}) to work
+/*
+eval(function wrapperTemplate(functionBody) {
+	return "function (__dirname, __filename, etc) {
+		functionBody
+	}"
+})(__dirname, __filename, etc)
+*/
+function wrapperQuine(object, functionBody) {
+
+	// here is the code that generates this silly script
+	// ALL THIS WORK JUST SO I NEVER HAVE TO WRITE JAVASCRIPT INSIDE A STRING AGAIN
 	// Here, object -> template function, template -> object
 	//   function -> string, string -> object something like that
-	// helper function for below statements
-	// BASIC TEMPLATE SYSTEM, find and replace tokens
-	if(typeof templateString == 'string') {
-		
-	} else 
-	// MUSTACHE STYLE
-	// IT'S A WRAPPER TEMPLATE CREATOR
-
-	if(typeof templateString == 'object') {
-		// do default template
-		// ALL THIS WORK JUST SO I NEVER HAVE TO WRITE JAVASCRIPT IN A STRING
-		return wrapperQuine.bind(null, templateString)
-
-		// TODO: this should generate a function that takes a string 
-		//   as an argument and generates a function body inside 
-		//   the previously configured context that create the function.
-		// TODO: this will make it super easy for my to polyfill any runContext
-		//   with different evironments as I reload the lib code multiple times
-		//   lib code could even be loaded in multiple places used like a template
-
-		// TODO: this kind of feels more like an functionQuine thing to do.
-		//		.bind.apply(preparedFunction, [this]
-		//				.concat())
-	} else
-	if(typeof templateString == 'function'
-			&& typeof arguments[1] == 'object') { {
-		// TODO: same as object quine but replacing template
-		/*
-		i.e. templateQuine(middlewareTemplate, {
-				request: onMessage,
-				response: sendMessage,
-		}) 
-		*/
-		// now all middlewares can use the same event names
-		//   because the attribute system will replay the context
-		//   before templateQuine() runs again, so it will inject
-		//   different functions depending on context.
-		// TODO: GET REPL WORKING NOW THAT TEMPLATES WORK
-	}
-
-	// TODO: connect REPL node visitor to do template ${var} 
-	//   replacements anywhere in the code, coming full circle
-
-	// TODO: automatically fold parameters from a template into
-	//   object names?
-  //const names = Object.keys(params);
-  //const vals = Object.values(params);
-	
-	// TODO: keep returning templates until we can replace
-	//   all the bootstrap parts of a function, or
-	//   return a template to replace middleware components
-}
-
-function interpolateTemplate(params) {
-	String.prototype.interpolate = function(params) {
-		const names = Object.keys(params);
-		const vals = Object.values(params);
-		return new Function(...names, `return \`${this}\`;`)(...vals);
-	}
-
-}
-
-function wrapperQuine(object, functionBody) {
 	let baseTemplate = replaceParameters(
 		'(' + wrapperTemplate.toString() + ')', {
-			templateParams: Object.keys(object).join(' , '),
+			templateParams: Object.keys(object).join(', '),
 			functionBody: functionBody
 		})
+		
+	// TODO: this kind of feels more like an functionQuine thing to do.
+	//		.bind.apply(preparedFunction, [this]
+	//				.concat())
+	//   perhaps it can be distilled even furthur by functionQuine()
 	let bindTemplate = replaceParameters(
-		'(' + eval(baseTemplate)().toString() + ').bind(null, templateValues)', {
-			templateValues: JSON.stringify(Object.values(object))
+		'(' + eval(baseTemplate)().toString() 
+				+ ').bind(null, templateValues)', {
+			// automatically fold parameters from a template into
+			//   object names
+			templateValues: JSON.stringify(Object.values(object), null, 2)
 		})
-
 	return bindTemplate
 }
 
-function replaceParameters(templateString, object) {
-	let params = Object.keys(object)
-	let values = Object.values(object)
-	for(let i = 0; i < params.length; i++) {
-		templateString =
-				templateString.replace(
-						new RegExp(params[i], 'g'), values[i])
+
+// this is fairly meaningless code, but it proves a single concept
+//   that less code can be used to generate more code.
+// basically, all this code does is make a few changes to make
+//   more code embeddable like such
+(function wrapperOutput(__dirname , __filename , __library) {
+	return a + b
+}).bind(null, [
+	"/Users/briancullinan/morpheus/driver/library",
+	"/Users/briancullinan/morpheus/driver/library/quine.js",
+	"/Users/briancullinan/morpheus/driver/library"])
+
+
+
+// TODO: this combined with @Attributes will make it super 
+//   easy for me to polyfill any runContext, with any language feature,
+//   with different evironments, as I reload the library code multiple times
+//   lib code could even be loaded in multiple places used like a template.
+//   i.e. in a worker it uses both virtualFS and some remote cloud FS.
+function logQuine(entryFunction) {
+	// FINALLY, these 3 lines of code generate the much wordyer function above
+	let envCreator = wrapperQuine({__dirname, __filename,
+			__library: __dirname }, 'return a + b')
+
+	console.log('output: ', envCreator)
+
+}
+
+
+// #####################  \/ IN PROGRESS
+
+
+function templateQuine(templateString) {
+	// TODO: same as `wrapperQuine` quine but replacing template
+	// TODO: this should generate a function that takes a string 
+	//   as an argument and generates a function body inside 
+	//   the previously configured context that create the function.
+
+	/*
+	i.e. templateQuine(middlewareTemplate, {
+			request: onMessage,
+			response: sendMessage,
+	}) 
+	*/
+
+	// TODO: GET REPL WORKING NOW THAT TEMPLATES WORK
+
+	//if(typeof templateString == 'function'
+	//		&& typeof arguments[1] == 'object') {
+	//}
+	throw new Error('Not implemented!')
+}
+
+
+
+// TODO: keep returning templates until we can replace
+//   all the bootstrap parts of a function, or
+//   return a template to replace middleware components
+function requireTemplate(library, dirname, libRequire) {
+	let path = require('path')
+	let requireRealpath = path.join(
+			path.relative(library, dirname), 
+			path.dirname(libRequire))
+	return (function (entryFunction = `${defaultFunction}`) {
+		return `${entryFunction}`
+	})('something else')
+}
+
+
+// THIS IS BASICALLY ALL WEBPACK / require() DOES.
+function modulizeQuine(entryFunction, libCode) {
+	let libFunctions = listFunctions(libCode)
+	let newModule = {}
+	for(let i = 0; i < libFunctions; i++) {
+		newModule[libFunctions[i]] = globalThis[libFunctions[i]]
 	}
-	return templateString
+	Object.assign(globalThis, module.exports, moduleResults)
+	return newModule
 }
 
 
+// TODO: do this thing where the notebooks export to seperate files
+//   and then convert seperate files and comments back into notebooks
+//   then wind it up as an RPC service.
 
-function evalQuine() {
-	// TODO: recursively replace eval() with onEval() polyfill
+// I ALWAYS HATED MODULE.EXPORTS, REQUIRE, IMPORT, LET'S APPEND
+//   THE REQUIRE COMMAND SO THAT ALL INCLUDES AFTER ARE IMPLIED
+/*
+require.extensions['.ipynb'] = function(module, filename) {
+if (meetsPermissions(module)) return jsloader.apply(this, arguments);
+	throw new Error("You don't have the necessary permissions");
 }
+*/
 
+
+// TODO: the functionQuine does 1 pass rotation on return types
+//   i.e. function -> string, string -> function
 function functionQuine(entryFunction) {
 	if(typeof entryFunction == 'function') {
 		return entryFunction.toString()
@@ -203,6 +215,11 @@ function functionQuine(entryFunction) {
 	//   can be used together
 }
 
+function evalQuine() {
+	// TODO: recursively replace eval() with doEval() polyfill
+}
+
+// TODO: MUSTACHE STYLE
 
 // TODO: use template quine to convert this so I never
 //   have to write middleware again
@@ -221,13 +238,22 @@ middlewareQuine(sendMessage, onResponse, initMessageResponse)
 ```
 */
 
-function wrapperTemplate() {
-	return (function (templateParams) {
-		functionBody
-	})
-}
+// TODO: doMiddleware(onMessage, sendRequest)
 
+// now all middlewares can use the same event names
+//   because the attribute system will replay the context
+//   before templateQuine() runs again, so it will inject
+//   different functions depending on context.
+/*
+i.e. templateQuine(middlewareTemplate, {
+		request: onMessage,
+		response: sendMessage,
+}) 
+*/
 function middlewareTemplate(request, response) {
+
+	// TODO: connect REPL node visitor to do template ${var} 
+	//   replacements anywhere in the code, coming full circle
 
 	function doRequest() {
 		if(condition) {
@@ -252,36 +278,6 @@ function middlewareTemplate(request, response) {
 
 }
 
-
-function requireTemplate(library, dirname, libRequire) {
-	let path = require('path')
-	let requireRealpath = path.join(
-			path.relative(library, dirname), 
-			path.dirname(libRequire))
-	return (function (entryFunction = `${defaultFunction}`) {
-		return `${entryFunction}`
-	})('something else')
-}
-
-function logQuine(entryFunction) {
-	/*
-	// how I want templateQuine({}) to work
-	eval(function (functionBody) {
-		return "function (__dirname, __filename, etc) {
-			functionBody
-		}"
-	})(__dirname, __filename, etc)
-	*/
-	let env = {
-		__dirname: __dirname,
-		__filename: __filename,
-		__library: __dirname,
-	}
-	let envCreator = templateQuine(env)
-	console.log('output: ', envCreator('return a + b'))
-
-}
-
 function fileQuine() {
 	// TODO: convert Makefile / make.js reliance into this function for 
 	//   combining files into the output
@@ -293,13 +289,6 @@ function replQuine() {
 
 }
 
-/*
-String.prototype.interpolate = templateString
-const template = 'Example text: ${text}';
-const result = template.interpolate({
-  text: 'Foo Boo'
-});
-*/
 
 function listFunctions(libCode) {
 	let result = []
@@ -309,6 +298,8 @@ function listFunctions(libCode) {
 	}
 	return result
 }
+
+
 
 // TODO: BOOTSTRAP?
 if(typeof require != 'undefined'
@@ -322,6 +313,8 @@ if(typeof require != 'undefined'
 
 if(typeof module != 'undefined'
 	&& typeof process != 'undefined') {
+	// javascript has a global context, not every language has
+	//   this feature, might as well take advantage of it here
 	globalThis.acorn = require('acorn')
 	globalThis.acorn.walk = require('acorn-walk')
 	globalThis.acorn.loose = require('acorn-loose')
@@ -335,6 +328,12 @@ if (typeof WorkerGlobalScope !== 'undefined'
 }
 
 
+
+// TODO: NEARLY TO THE POINT OF EMITTING TO THE CLOUD,
+//   ALSO EMIT A RELOADER EXTENSION DURING DEVELOPMENT
+//   https://github.com/arikw/chrome-extensions-reloader/blob/master/background.js
+// INSTALL, RELOAD OUR OWN, UNINSTALL RELOADER
+//   IF I DO THIS FROM LIBRARY/ THEN IT'S RECURSIVE.
 
 
 function emitPlugin() {
@@ -364,14 +363,6 @@ function emitEmitters() {
 	].concat(MIDDLEWARE_DEPENDENCIES)
 	
 
-}
-
-// this is some nice distilling
-// Source: https://stackoverflow.com/questions/29182244/convert-a-string-to-a-template-string
-String.prototype.interpolate = function(params) {
-  const names = Object.keys(params);
-  const vals = Object.values(params);
-  return new Function(...names, `return \`${this}\`;`)(...vals);
 }
 
 // https://github.com/briancullinan/c2make-babel-transpiler
