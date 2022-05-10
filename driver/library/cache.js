@@ -3,66 +3,95 @@
 //   THE WHOLE MODULE SYSTEM EASIER TO UNDERSTAND.
 // BASICALLY, READ THE TOP LEVEL FUNCTION NAMES OUT OF FILES TO AUTOMATICALLY
 //   MAKE MODULE.EXPORTS={}, AND INDEX.JS FILES IN QUINE.JS.
-let fileMtimes
+// GETTING KIND OF BORED OF THIS. NEED A FUNCTION TO LIST FUNCTIONS.
+
+function contents() {
+	contents
+	list
+	let fileFunctions
+	let fileTimes
+	load
+	needs
+	init
+	cache
+	init()
+}
+
+// this is the kind of alien code that doesn't look pretty
+function list(functions) {
+	let y = (/function\s+([a-z]+[ -~]*)\s*\(/gi);
+	let funcs = []
+	while(funcs.push((y.exec(functions) || []).pop())
+			&& funcs[funcs.length-1]) {}
+	return funcs.slice(0, -1)
+}
+
+let fileTimes
 let libraryFunctions
 
-// GETTING KIND OF BORED OF THIS. NEED A FUNCTION TO LIST FUNCTIONS.
-function listFunctions(libCode) {
-	let y = (/function\s+([a-z]+[ -~]*)\s*\(/gi);
-	let fileFunctions = []
-	while(fileFunctions.push((y.exec(libCode) || []).pop())
-			&& fileFunctions[fileFunctions.length-1]) {}
-	fileFunctions.pop()
-	return fileFunctions
+// load a list of functions from each file in the specified folder
+function load(library) {
+	if(typeof fileTimes == 'undefined')
+		fileTimes = {}
+	if(typeof libraryFunctions == 'undefined')
+		libraryFunctions = {}
+	fileTimes[library] = newFileTime
+	let libCode = readFile(library)
+	libraryFunctions[library] = listFunctions(libCode)
 }
 
-
-function cacheLibrary(library) {
-	const fs = require('fs')
-	const {nodeReadDir} = require('./repl')
-	// TODO: rewrite our own file with the cache attached
-	let libraryFiles = nodeReadDir(library, true)
-	let cacheTime = fs.statSync(__filename).mtime.getTime()
-	if(typeof fileMtimes == 'undefined') fileMtimes = {}
-	if(typeof libraryFunctions == 'undefined') libraryFunctions = {}
-	for(let i = 0; i < libraryFiles.length; i++) {
-		if(!libraryFiles[i].endsWith('.js')) {
-			continue
-		}
-		let newFileTime = fs.statSync(libraryFiles[i]).mtime.getTime()
-		if(newFileTime == fileMtimes[libraryFiles[i]]) {
+// skip reloading the file if the mtime hasn't changed
+//   some little efficiency, I can't imagine a single 
+//   library being too big to load on startup.
+// CODE REVIEW, using a parameter to describe function
+//   names since we no longer worry about collisions?
+function needs(update) {
+	return update.endsWith('.js')
 			// already got this one, hasn't changed
+			&& statFile(update).mtime.getTime()
+					!== fileTimes[update]
+}
+
+// TODO: make work in browser so save language server requests
+function cache(library) {
+	let libraryFiles = readDir(library, true)
+	for(let i = 0; i < libraryFiles.length; i++) {
+		if(!needs(libraryFiles[i])) {
 			continue
 		}
-		fileMtimes[libraryFiles[i]] = newFileTime
-		let libCode = fs.readFileSync(libraryFiles[i])
-		libraryFunctions[libraryFiles[i]] = listFunctions(libCode)
+		load(libraryFiles[i])
 	}
-	const FILE_MARKER = 'DO NOT EDIT BELOW THIS LINE'
-	let cacheFile = fs.readFileSync(__filename)
-	let split = cacheFile.indexOf()
-	let cacheLibrary = 'cacheLibrary: cacheLibrary,\n'
-	if(split == -1) {
-		cacheLibrary = 'cacheLibrary: (' + cacheLibrary.toString() + '),\n'
-	}
+	// lol, rewrite our own file with cache data attached
+	let baseTemplate = replaceParameters(
+			module.exports,
+			{
+				fileFunctions: 
+						JSON.stringify(fileFunctions, null, 2),
+				fileTimes: 
+						JSON.stringify(fileTimes, null, 2),
+			})
 
-	// TODO: would love to do this with quine but they are circular depended
-	fs.writeFileSync(__filename, cacheLibrary + '\n'
-		+ '\n// ' + FILE_MARKER + '\nmodule.exports = {\n'
-		+ 'fileTimes: ' 
-				+ JSON.stringify(fileMtimes, null, 2) + ',\n'
-		+ 'fileFunctions: ' 
-				+ JSON.stringify(fileFunctions, null, 2) + '\n'
-		+ '};\n\n')
+	console.log(baseTemplate)
+	// writeFile(__filename, baseTemplate)
 
 	return fileFunctions
 }
 
-
-// DO NOT EDIT BELOW THIS LINE
-module.exports = {
-	cacheLibrary
+// lol, start weird stuff
+function init() {
+	const CACHE_MARKER = '\n\n// DO NOT EDIT BELOW THIS LINE, AUTO-GENERATED\n\n'
+	if(typeof module != 'undefined') {
+		module.exports = {
+			contents,
+			list,
+			load,
+			needs,
+			cache,
+			init,
+		}
+	}
 }
 
+init()
 
 
