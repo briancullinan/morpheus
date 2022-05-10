@@ -141,12 +141,22 @@ function convertFunctions(v) {
 /*
 
 */
-function requireTemplate(library, libraryFile) {
-	let requireLibrary = wrapperQuine({
-		__library: library,
-	}, modulizeLibrary)
+function bootstrapRequire(library, libraryFile) {
+	
+	// TODO: move require and __library down below libraryLookup
+	if(typeof require != 'undefined') {
+		let {nodeReadDir} = require('./repl')
+		let libCode = nodeReadDir('./', true)
+		console.log(libCode)
+		let y = (/function\s+([a-z]+[ -~]*)\s*\(/gi);
+		let z
+		let libFunctions = []
+		while(null != (z=y.exec(libCode))) {
+			libFunctions.push(z[1])
+		}
+		console.log(libFunctions)
+	} // TODO: alternate require
 
-// '(' + .toString() + ')'
 	let customRequire = wrapperQuine({
 		// provide a relative path to lib files in case
 		//   lib code wants to refer to itself
@@ -154,9 +164,6 @@ function requireTemplate(library, libraryFile) {
 		__dirname: libraryFile.replace(/\/[^\/]*?$/, ''),
 		__filename: libraryFile,
 	}, 'return a + b')
-	
-	console.log(requireLibrary)
-
 
 	// TODO: keep returning templates until we can replace
 	//   all the bootstrap parts of a function, or
@@ -192,19 +199,6 @@ function templateQuine(templateString) {
 
 
 
-// THIS IS BASICALLY ALL WEBPACK / require() DOES.
-function modulizeLibrary(entryFunction, libCode) {
-	let libFunctions = listFunctions(libCode)
-	let newModule = {}
-	for(let i = 0; i < libFunctions; i++) {
-		newModule[libFunctions[i]] = globalThis[libFunctions[i]]
-	}
-	Object.assign(globalThis, module.exports, moduleResults)
-	return newModule
-}
-
-
-
 // TODO: do this thing where the notebooks export to seperate files
 //   and then convert seperate files and comments back into notebooks
 //   then wind it up as an RPC service.
@@ -219,6 +213,7 @@ if (meetsPermissions(module)) return jsloader.apply(this, arguments);
 */
 
 
+// THIS IS BASICALLY ALL WEBPACK / require() DOES.
 // TODO: the functionQuine does 1 pass rotation on return types
 //   i.e. function -> string, string -> function
 function functionQuine(entryFunction) {
@@ -314,39 +309,37 @@ function replQuine() {
 }
 
 
-function listFunctions(libCode) {
-	let result = []
-	y = (/function\s+([a-z]+[ -~]*)\s*\(/gi);
-	while(null != (z=y.exec(libCode))) {
-		result.push(z[1])
+
+
+
+// TODO: move to repl/env.js
+if(typeof module != 'undefined') {
+
+	// TODO: BOOTSTRAP?
+	if(typeof require != 'undefined') {
+
+		let path = require('path')
+		bootstrapRequire(path.relative(
+			path.resolve(path.join(__dirname, './repl')),
+			path.resolve(__dirname)), './repl/eval.js')
 	}
-	return result
+
+	if(typeof process != 'undefined') {
+		// javascript has a global context, not every language has
+		//   this feature, might as well take advantage of it here
+		globalThis.acorn = require('acorn')
+		globalThis.acorn.walk = require('acorn-walk')
+		globalThis.acorn.loose = require('acorn-loose')
+		newRequire(__dirname, __dirname, __filename, './stacks/cli.js')
+		emitCLI()
+	}
+
+	module.exports = {
+		emitMakefile,
+	}
+
 }
 
-
-
-// TODO: BOOTSTRAP?
-if(typeof require != 'undefined'
-	&& typeof module != 'undefined'
-	&& typeof module.exports.require == 'undefined') {
-	
-	let path = require('path')
-	requireTemplate(path.relative(
-		path.resolve(path.join(__dirname, './repl')),
-		path.resolve(__dirname)), './repl/eval.js')
-
-}
-
-if(typeof module != 'undefined'
-	&& typeof process != 'undefined') {
-	// javascript has a global context, not every language has
-	//   this feature, might as well take advantage of it here
-	globalThis.acorn = require('acorn')
-	globalThis.acorn.walk = require('acorn-walk')
-	globalThis.acorn.loose = require('acorn-loose')
-	newRequire(__dirname, __dirname, __filename, './stacks/cli.js')
-	emitCLI()
-}
 
 if (typeof WorkerGlobalScope !== 'undefined'
 		&& self instanceof WorkerGlobalScope ) {
@@ -455,12 +448,3 @@ const MIDDLEWARE_DEPENDENCIES = [
 	'encryptedResponseMiddleware',
 	'installEncryptedAsyncMiddleware',
 ]
-
-
-if(typeof module != 'undefined') {
-	module.exports = {
-		emitDownload,
-		emitMakefile,
-	}
-}
-

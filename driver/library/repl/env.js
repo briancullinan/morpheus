@@ -101,12 +101,15 @@ function nodeReadDir(pathname, recursive) {
 	if(recursive) {
 		let result = []
 		let directory = fs.readdirSync(pathname)
-		console.log(directory)
 		for(let i = 0; i < directory.length; i++) {
-			result.push(directory[i])
-			if(fs.statSync(directory[i]).isDirectory()) {
-				let subdir = nodeReadDir(directory[i], recursive)
-				directory.push.apply(directory, subdir)
+			if(directory[i].startsWith('.')) {
+				continue
+			}
+			let fullpath = path.join(pathname, directory[i])
+			result.push(fullpath)
+			if(fs.statSync(fullpath).isDirectory()) {
+				let subdir = nodeReadDir(fullpath, recursive)
+				result.push.apply(result, subdir)
 			}
 		}
 		return result
@@ -125,4 +128,13 @@ function virtualReadFile(filename) {
 	.map(function (c) { return String.fromCharCode(c) })
 	.join('')
 }
+
+if(typeof module != 'undefined') {
+  module.exports = {
+    nodeReadDir,
+  }
+
+
+}
+
 
