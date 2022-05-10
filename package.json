@@ -11,7 +11,7 @@
     "deploy:build": "gsutil -m cp -r build/release-wasm-js/*.wasm gs://nightly.quake.games/",
     "deploy": "npm run deploy:assets && npm run deploy:http && npm run deploy:build && npm run deploy:game",
     "make": "node -e \"require('./driver/library/quine.js').emitMakefile()\"",
-    "cli": "node ./driver/library/quine.js"
+    "cli": "node ./driver/library"
   },
   "bin": {
     "quakejs-content": "bin/content.js",

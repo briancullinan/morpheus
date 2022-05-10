@@ -1,10 +1,6 @@
 // emit self in a cloud-compatible way.
-// SELF EXTRACTOR LIKE BUSYBOX
 // quines have a life-expectancy, we should be up-front with 
 //   them about that so they don't come back to kill us like Roy.
-
-// convert makefile to jupyter notebook for storage in collab / download.
-//   does jupyter support encryption?
 
 // CODE REVIEW: I'VE COMBINED DEPENDENCY INJECTION FROM MY MAKEFILE
 //   WITH EXPRESS STYLE MIDDLEWARES FOR FEATURE SPECIFICS.
@@ -20,15 +16,22 @@ String.prototype.interpolate = function interpolateTemplate(params) {
 
 
 // BASIC TEMPLATE SYSTEM, find and replace tokens
-function replaceParameters(templateString, object) {
+function template(string, object) {
 	let params = Object.keys(object)
 	let values = Object.values(object)
 	for(let i = 0; i < params.length; i++) {
-		templateString =
-				templateString.replace(
-						new RegExp(params[i], 'g'), values[i])
+		string =
+		(string + '').replace(
+				new RegExp(params[i], 'g'), values[i])
 	}
-	return templateString
+	return string
+}
+
+if(typeof module != 'undefined') {
+	module.exports = {
+		template
+	}
+
 }
 
 // OKAY, THEORY, THE BASIS BEHIND ALL MUSTACHE / LATEX / RAZOR / SCSS
@@ -79,7 +82,7 @@ function wrapperQuine(object, functionBody) {
 	// ALL THIS WORK JUST SO I NEVER HAVE TO WRITE JAVASCRIPT INSIDE A STRING AGAIN
 	// Here, object -> template function, template -> object
 	//   function -> string, string -> object something like that
-	let baseTemplate = replaceParameters(
+	let baseTemplate = template(
 		'(' + wrapperTemplate.toString() + ')', {
 			templateParams: Object.keys(object).join(', '),
 			functionBody: functionBody.toString()
@@ -89,7 +92,7 @@ function wrapperQuine(object, functionBody) {
 	//		.bind.apply(preparedFunction, [this]
 	//				.concat())
 	//   perhaps it can be distilled even furthur by functionQuine()
-	let bindTemplate = replaceParameters(
+	let bindTemplate = template(
 		'(' + eval(baseTemplate)().toString() 
 				+ ').bind(null, templateValues)', {
 			// automatically fold parameters from a template into
@@ -187,6 +190,10 @@ function functionQuine(entryFunction) {
 	//   functional names, templateQuine and functionQuine
 	//   can be used together
 }
+
+// convert makefile to jupyter notebook for storage in collab / download.
+//   does jupyter support encryption?
+// SELF EXTRACTOR LIKE BUSYBOX
 
 function evalQuine() {
 	// TODO: recursively replace eval() with doEval() polyfill

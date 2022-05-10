@@ -17,8 +17,8 @@
 function bootstrapRequire(library, libraryFile) {
 	// TODO: move require and __library down below libraryLookup
 	if(typeof require != 'undefined') {
-		let {cacheLibrary} = require('./cache.js')
-		let libCache = cacheLibrary(library)
+		let {cache} = require('./cache.js')
+		let libCache = cache(library)
 		for(let i = 0; i < libCache.length; i++) {
 			
 		}

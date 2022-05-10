@@ -5,18 +5,6 @@
 //   MAKE MODULE.EXPORTS={}, AND INDEX.JS FILES IN QUINE.JS.
 // GETTING KIND OF BORED OF THIS. NEED A FUNCTION TO LIST FUNCTIONS.
 
-function contents() {
-	contents
-	list
-	let fileFunctions
-	let fileTimes
-	load
-	needs
-	init
-	cache
-	init()
-}
-
 // this is the kind of alien code that doesn't look pretty
 function list(functions) {
 	let y = (/function\s+([a-z]+[ -~]*)\s*\(/gi);
@@ -31,13 +19,13 @@ let libraryFunctions
 
 // load a list of functions from each file in the specified folder
 function load(library) {
-	if(typeof fileTimes == 'undefined')
-		fileTimes = {}
-	if(typeof libraryFunctions == 'undefined')
-		libraryFunctions = {}
-	fileTimes[library] = newFileTime
+	let needsUpdate = needs(library)
+	if(!needsUpdate) {
+		return
+	}
+	fileTimes[library] = needsUpdate
 	let libCode = readFile(library)
-	libraryFunctions[library] = listFunctions(libCode)
+	libraryFunctions[library] = list(libCode)
 }
 
 // skip reloading the file if the mtime hasn't changed
@@ -46,44 +34,58 @@ function load(library) {
 // CODE REVIEW, using a parameter to describe function
 //   names since we no longer worry about collisions?
 function needs(update) {
-	return update.endsWith('.js')
-			// already got this one, hasn't changed
-			&& statFile(update).mtime.getTime()
-					!== fileTimes[update]
+	if(!update.endsWith('.js')) {
+		return false
+	}
+	let newFileTime = statFile(update).mtime.getTime()
+		// already got this one, hasn't changed
+	if(newFileTime !== fileTimes[update]) {
+		return newFileTime
+	}
+	return false
 }
 
-// TODO: make work in browser so save language server requests
+
 function cache(library) {
+	if(typeof fileTimes == 'undefined')
+		fileTimes = {}
+	if(typeof libraryFunctions == 'undefined')
+		libraryFunctions = {}
 	let libraryFiles = readDir(library, true)
 	for(let i = 0; i < libraryFiles.length; i++) {
-		if(!needs(libraryFiles[i])) {
-			continue
-		}
 		load(libraryFiles[i])
 	}
 	// lol, rewrite our own file with cache data attached
-	let baseTemplate = replaceParameters(
-			module.exports,
-			{
-				fileFunctions: 
-						JSON.stringify(fileFunctions, null, 2),
-				fileTimes: 
-						JSON.stringify(fileTimes, null, 2),
-			})
+	if(typeof module != 'undefined') {
+		Object.assign(module.exports, {
+			libraryFunctions: 
+					JSON.stringify(libraryFunctions, null, 2),
+			fileTimes: 
+					JSON.stringify(fileTimes, null, 2),
+		})
+		// TODO: make work in browser so save language server requests
+		let baseTemplate = template(init, module.exports)
 
-	console.log(baseTemplate)
+		console.log(baseTemplate)
+	}
 	// writeFile(__filename, baseTemplate)
 
-	return fileFunctions
+	return libraryFunctions
 }
 
 // lol, start weird stuff
+// @Quine()
 function init() {
 	const CACHE_MARKER = '\n\n// DO NOT EDIT BELOW THIS LINE, AUTO-GENERATED\n\n'
 	if(typeof module != 'undefined') {
+		// javascript has a global context, not every language has
+		//   this feature, might as well take advantage of it here
+		globalThis.template = require('./quine.js').template
+		globalThis.readDir = require('./env.js').readDir
 		module.exports = {
-			contents,
 			list,
+			fileTimes,
+			libraryFunctions,
 			load,
 			needs,
 			cache,
