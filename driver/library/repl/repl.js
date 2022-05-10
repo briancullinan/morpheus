@@ -133,6 +133,7 @@ function doLibraryLookup(functionName) {
 		readFile,
 	} = 
 	*/
+	// TODO: tie into cache-system
 	let libraryFiles = readDir(__library, true)
 	for(let i = 0; i < libraryFiles.length; i++) {
 		let libraryCode = readFile(libraryFiles[i])

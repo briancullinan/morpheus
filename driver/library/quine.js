@@ -142,19 +142,28 @@ function convertFunctions(v) {
 
 */
 function bootstrapRequire(library, libraryFile) {
-	
 	// TODO: move require and __library down below libraryLookup
 	if(typeof require != 'undefined') {
 		let {nodeReadDir} = require('./repl')
-		let libCode = nodeReadDir('./', true)
-		console.log(libCode)
-		let y = (/function\s+([a-z]+[ -~]*)\s*\(/gi);
-		let z
-		let libFunctions = []
-		while(null != (z=y.exec(libCode))) {
-			libFunctions.push(z[1])
+		let libraryFiles = nodeReadDir(library, true)
+		// TODO: INTERESTING IDEA, REPLACE GLOBALTHIS WITH 
+		//   PLACEHOLDER FUNCTIONS FOR EVERYTHING IN THE LIBRARY,
+		//   THE FIRST TIME THE FUNCTION IS USED, BOOT UP A CLOUD
+		//   SERVICE TO HOST IT, REPLACE THE CALL IN GLOBALTHIS WITH
+		//   THE NEW `RENDERED` FUNCTION.
+		for(let i = 0; i < libraryFiles.length; i++) {
+			if(!libraryFiles[i].endsWith('.js')) {
+				continue
+			}
+			let libCode = require('fs').readFileSync(libraryFiles[i])
+			let y = (/function\s+([a-z]+[ -~]*)\s*\(/gi);
+			let libFunctions = []
+			while(libFunctions.push((y.exec(libCode) || []).pop())
+				&& libFunctions[libFunctions.length-1]) {}
+			libFunctions.pop()
+			console.log(libFunctions)
+
 		}
-		console.log(libFunctions)
 	} // TODO: alternate require
 
 	let customRequire = wrapperQuine({
@@ -168,6 +177,11 @@ function bootstrapRequire(library, libraryFile) {
 	// TODO: keep returning templates until we can replace
 	//   all the bootstrap parts of a function, or
 	//   return a template to replace middleware components
+
+}
+
+
+function cacheLibrary() {
 
 }
 
@@ -317,11 +331,16 @@ if(typeof module != 'undefined') {
 
 	// TODO: BOOTSTRAP?
 	if(typeof require != 'undefined') {
-
 		let path = require('path')
-		bootstrapRequire(path.relative(
-			path.resolve(path.join(__dirname, './repl')),
-			path.resolve(__dirname)), './repl/eval.js')
+		// TODO: copy this to module-maker
+		//let relativePath = path.relative(
+		//	path.resolve(path.join(__dirname, './repl')),
+		//	path.resolve(__dirname))
+		let relativePath = path.relative(
+			path.resolve(process.cwd()),
+			path.resolve(__dirname))
+
+		bootstrapRequire(relativePath, './repl/eval.js')
 	}
 
 	if(typeof process != 'undefined') {
