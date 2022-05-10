@@ -150,6 +150,11 @@ function bootstrapRequire(library, libraryFile) {
 			
 		}
 	} // TODO: alternate require
+	// TODO: INTERESTING IDEA, REPLACE GLOBALTHIS WITH 
+	//   PLACEHOLDER FUNCTIONS FOR EVERYTHING IN THE LIBRARY,
+	//   THE FIRST TIME THE FUNCTION IS USED, BOOT UP A CLOUD
+	//   SERVICE TO HOST IT, REPLACE THE CALL IN GLOBALTHIS WITH
+	//   THE NEW `RENDERED` FUNCTION.
 
 	let customRequire = wrapperQuine({
 		// provide a relative path to lib files in case

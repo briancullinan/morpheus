@@ -3,32 +3,40 @@
 //   THE WHOLE MODULE SYSTEM EASIER TO UNDERSTAND.
 // BASICALLY, READ THE TOP LEVEL FUNCTION NAMES OUT OF FILES TO AUTOMATICALLY
 //   MAKE MODULE.EXPORTS={}, AND INDEX.JS FILES IN QUINE.JS.
+let fileMtimes
+let libraryFunctions
+
+// GETTING KIND OF BORED OF THIS. NEED A FUNCTION TO LIST FUNCTIONS.
+function listFunctions(libCode) {
+	let y = (/function\s+([a-z]+[ -~]*)\s*\(/gi);
+	let fileFunctions = []
+	while(fileFunctions.push((y.exec(libCode) || []).pop())
+			&& fileFunctions[fileFunctions.length-1]) {}
+	fileFunctions.pop()
+	return fileFunctions
+}
+
 
 function cacheLibrary(library) {
 	const fs = require('fs')
+	const {nodeReadDir} = require('./repl')
 	// TODO: rewrite our own file with the cache attached
-	let {nodeReadDir} = require('./repl')
 	let libraryFiles = nodeReadDir(library, true)
-	// TODO: INTERESTING IDEA, REPLACE GLOBALTHIS WITH 
-	//   PLACEHOLDER FUNCTIONS FOR EVERYTHING IN THE LIBRARY,
-	//   THE FIRST TIME THE FUNCTION IS USED, BOOT UP A CLOUD
-	//   SERVICE TO HOST IT, REPLACE THE CALL IN GLOBALTHIS WITH
-	//   THE NEW `RENDERED` FUNCTION.
-	let libraryFunctions = {}
-	let fileMtimes = {}
+	let cacheTime = fs.statSync(__filename).mtime.getTime()
+	if(typeof fileMtimes == 'undefined') fileMtimes = {}
+	if(typeof libraryFunctions == 'undefined') libraryFunctions = {}
 	for(let i = 0; i < libraryFiles.length; i++) {
 		if(!libraryFiles[i].endsWith('.js')) {
 			continue
 		}
-		fileMtimes[libraryFiles[i]] = fs.statSync(libraryFiles[i])
-				.mtime.getTime()
+		let newFileTime = fs.statSync(libraryFiles[i]).mtime.getTime()
+		if(newFileTime == fileMtimes[libraryFiles[i]]) {
+			// already got this one, hasn't changed
+			continue
+		}
+		fileMtimes[libraryFiles[i]] = newFileTime
 		let libCode = fs.readFileSync(libraryFiles[i])
-		let y = (/function\s+([a-z]+[ -~]*)\s*\(/gi);
-		let fileFunctions = []
-		while(fileFunctions.push((y.exec(libCode) || []).pop())
-				&& fileFunctions[fileFunctions.length-1]) {}
-		fileFunctions.pop()
-		fileMtimes[libraryFiles[i]] = libraryFunctions
+		libraryFunctions[libraryFiles[i]] = listFunctions(libCode)
 	}
 	const FILE_MARKER = 'DO NOT EDIT BELOW THIS LINE'
 	let cacheFile = fs.readFileSync(__filename)
