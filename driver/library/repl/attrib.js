@@ -17,7 +17,7 @@
 
 // Consequently, the structure/scaffolding for dependency injection
 //   can be abstracted out to declarations i.e:
-test1(func => { test; script }); test2
+test1(func => { test; script }); test2(func => {})
 // becomes something more like:
 ({
 	dev: 'test data',
@@ -204,6 +204,10 @@ function doAttributes(abstractNode) {
 		//   unit tests. LOL, invent a new language with a unit-test free side-effect.
 		
 		// TODO: REGEXP -> template(functions)
+		// this level of abtraction is only to test our own system, the
+		//   rest can be written and standard javascript using whatever
+		//   level of attributes needed to keep the code small.
+		
 
 		// that we can use with the module loader in env.js like 
 		//modules.exports = template({ doEval: (function () { 
@@ -327,12 +331,17 @@ function doAttributes(abstractNode) {
 	balanced: ')',
 })
 
+
+
 // #############  THIS SHOULD BE ENOUGH TO GET REPL GOING
 // #############  FOR MORE RELIABLE SYNTAX EVALUATIONS USING
 // #############  THE SAME DECLARATIVE SYSTEM AND 5 LINES OF CODE.
 
+
+
+
 // TODO: add attributes to another language that doesn't have them
-//   using this system on itself.
+//   using this system on itself. ie function attributes(antlr) {}
 
 ({
 
