@@ -9,7 +9,8 @@ const fs = require('fs');
 const path = require('path');
 const GAME_DIRECTORY = 'multigame'
 const WEB_DIRECTORY = path.resolve(__dirname + '/../http')
-const ASSETS_DIRECTORY = path.resolve(__dirname + '/../../../games/multigame/assets/')
+const ASSETS_DIRECTORY = path.resolve(__dirname 
+    + '/../../../games/multigame/assets/')
 const BUILD_DIRECTORY = path.resolve(__dirname + '/../../../build/')
 const ALLOWED_DIRECTORIES = [
   WEB_DIRECTORY,

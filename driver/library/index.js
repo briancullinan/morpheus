@@ -14,10 +14,9 @@
 /*
 
 */
-function bootstrapRequire(library, libraryFile) {
+function bootstrap({library, require}, libraryFile) {
 	// TODO: move require and __library down below libraryLookup
 	if(typeof require != 'undefined') {
-		let {cache} = require('./cache.js')
 		let libCache = cache(library)
 		for(let i = 0; i < libCache.length; i++) {
 			
@@ -52,15 +51,11 @@ if(typeof module != 'undefined') {
 	// TODO: BOOTSTRAP?
 	if(typeof require != 'undefined') {
 		let path = require('path')
-		// TODO: copy this to module-maker
-		//let relativePath = path.relative(
-		//	path.resolve(path.join(__dirname, './repl')),
-		//	path.resolve(__dirname))
 		let relativePath = path.relative(
 			path.resolve(process.cwd()),
 			path.resolve(__dirname))
 
-		bootstrapRequire(relativePath)
+		bootstrap(require, relativePath)
 	}
 
 	if(typeof process != 'undefined') {

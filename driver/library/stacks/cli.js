@@ -1,36 +1,15 @@
 
 // have to do this to build
+// TODO: somehow recursively pull environment 
+//   arguments from somewhere else like xargs? implied -e? jupyter_ops?
+if(typeof yargs != 'undefined') {
 
-function cliArgumentsMiddelware(onArguments) {
-	let stdioMiddleware
-	if(typeof require != 'undefined') {
-		stdioMiddleware = require('./../repl/env.js').stdioMiddleware
-	}
-	// TODO: somehow recursively pull environment 
-	//   arguments from somewhere else like xargs? implied -e? jupyter_ops?
-	if(typeof require != 'undefined') {
-		try { yargs = require('yargs') }
-		catch (e) {
-			if(!e.message.includes('find module')) {
-				throw e
-			}
-		}
-	}
-
-	let { 
-		existsSync, getCwd
-	} = stdioMiddleware() // auto-detect
-
-	// TODO: in my jupter_ops I automatically converted function parameters to
-	//   the same name on the command, would be neat to automatically parse
-	//   aliases and descripts from code comments as a proof of concept here.
-	// Quines.
-
-	return {
-		getArguments,
-		runArguments,
-	}
 }
+
+// TODO: in my jupter_ops I automatically converted function parameters to
+//   the same name on the command, would be neat to automatically parse
+//   aliases and descripts from code comments as a proof of concept here.
+// Quines.
 
 
 function onArg() {
@@ -60,14 +39,8 @@ function runArguments(args) {
 					|| args[i].includes('quine')) {
 				runProgram = true
 			} else
-			if(existsSync(path.join(getCwd(), args[i]))) {
-				foundFiles.push(getCwd(), args[i])
-			} else
-			if(existsSync(args[i])) {
+			if(fileExists(args[i])) {
 				foundFiles.push(args[i])
-			} else
-			if(existsSync(path.join(__dirname, args[i]))) {
-				foundFiles.push(__dirname, args[i])
 			} else
 			if(args[i] == '-e') {
 				runProgram = args[++i]
