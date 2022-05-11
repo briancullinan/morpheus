@@ -29,8 +29,9 @@ function framework(name) {
 
 // TODO: parse our own file using the @Attribute system to load the REPL framework
 
-function bootstrap(framework, {library, require}, libraryFile) {
+function bootstrap(framework) {
 	// TODO: move require and __library down below libraryLookup
+	
 	if(typeof require != 'undefined') {
 		let libCache = cache(library)
 		for(let i = 0; i < libCache.length; i++) {
@@ -56,9 +57,15 @@ function bootstrap(framework, {library, require}, libraryFile) {
 	//   return a template to replace middleware components
 
 }
+
+// TODO: BOOTSTRAP?
+if(typeof require != 'undefined') {
+	require('./env.js')
+	bootstrap()
+}
 // ^^^ should be able to load wordpress, ourselves, symphony projects, 
 //   old drupal projects, phpBB, deployment frameworks, etc.
-
+return
 
 // It might be nice if I could just arbitrarily include code
 //   in my page without like having to write <script src="" />

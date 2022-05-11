@@ -30,11 +30,9 @@ if(typeof FS != 'undefined') {
 		existsSync: function () {
 			return typeof FS.virtual[localName] != 'undefined'
 		},
-		fileExists,
 		readDir: virtualReadDir,
 		readFile: virtualReadFile,
 		statFile: virtualFileStat,
-		readRecursive,
 	})
 } else
 
@@ -46,11 +44,10 @@ if(typeof process != 'undefined') {
 		} = require('fs') // stdioMiddleware
 		let { cwd: getCwd } = require('process')
 		module.exports = {
-			existsSync, getCwd, fileExists,
+			existsSync, getCwd,
 			readDir: readdirSync, // only adds recursive readdirSync
 			readFile: readFileSync,
 			statFile: statSync,
-			readRecursive
 		}
 		Object.assign(globalThis, module.exports)
 	} catch (e) {
