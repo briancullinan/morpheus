@@ -1,11 +1,15 @@
 // INTENT COMPILER
 /*
-THEORY: I've combine an @attribute system with a code template
+THEORY: I've combine an @Attribute system with a code template
 system. like `function ${name}(${params}) { return ${values} }`
 
 this will give me the abstraction level that need to write
 the `intent` compiler. a single directive programming language
-something like lexer: token(word(/\w/g), symbol(/[- ,\[\(_,'"\*\&\^ etc/))
+something like lexer: 
+token (
+    word ( /\w/g ), 
+    symbol ( /[- ,\[\(_,'"\*\&\^ etc/ )
+)
 because node/JS already come with most features, the compiler will
 be less than 30 lines of code. a basic consumer for ANTLR, same as
 many other projects/transpilers.
@@ -13,7 +17,7 @@ many other projects/transpilers.
 the part that will set this compiler apart is that it will require
 natural language processing attached to it as a part of the compile
 process. this will be an odd relationship to make in the current
-design. something like this for every sentence between periods / lines / parens:
+design. something like this for every sentence:
 
 @Emotion(adjectives)
 function (context, subject, verbs, nouns)
