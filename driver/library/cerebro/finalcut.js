@@ -74,5 +74,8 @@ when neura-link is finished I'll have the
 output data and tools necessary to validate what's 
 left of my existance after I'm gone.
 
+Validate like add accountability to "in retrospect"
+Like in the movie The Circle. Quality control.
+Like God at the pearly gates.
 
 */

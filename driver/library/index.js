@@ -13,6 +13,7 @@ functions and some declarative framework code.
 // I.E.
 // @Template
 // @Framework(ideologies)
+// @Bootstrap()
 function framework(name) {
 	bootstrap
 
@@ -24,11 +25,142 @@ function framework(name) {
 //   old drupal projects, phpBB, deployment frameworks, etc.
 
 /*
+Unfortunately, the software industry at large has made a giant mistep.
+https://qz.com/646467/how-one-programmer-broke-the-internet-by-deleting-a-tiny-piece-of-code/
+As history repeats itself, programmers include smaller, 
+stupider code in their projects. This IDE aims to solve
+all of that by making the stupid code declarative. This
+leads to a much larger, prior mis-step that eventually
+lead to NPM and the left-pad fiasco. The much larger 
+mistep, like NPM is that rather than adding dependency
+injection to projects and frameworks, creating less code
+NPM actually becomes a delivery pipeline for MORE code.
+How then, as a whole did dependency injection help NPM?
+Doesn't it stand to reason that NPM should withold all
+source code from my, provide some basic polyfills to
+run my code locally, until NPM itself is wound through
+it's scaffolding API and my codebase is compiled and run
+in memory as an "Angular" or "React" project based on
+the platform specifics I feel like providing myself.
+But the codebase itself and the functionality would 
+remain framework independent because of how NPM was 
+designed. But that isn't the NPM we have today.
+
+You can't benefit from dependency injection if the very
+act of adding dependency injection to a project doubles
+the code size with unit tests. Why not tests your unit tests?
+Make sure the unit tests are working as expect? Seriously?
+
+This leads me to the much larger software-industry wide
+problem that rather than developing Object Oriented pattern
+or RESTful pattern making our code bases smaller with 
+less scaffolding, we've engineered ourselves into writing
+10 times more scaffolding just so that we can be more
+descriptive in the actual coding project. i.e. 100,000
+lines of Razor engine code, where is it now? Wasted, 
+because of too-tight-coupling of interconnected dependencies.
+Why? Because the language promoted engineers design it
+that way. Because of DI being overused.
+
+This leads me to a much larger, possibly shared problem
+between many disciplines. It's the failure to recognize 
+that Residential stored lithium ion battiers have an 
+enormous infrastructure technical debt, just like adding
+any "pattern", no matter how novel adds 1 level of complexity
+to the system, be it city management or code management.
+
+In exchange for adding dependency injection as a technical
+complexity in itself, the language and writing style needs
+extra annoying rules to make sure we stay organized. Programmers
+impose these rules on other programmers because they think
+they know better. e.g:
+* Tabs `\t` versus Spaces `\s`
+* {} - curly brackets always on a new line
+* "At least write some unit-tests"
+* Middle-wares, boot-loaders, dependencies, imports, 
+components / modules, code-complete, are all
+just examples of framework level non-sense to
+help programmers keep organized. I.e. opinionated 
+programming styles.
+
+Here's my optimal style:
+* 30 to 100 lines of code per component file
+* 1 to 2 functions, certainly no more than 10 per file
+* A list of declarative statements. 
+(these are where nicely stated Observables 
+and transforms come in, in React, some code
+looks good.)
+* Real world use-case test functions and mock-data / results.
+(i.e. use the component to generate the mock data.)
+* Optimal component format:
+
+
+
+
+// @Template
+function component() {
+	listOf
+	component
+	purposes
+}
+
+// @Declarations 
+// @Component(production)
+({
+purpose: doSomething
+})
+
+// @Component(development)
+({
+purpose: doSomethingElse
+})
+
+// @Test
+function generate(component) {
+	if(production) {
+
+	} else if (development) {
+
+	}
+}
+
+// @Environment
+({
+production: [{data: ['use this data']}]
+})
+({
+development: [{data: ['use this data instead']}]
+})
+
+Because using this declarative style shows up correctly in
+a default JS syntax parser. It is also easily parsible
+without a full lexographer and AST parse tree generator.
+I don't need to import every javascript feature like
+if I was using React static-class-style declarations. 
+(not all bad.)
+
+But most importantly, unlike React static class declarations,
+this format should force us to write STATEMENTS. NOT BRANCHES.
+That is the whole purpose of changing programing styles
+to accomodate the extra complexity of dependency injection
+is to reduce branching, no functions, no branching. 
+No branching, no unit-tests. Add functions, need more
+tests. (i.e. could write a more complex undoEval() to
+undo the expectations for the branching pattern, more
+on that I was thinking in patterns.js)
+
+
+Following these rules, I suspect I can blur the lines
+between `component` and `module` to the extent where
+my module just becomes whatever programming problem
+I am working on / designing at the time, and my components
+are already inter-connected and documented however they 
+need to be by the environment based linking system.
 
 */
 
 // TODO: parse our own file using the @Attribute system to load the REPL framework
-
+// @Load()
 function bootstrap(framework) {
 	// TODO: move require and __library down below libraryLookup
 	
@@ -37,7 +169,7 @@ function bootstrap(framework) {
 		for(let i = 0; i < libCache.length; i++) {
 			
 		}
-	} // TODO: alternate require
+	} // TODO: alternate require from "webpack"
 	// TODO: INTERESTING IDEA, REPLACE GLOBALTHIS WITH 
 	//   PLACEHOLDER FUNCTIONS FOR EVERYTHING IN THE LIBRARY,
 	//   THE FIRST TIME THE FUNCTION IS USED, BOOT UP A CLOUD
@@ -57,17 +189,34 @@ function bootstrap(framework) {
 	//   return a template to replace middleware components
 
 }
+// ^^^ should be able to load wordpress, ourselves, symphony projects, 
+//   old drupal projects, phpBB, deployment frameworks, etc.
 
 // TODO: BOOTSTRAP?
+// @Init()
 if(typeof require != 'undefined') {
 	require('./env.js')
 	bootstrap()
 }
-// ^^^ should be able to load wordpress, ourselves, symphony projects, 
-//   old drupal projects, phpBB, deployment frameworks, etc.
+
+// @Exit()
 return
 
-// It might be nice if I could just arbitrarily include code
+// TODO: this file is done, kind of poetic how this matches
+/*
+
+@Template
+
+@Load
+
+@Init - You are here, LOL
+
+exit // part of init() context from platform env.js
+
+*/
+
+
+// TODO: It might be nice if I could just arbitrarily include code
 //   in my page without like having to write <script src="" />
 // TODO: SCSS compiler is/was native C, by now it's probably WASM.
 //   but it might be nice to use that in templates with needing
@@ -147,6 +296,7 @@ init: ['npm', framework] // boot itself in outer context
 
 
 // TODO: move to repl/env.js
+/*
 if(typeof module != 'undefined') {
 
 	// TODO: BOOTSTRAP?
@@ -180,3 +330,4 @@ if (typeof WorkerGlobalScope !== 'undefined'
 		&& self instanceof WorkerGlobalScope ) {
 	emitService()
 }
+*/
