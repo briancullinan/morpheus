@@ -2,9 +2,8 @@
 
 /*
 
-
-This is the project that makes me the most sad.
-The most obviously use case would be connect
+This is the declaration project that makes me the most
+ sad. The most obvious use case would be connect
 javascript webcam API, OpenCV, Microphone, and
 the game engine/IDE output to an OBS style Twitch/YT
 stream compiled and transcoded with 
@@ -60,5 +59,11 @@ it. Less 30 lines of declarative code.
 TODO: make a final cut of my life to include a cached quine.
 
 It's a sad movie.
+
+TODO: Neura-link connector:
+when neura-link is finished I'll have the
+output data and tools necessary to validate what's 
+left of my existance after I'm gone.
+
 
 */
