@@ -5,7 +5,7 @@ DEMO: https://briancullinan.github.io/morpheus
 
 LIVE DEV: https://youtu.be/vKtYBDn2K24
 
-I'm not very creative re-inventing the wheel.
+I'm not very creative, re-inventing the wheel.
 
 TLDR: 
 
@@ -40,14 +40,14 @@ With a little Devil icon. A play on the demo, demon, and daemon.
 
 ## Short term
 1) DONE: Componentize engine, combine with Ace9
-2) Give Morpheus form, animations and world geometry, 
+2) WIP: Give Morpheus form, animations and world geometry, 
     tc_vis for tracemap grid snapping, Morpheus offers you a quine.
     use Q3 materials and vertexes as gravitational points for the code
     syntax tree to "fit" the code to the 3D model to make it look like
     I'm programming a Jesus face, or like how Neo reached into repair
     the bad code. Or like a https://en.wikipedia.org/wiki/Method_of_loci
     https://15.ai/
-3) Modularize goals, separate QVMs
+3) WIP: Modularize goals, separate QVMs
 4) POC DONE: Stream browser automation through plugin
 5) Automate LinkedIn lobby, find gamers
 6) Slippery onboarding, "Holy Shit!" moment

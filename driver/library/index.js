@@ -60,14 +60,38 @@ function bootstrap(framework, {library, require}, libraryFile) {
 //   old drupal projects, phpBB, deployment frameworks, etc.
 
 
+// It might be nice if I could just arbitrarily include code
+//   in my page without like having to write <script src="" />
+// TODO: SCSS compiler is/was native C, by now it's probably WASM.
+//   but it might be nice to use that in templates with needing
+//   `npm install scss` and 100,000 LoC with webpack. maybe a 
+//   wrapper to convert basic SCSS structures to their output.
+
 // I.E.
 // to consume all Google cloud services, 
 //    the declaration in cloud.js becomes something like:
+// @Add(@Cloud,google)
 ({
 boostrap: ['gutil', 'https://google.apis'],
 load: middleware(['express', 'google cloud function mock']),
 init: ['npm', framework] // boot itself in outer context
 })
+// That way, any time a write a script like copy(file)
+//   upload can be replaced with a cloud service, or 
+//   local fs.copyFileSync(), support for that environment
+// Is deginated now using @Cloud(google) anywhere in the
+//   global scope or above the compatible function.
+// When the service is compiled made up of multiple
+//   components, the linker can figure out if all the 
+//   functions our service relies on is compatible with
+//   the cloud service we're trying to run on.
+//   i.e. copy(file) from Google to Google swaps out for
+//     `gsutil -`, but running in a web-worker uses an RPC
+//     call to a non-Google hosted VM that uses a backend-secured from OAuth
+//     call to GCS REST API.
+// Henceforth, the "framework" written in less than 30 LoC
+
+
 // TODO: same for AWS, because framework() is a consumer of
 //   framework definition files these cloud providers provide
 //   either in the form of consumable REST documentation, OR
@@ -102,17 +126,18 @@ init: ['npm', framework] // boot itself in outer context
 
 })
 
-// It might be nice if I could just arbitrarily include code
-//   in my page without like having to write <script src="" />
-// TODO: SCSS compiler is/was native C, by now it's probably WASM.
-//   but it might be nice to use that in templates with needing
-//   `npm install scss` and 100,000 LoC with webpack. maybe a 
-//   wrapper to convert basic SCSS structures to their output.
-
 // TODO: auto-detect some language features and output a module
 //   that can be run in different contexts. i.e. Makefile / doEval('./Makefile')
 //   all could pass through a single require statement.
 // but how to define it?
+
+// TODO: drupal and symfony bootstrap demo
+
+// TODO: generate `code bodies` for lessons in traditional formats 
+//   for any language using these folding tools when loaded from
+//   the IDE documentation module. With only the relevant API code 
+//   blocks folded and listed nearby their usage.
+
 
 // TODO: move to repl/env.js
 if(typeof module != 'undefined') {

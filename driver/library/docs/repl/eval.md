@@ -1,3 +1,7 @@
+# EVAL IS EVIL!!!
+
+TODO: undoEvil demo
+
 `eval()` is converts plain text into a callable procedures.
 
 This plugin doesn't use eval(), instead it 
