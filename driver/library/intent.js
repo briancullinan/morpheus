@@ -45,8 +45,9 @@ design. something like this for every sentence:
 // As a side-effect, `intent` is a language consumer as well as language.
 //   due to NLP being build into the compiler along side ANTLR and JS.
 //   it is the software version of reimplmenting reliable algorithms
-//   on a GPU in hardware. Like MATLAB and Wolfram, but without the extra
-//   programing language, only JS and the `// comment @attribute` system.
+//   on a GPU in hardware. Like MATLAB and Wolfram (i.e. genius, brilliance), 
+//   but without the extra nuanced programing language
+//   only JS and the `// comment @attribute` system.
 //   (supplant @attribute system on other "naive languages" still using dependency injection.)
 // If I wanted to be weird and go the next step, then I'd use intent instead
 //   of JS to reimplement the entire attribute system, then I would have

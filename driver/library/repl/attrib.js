@@ -4,9 +4,43 @@
 // Middleware is 1 type of AOP design
 // Cloud computing is 1 aspect of infrastructure design
 // // @Attributes are 1 aspect of Aspect orient programming
-//   (That allow me to add aspect oriented programming)
+//   (^^^ That allows me to add aspect oriented programming)
+//   (^^^ Lot's of languages have that, but then using that system
+//     to validate itself by making itself declarative is the dividing
+//     line that only I can accomplish from 3 decades of programming and
+//     learning a game Quake 3, i.e. brilliance, aka mind reading, aka brain-to-brain)
+// TODO: adding all these silly comments so latter I can make a markdown declaration
+//   that automatically converts science terms to wikipedia links and
+//   1 declaration that automatically converts // comments + function into 
+//   the jupyter notebook system with all @Attribute dependencies attached
+//   it's own declarative kernel system.
+
 // Consequently, the structure/scaffolding for dependency injection
-//   can be abstracted out. The scaffolding for angular versus react
+//   can be abstracted out to declarations i.e:
+test1(func => { test; script }); test2
+// becomes something more like:
+({
+	dev: 'test data',
+	test: 'test data',
+	stage: 'prod distilled'
+})
+// which generates all the functional branching at an API level
+//   much like a .yml config file, parsing that instead would also
+//   be declarative i.e. ({parseYml}) versus @Attribute({})/doAttributes in
+//   an outer scope to the test environment context above.
+// in order to add a level of complexity, @Attributes, we must remove
+//   another order of complexity, functional branching (1 - 2) and 
+//   function count (1 - 2) and project scaffolding, (1 - 2) real world
+//   test cases in the component caller to test that the design works
+//   a test / stage environment would be passed into the final context.
+//   on node -e / compile / make. That removes a complexity from our
+//   project file-system because I don't need a separate /test/ folder
+//   the function usage actually becomes the test but it's also written
+//   down for managers to see it.
+// TODO: demonstrate seperate unit test file.
+
+
+// The scaffolding for angular versus react
 //   can all be designed away. Functional and logical branching
 //   can all be declarative statements, which means in it's purest
 //   form, the functions that remain 
@@ -158,16 +192,6 @@ function doAttributes(abstractNode) {
 		//   TO MAKE 5-LINE NODE-GYP-STYLE 
 		//   ENTRIES INTO MORE RELIABLE SYSTEMS?
 		//   CODE POETRY. CODETRY.
-		// TODO: recover regex to list comments right above functions
-		//   pass into next fold
-		// TODO: use functional-comment attributes to detect
-		//   regex (var,let) desclarations to get list(cache) working
-		//   use regex to find // @Attribute\n({\n\n}) with a copied...
-		//   TODO: EDGE-CASE, balanced-brackes if preceeded by (parens)?
-		//      BAH! can't find equal curly brackets inside of strings
-		//      (TODO: does balanced-brackets not work within strings/templates?)
-		//      without the language lexer! Need more WASMs >:Z
-		
 
 		// TODO: I'm just going to rewrite all the RegExps here in sequence
 		//   to parse the above commands, even though I could write these 
@@ -179,7 +203,12 @@ function doAttributes(abstractNode) {
 		//   developers to stop writing vulnerabilities. This is the way. 
 		//   It's not a pie-the-sky. It just takes commitment to not writing
 		//   unit tests. LOL, invent a new language with a unit-test free side-effect.
+		
 		// TODO: REGEXP -> template(functions)
+
+
+		// TODO: recover regex to list comments right above functions
+		//   pass into next fold
 
 		// TODO RETURN:
 		// TODO: need to return a list of evaluations that returns a list of
@@ -191,6 +220,13 @@ function doAttributes(abstractNode) {
 		//     of complexity, 1 list of polyfills specified below. 1 in / 1 out 
 		//     function. This component follows all my new rules. Try < 30 lines of code.
 
+		// TODO: use functional-comment attributes to detect
+		//   regex (var,let) desclarations to get list(cache) working
+		//   use regex to find // @Attribute\n({\n\n}) with a copied...
+		//   TODO: EDGE-CASE, balanced-brackes if preceeded by (parens)?
+		//      BAH! can't find equal curly brackets inside of strings
+		//      (TODO: does balanced-brackets not work within strings/templates?)
+		//      without the language lexer! Need more WASMs >:Z
 
 	} else
 
