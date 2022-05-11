@@ -168,7 +168,6 @@ const MATCH_ATTRIBUTE = /@(\w)\s*\(\s*([^,\)]*?)\s*(,\s*[^,\)]*?\s*)*\)/i
 	topOfStack: MATCH_ATTRIBUTE.exec(comment), // TODO: only one @attr per line comment
 	// TODO: one more match to match any word with an @attr above it, to match objects
 	//   variables, parameters, etc...
-
 })
 
 // STEP 0: using this function to do STEP 1 - 4
@@ -206,6 +205,14 @@ function doAttributes(abstractNode) {
 		
 		// TODO: REGEXP -> template(functions)
 
+		// that we can use with the module loader in env.js like 
+		//modules.exports = template({ doEval: (function () { 
+		//   if(doAttributes) doCodeComplete(); eval(); onNode() }).toString() 
+		//}) // that calls our attribute list instead, based on the next context
+		//   outwards, in REPL it would be more attributes and queuing, and in
+		//   env.js, eval(template()) called directly. In code-complete
+		//   checker for lines / call expressions the doCodeComplete is added
+		//   and records the symbols that we hit in each call branch.
 
 		// TODO: recover regex to list comments right above functions
 		//   pass into next fold
@@ -219,6 +226,8 @@ function doAttributes(abstractNode) {
 		//     structure instead. 100% responsibility isolation with 1 more level 
 		//     of complexity, 1 list of polyfills specified below. 1 in / 1 out 
 		//     function. This component follows all my new rules. Try < 30 lines of code.
+
+
 
 		// TODO: use functional-comment attributes to detect
 		//   regex (var,let) desclarations to get list(cache) working
@@ -307,6 +316,32 @@ function doAttributes(abstractNode) {
 	*/
 
 }
+
+// TODO: use attribute system on this list below to define
+//   and a template to replace function calls with calls
+//   to it's own attributes.
+// @Template(balanced)
+({
+	eval: (/[\s\.](eval|onEval)\s*\(/gi),
+	// TODO:
+	balanced: ')',
+})
+
+// #############  THIS SHOULD BE ENOUGH TO GET REPL GOING
+// #############  FOR MORE RELIABLE SYNTAX EVALUATIONS USING
+// #############  THE SAME DECLARATIVE SYSTEM AND 5 LINES OF CODE.
+
+// TODO: add attributes to another language that doesn't have them
+//   using this system on itself.
+
+({
+
+
+})
+// TODO: add comments to a language that doesn't have comments?
+//   then add attributes to that with above?
+// TODO: write the test.js validation using the attribute system
+//   on the attribute system, i.e. write the test.js runner with @Attribute({}) declarations
 
 // TODO: make this a DFA animation showing every node type
 //   in a long list and shifting between positions

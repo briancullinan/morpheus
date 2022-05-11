@@ -67,9 +67,36 @@ Element: ''
 
 })
 
+
+// TODO: this could be delarative if I needed it for CallExpression below,
+//   attribute() needs to imply this automatically though with template()
+function IfStatement(node) {
+	// TODO: turn back into code template code, if needed
+	if(condition) {
+		return evaluate
+	}
+}
+
+// @Template
+function attribute(context, node) {
+	if(node.type == Object.keys(context)[0]) {
+		// TODO: return template(IfStatement, context) // 3 - lines of code instead of 30
+		context.attributes[node.type] = function (node) {
+			// TODO: turn back into code template code, if needed
+			if(node.name.match(/eval|doEval/i)) {
+				return require('balanced').eval(
+						context.script.substring(node.start))
+			}
+		}
+	}
+}
+
+
+// adds an attribute declaratively, so I don't have to retest branches
+// @Template(attribute) 
 ({
-
-
+CallExpression: node.name.match(/eval|doEval/i),
+evaluate: require('balanced').eval
 })
 
 ({
