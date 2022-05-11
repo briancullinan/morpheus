@@ -5,7 +5,14 @@ DEMO: https://briancullinan.github.io/morpheus
 
 LIVE DEV: https://youtu.be/vKtYBDn2K24
 
-TLDR; Morpheus can automate marketing contact, call centers tasks, web searches and scraping obviously, anything you use to test with web-driver, testing web apps, supplementing website features such as a lack of export feature or message logging. We've never explored better designs because of Content-Security-Policy
+I'm not very creative re-inventing the wheel.
+
+TLDR: PASTEBIN 
+COMBINED WITH LUMBERYARD (Q3 INSTEAD) 
+COMBINED WITH CODE ANALYSIS TOOLS / BUILD TOOLS 
+COMBINED WITH DOCUMENTATION (!!!) / PROOFS OF CONCEPTS, UX.
+
+TLDR; PS: Morpheus can automate marketing contact, call centers tasks, web searches and scraping obviously, anything you use to test with web-driver, testing web apps, supplementing website features such as a lack of export feature or message logging. We've never explored better designs because of Content-Security-Policy
 ; we've engineered ourselves into a corner.
 
 In the movie the Matrix, Morpheus prevails by communicating with the right persons.

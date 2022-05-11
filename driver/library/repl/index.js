@@ -29,7 +29,7 @@ function framework(name) {
 
 // TODO: parse our own file using the @Attribute system to load the REPL framework
 
-function bootstrap({library, require}, libraryFile) {
+function bootstrap(framework, {library, require}, libraryFile) {
 	// TODO: move require and __library down below libraryLookup
 	if(typeof require != 'undefined') {
 		let libCache = cache(library)
@@ -83,12 +83,16 @@ init: ['npm', framework] // boot itself in outer context
 	
 })
 
-// TODO: on more proof of concept to generate a google docs style website with 
-//    ace editor and live cloud coding using 5 lines of code here
+// TODO: on more proof of concept to generate a google 
+//    docs style website with ace editor and live cloud coding
+//    for our own entire init system using 5 lines of code here
 ({
 
 })
 
+// TODO: make a wrapper for systemd style config files to use our own init() system, LOL.
+//   the systemd haters are gonna hate this so much more, 
+//   ("use systemd in Github Actions and Symfony projects alike!" - Hacker News)
 // TODO: bootstrap old PHP project into PHP running jupyter kernel, 
 //   then bootstrap running jupyter kernel with our own REPL service.
 // TODO: write kernel.js declarations first, LOL, should output kernel 
