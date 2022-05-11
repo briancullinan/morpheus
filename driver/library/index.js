@@ -43,8 +43,6 @@ function bootstrap({library, require}, libraryFile) {
 }
 
 
-
-
 // TODO: move to repl/env.js
 if(typeof module != 'undefined') {
 
