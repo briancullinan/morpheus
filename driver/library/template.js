@@ -72,6 +72,11 @@ Element: ''
 
 })
 
+// TODO: make a proof of concept mustache-style template in 3 
+//   lines of code by evaluating code inside of {{{ blocks }}}
+// TODO: make it independent of eval() or acorn([Program])
+//   thanks to context abstraction. which means {{{ mustache }}}
+//   code can be made from any language!
 ({
 
 
@@ -89,4 +94,5 @@ Element: ''
 //   statements to use with a replacement quine for instanbul and unit generator
 
 // TODO: REPL TEMPLATE PROCESSOR.
+// TODO: LATEX EVALUATOR.
 

@@ -1,3 +1,5 @@
+// NAME OF EVALUATOR: VOIDZERO
+//   (aka postfix program stack calculator)
 // something is wrong with repl
 //   it's way too slow
 //   let's try something new

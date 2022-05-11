@@ -1,3 +1,5 @@
+// NAME OF ATTRIBUTE SYSTEM: PASTA
+
 // OKAY THEORY
 //   A CPU INTERRUPT ADDS 1 VARIABLE
 //   1 VARIABLE MAKES 2 BY COUNTING
@@ -60,7 +62,8 @@
 
 // how the hell do I use attributes on the file that specifies how attributes work?
 //   this is like taking the integral of logic and then testing it's limits.
-// obviously
+// Obviously: 
+
 // @Template
 async function evaluate(topOfStack) {
 	await topOfStack()
@@ -75,14 +78,31 @@ async function evaluate(topOfStack) {
 // @Add(@Node,doNode)
 `node`
 
-// ^^^ Need to connect those two things together in one function.
-// So, one function to read all attribute either by parse test or loading acorn?
-// ENTRY INTO ATTRIBUTE SYSTEM
+// ^^^ Need to connect those two things together in 
+//   one function using template system.
 
+// pretty loose attribute parser, parses attribs with 1 or more params
+//  like @Function(myCustomBootstrap,doBootstrap)
+const MATCH_ATTRIBUTE = /@(\w)\s*\(\s*([^,\)]*?)\s*(,\s*[^,\)]*?\s*)*\)/i
+
+({
+	// TODO: match only the comments right before functions
+	topOfStack: list(/\sfunction\s*[^\()]*?\(/g),
+	// TODO: match all attributes in comments
+	topOfStack: MATCH_ATTRIBUTE.exec(comment), // TODO: only one @attr per line comment
+	// TODO: one more match to match any word with an @attr above it, to match objects
+	//   variables, parameters, etc...
+
+})
+
+// So, one function to read all attribute either
+//   by parse text or loading acorn?
+// ENTRY INTO ATTRIBUTE SYSTEM
 function doAttributes(runContext, abstractNode) {
 
-	// CODE REVIEW, THIS IS A PRE-CURSOR TO LOADING THE CURRENT NODE'S ATTRIBUTES
-	//   LOAD THE ACTUAL ATTRIBUTES FROM COMMENTS INTO THE NODE OBJECT
+	// CODE REVIEW, THIS IS A PRE-CURSOR TO LOADING
+	//   THE CURRENT NODE'S ATTRIBUTES LOAD THE ACTUAL
+	//   ATTRIBUTES FROM COMMENTS INTO THE NODE OBJECT
 	if(typeof abstractNode.attributes != 'undefined') {
 	}
 
@@ -161,14 +181,9 @@ function doAttributes(runContext, abstractNode) {
 //   should go nicely with the vertical line highlighter.
 
 ({
-	
+
 
 })
-
-// ENTRY INTO ATTRIBUTE SYSTEM
-// pretty loose attribute parser, parses attribs with 1 or more params
-//  like @Function(myCustomBootstrap,doBootstrap)
-const MATCH_ATTRIBUTE = /@(\w)\s*\(\s*([^,\)]*?)\s*(,\s*[^,\)]*?\s*)*\)/i
 
 // I THINK THIS FULLY CAPTURES WHAT I WAS IMAGINING
 /* 
