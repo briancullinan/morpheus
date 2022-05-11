@@ -7,10 +7,10 @@ this will give me the abstraction level that need to write
 the `intent` compiler. a single directive programming language
 something like lexer: 
 token (
-    word ( /\w/g ), 
-    symbol ( /[- ,\[\(_,'"\*\&\^ etc/ )
+  word ( /\w/g ), 
+  symbol ( /[- ,\[\(_,'"\*\&\^ etc/ )
 )
-because node/JS already come with most features, the compiler will
+because node/JS already comes with most features, the compiler will
 be less than 30 lines of code. a basic consumer for ANTLR, same as
 many other projects/transpilers.
 
@@ -19,11 +19,17 @@ natural language processing attached to it as a part of the compile
 process. this will be an odd relationship to make in the current
 design. something like this for every sentence:
 
-@Emotion(adjectives)
-function (context, subject, verbs, nouns)
-  let callee = findFunction(context, subject, ...verbs)
-  callee(context, ...nouns)
+*/
+
+
+// @Emotion(adjectives) // context passed automatically
+function translate(context, subject, verbs, nouns) {
+  let callee = find(context, subject, ...verbs)
+  // context.subject and context.verbs
+  return callee(context, ...nouns)
 }
+
+/*
 
 this will form a descriptive tree where basically every `node` in the tree
 is it's own seperate program that either does an action or acts on other
