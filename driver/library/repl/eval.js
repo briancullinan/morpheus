@@ -6,6 +6,56 @@
 // every time I feel like I can make a vast improvement in style
 // to test this concept, lets use it from the very beginning
 
+// TODO:  
+({
+CallExpression: 'evaluate',
+select: evaluate(linq)
+}) // is one eval.js REPL language declaration that calls linq evaluator
+
+// TODO: we're in the eval function so make CallExpression implied and do something else
+({
+// @Evaluate // either generate eval directly or 
+//   get replaced by ({repl: callstack.push()})
+//   implied CallExpression: 'evaluate',
+// This is too simple, do something else by calling 
+//    template(Object.keys()[0], object/function) automatically
+mustache: translate(template)
+// TODO: template(Object.keys()[1], object/function) automatically?
+//    template(Object.keys()[n], object/function) automatically?
+
+})
+
+// calls mustache on a template loaded from any source project, ie
+//   call the test creator to callback into an async UI component
+//   that asks for variables by name, like a LIVE CODE version of
+//   Google nicely built interactive documentation, the fields
+//   it displays can change as we write our API. All declarative features.
+
+// TODO: ?
+({
+CallExpression: 'evaluate',
+repl: template(acorn.parse, {script: BOOTSTRAP_EVAL})
+})
+
+// this creates a REPL context out of evaluations, i.e. execute
+//   the same code, but instead of using node's eval() use our
+//   REPL service instead. Should be used like await (eval()(params))
+// as a side-effect, this also means we can eval(`inline`) code inlined
+//   from other places by adding another declaration. i.e.
+
+// TODO: something like
+// @Evaluate
+({
+// @IfStatement
+template: new RegExp('\s(emscripten|asm|{{{|}}})|```|```)', 'gi'),
+evaluate: doEval,
+})
+
+// this doesn't evaluate code, OH NO. this finds inline contexts
+//   created in any language to replace with eval() that can be
+//   automatically executed with the same string / REPL bootstrap function below.
+
+
 let programThreads = []
 let programResponses = []
 let programHeap = []
@@ -43,6 +93,11 @@ const PREAMBLE_LINES = BOOTSTRAP_EVAL
 //   same as we have onEval, doEval, onMessage, sendMessage
 //   onTranspile, doTranspile is make stack change, and reverse 
 //   stack change back to language.
+
+
+// TODO rewrite more declaratively, de-couple REPL
+/*
+
 function doEval(runContext, evalStr) {
 	// CODE REVIEW, stacking pre-requisits?
 	// @REPL() // automatic type checker for `request`
@@ -128,6 +183,7 @@ if(typeof evalStr != 'string') {
 //   I SHOULD PRESERVE THAT FUNCTIONALITY AS A FEATURE
 // TODO: move to before symbol
 
+/*
 function onEval(runContext, resolve, reject) {
 	// Step by step calculator? this a basic stack based
 	//   calculator, except parentheses operators has already
@@ -200,6 +256,8 @@ function onEval(runContext, resolve, reject) {
 	//}
 	
 }
+*/
+
 
 // PROGRAM CALCULATOR IN < 100 LOC WAS 
 //   MY GOAL AND MOST OF IT IS COMMENTS.

@@ -100,7 +100,11 @@ evaluate: function IfStatement(node) {
 	}
 }
 })
-// TODO: ^^^ the rest of these like function() {for(transform all loops) {body}}
+// TODO: ^^^ the rest of these like function() 
+//   {for(transform all language sets) {body}} 
+//      (i.e. ({select: evaluate(linq)}) is one eval.js REPL language 
+//         declaration that wraps into a kernel.js template, 
+//         those controllers are declarations inside /repl/)
 //   should be found in their designated /repl/loops.js declarations file.
 //   ({}) // do transforms on sets with declarations that feed functional / test
 //   template functions. This is nice because I can come back later with our own
