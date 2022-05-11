@@ -27,7 +27,7 @@ design. something like this for every sentence:
 
 // TODO: can sass be detected by coloquial or slang qualifiers?
 // @[...adjectives](attitude) i.e. @Sad(sarcastic) versus 
-//   @Melancholic(hotdog, chicago) could return a list of all NYC
+//   @Melancholic(hotdog, NYC) could return a list of all NYC
 //   hotdog stands with bad reviews where people thought they could 
 //   die if they don't eat something, and the food was unsatisfactory 
 //   anyways.
@@ -35,6 +35,23 @@ design. something like this for every sentence:
 //   @Melancholic(hotdog, chicago-style) which
 //   searches your default locale for chicago-style hotdogs 
 //   with melacholic reviews.  LOL
+// Obviously, the `review parser` could be swapped out for a program
+//   that finds pictures of really sad looking chicago-style hot dogs
+//   by comparing posted photos and `review parser` and combining with 
+//   `find hotdog` algorithm https://github.com/shaqian/Not-Hotdog.
+// https://github.com/kmather73/NotHotdog-Classifier
+// So many `not hotdog` algorithms. https://github.com/prash29/Hotdog-Not-Hotdog
+
+// As a side-effect, `intent` is a language consumer as well as language.
+//   due to NLP being build into the compiler along side ANTLR and JS.
+//   it is the software version of reimplmenting reliable algorithms
+//   on a GPU in hardware. Like MATLAB and Wolfram, but without the extra
+//   programing language, only JS and the `// comment @attribute` system.
+//   (supplant @attribute system on other "naive languages" still using dependency injection.)
+// If I wanted to be weird and go the next step, then I'd use intent instead
+//   of JS to reimplement the entire attribute system, then I would have
+//   a JS < to > intent bi-directional-transpiler as a side-effect.
+
 
 // programs now have feelings too
 // @Emotion(attitude, ...adjectives)

@@ -28,6 +28,11 @@ function template(string, object) {
 // TODO: wind this whole template naming into caching 
 //   system to easily lookup template names with @Cache
 
+// CODE REVIEW, comment possible side-effects ahead of time as a part of design.
+// TODO: side-effect, check matching object key names in a function or call
+//   a different function with matches, this is a @Template thing to do?
+
+
 // ATTRIBUTE SYSTEM
 // a node template looks like this
 // @Template

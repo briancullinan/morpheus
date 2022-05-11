@@ -1,4 +1,27 @@
 // NAME OF ATTRIBUTE SYSTEM: PASTA
+// Dependency injection is 1 aspect of of Aspect oriented programming
+// Pre-compiler #defines are 1 aspect of AOP
+// Middleware is 1 type of AOP design
+// Cloud computing is 1 aspect of infrastructure design
+// // @Attributes are 1 aspect of Aspect orient programming
+//   (That allow me to add aspect oriented programming)
+// Consequently, the structure/scaffolding for dependency injection
+//   can be abstracted out. The scaffolding for angular versus react
+//   can all be designed away. Functional and logical branching
+//   can all be declarative statements, which means in it's purest
+//   form, the functions that remain 
+//   (i.e. 1 or 2 per component, in and out, message / response) 
+//   are actually the only test that generate a result.
+// And the next component that uses the first component tests the
+//   only inputs and outputs of the first component in order 
+//   to generate the functionality it needs. Just like using
+//   dependency injection to run a test, instead we're using
+//   dependency injection to generate the program code from
+//   the test inputs. Fuck unit-tests.
+// I've always thought about code
+//   this way, now I can finally design a learning-system
+//   to explain why/how everybody else is making a mess.
+
 
 // OKAY THEORY
 //   A CPU INTERRUPT ADDS 1 VARIABLE
@@ -81,14 +104,23 @@ async function evaluate(topOfStack) {
 // STEP 3, based on these declarations
 // STEP 4, continue writing functionality using 2 
 //    declarative lines (simple), @Attribute\nStatements
+
+// ############ actual template code for attributes
+// ```
+
 // do attribute events, do @Before events
 // @Add(@Node,doAttributes)
 // on response events, do @After calls
 // @Add(@Node,doNode)
 `node`
 
+// ```
+// ########### end template
+
 // ^^^ Need to connect those two things together in 
-//   one function using template system.
+//   one function using template system. the extra code
+//   comments are for the reader and have nothing to do with
+//   parsing attributes from code strings.
 
 // STEP 2: by connecting this declarative style
 // pretty loose attribute parser, parses attribs with 1 or more params
@@ -109,7 +141,9 @@ const MATCH_ATTRIBUTE = /@(\w)\s*\(\s*([^,\)]*?)\s*(,\s*[^,\)]*?\s*)*\)/i
 // So, one function to read all attribute either
 //   by parse text or loading acorn?
 // ENTRY INTO ATTRIBUTE SYSTEM
-function doAttributes(abstractNode) {
+function doAttributes(abstractNode) { 
+// ^^^ de-coupling attribute system from REPL object format. 
+// TODO: rewrite acorn Node exception made below
 
 	// CODE REVIEW, automatic unit test generator?
 	// TODO: do using regex and plain text,
@@ -133,6 +167,30 @@ function doAttributes(abstractNode) {
 		//      BAH! can't find equal curly brackets inside of strings
 		//      (TODO: does balanced-brackets not work within strings/templates?)
 		//      without the language lexer! Need more WASMs >:Z
+		
+
+		// TODO: I'm just going to rewrite all the RegExps here in sequence
+		//   to parse the above commands, even though I could write these 
+		//   into template.js then bootstrap the cache on our own file, then
+		//   use our own template system to parse our own @Attribute system I 
+		//   linked to above which would prove it's own unit test. This part
+		//   needs a unit test. I'm not going to write one. I refuse to learn.
+		// A high-ranking security officer from Credit Karma told me he wants
+		//   developers to stop writing vulnerabilities. This is the way. 
+		//   It's not a pie-the-sky. It just takes commitment to not writing
+		//   unit tests. LOL, invent a new language with a unit-test free side-effect.
+		// TODO: REGEXP -> template(functions)
+
+		// TODO RETURN:
+		// TODO: need to return a list of evaluations that returns a list of
+		//   functions for every attribute, in string/eval() mode each function
+		//   can be called directly to get the effects of the attribute system.
+	  //   TODO: but in REPL mode, another template would be applied to every
+		//     eval() to call doNode() functions that affect the REPL stack
+		//     structure instead. 100% responsibility isolation with 1 more level 
+		//     of complexity, 1 list of polyfills specified below. 1 in / 1 out 
+		//     function. This component follows all my new rules. Try < 30 lines of code.
+
 
 	} else
 
@@ -150,6 +208,7 @@ function doAttributes(abstractNode) {
 	//   every time a function is called, an attribute
 	//   should be created that changes the list of
 	//   runContext.attributes. i.e. @Add(@Function, _changeAttribs)
+	/*
 	runContext.programCallstack.push({
 		type: 'Evaluate',
 		value: doNodeAttributes
@@ -209,6 +268,7 @@ function doAttributes(abstractNode) {
 
 		// push only abstractNode.attributes
 	}
+	*/
 
 }
 
