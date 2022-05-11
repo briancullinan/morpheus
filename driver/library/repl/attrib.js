@@ -64,14 +64,23 @@
 //   this is like taking the integral of logic and then testing it's limits.
 // Obviously: 
 
+// STEP 1, emit this function
 // @Template
 async function evaluate(topOfStack) {
 	await topOfStack()
 }
 
+// integrating a program would be like applying dependency injection
+//   to someone's existing code. this is integrating a programming
+//   language. instead of taking the integral of a math equation
+//   i'm taking the integral of syntax and logic. like differential
+//   equations for software.
 // but this is too simple, one more level of complexity and I 
 //   should specify all the outputs of my attribute evaluations
 
+// STEP 3, based on these declarations
+// STEP 4, continue writing functionality using 2 
+//    declarative lines (simple), @Attribute\nStatements
 // do attribute events, do @Before events
 // @Add(@Node,doAttributes)
 // on response events, do @After calls
@@ -81,6 +90,7 @@ async function evaluate(topOfStack) {
 // ^^^ Need to connect those two things together in 
 //   one function using template system.
 
+// STEP 2: by connecting this declarative style
 // pretty loose attribute parser, parses attribs with 1 or more params
 //  like @Function(myCustomBootstrap,doBootstrap)
 const MATCH_ATTRIBUTE = /@(\w)\s*\(\s*([^,\)]*?)\s*(,\s*[^,\)]*?\s*)*\)/i
@@ -95,10 +105,18 @@ const MATCH_ATTRIBUTE = /@(\w)\s*\(\s*([^,\)]*?)\s*(,\s*[^,\)]*?\s*)*\)/i
 
 })
 
+// STEP 0: using this function to do STEP 1 - 4
 // So, one function to read all attribute either
 //   by parse text or loading acorn?
 // ENTRY INTO ATTRIBUTE SYSTEM
 function doAttributes(runContext, abstractNode) {
+
+	// CODE REVIEW, automatic unit test generator?
+	// TODO: do using regex and plain text,
+	// TODO: also do using acorn. 
+	// i.e. first is for bootstrapping
+	//   latter is for runtime use
+
 
 	// CODE REVIEW, THIS IS A PRE-CURSOR TO LOADING
 	//   THE CURRENT NODE'S ATTRIBUTES LOAD THE ACTUAL
