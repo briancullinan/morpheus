@@ -52,50 +52,50 @@ function cache(files) {
 // implied @Template(cache) forces @Template implication
 // @Add(Cache,template) // TODO: automatically create useful names based on functional diferences
 ({
-	// cache a file of function
-	// skip reloading the file if the mtime hasn't changed
-	//   some little efficiency, I can't imagine a single 
-	//   library being too big to load on startup.
-	// CODE REVIEW, using a parameter to describe function
-	//   names since we no longer worry about collisions?
-	outdated: statFile(update).mtime.getTime(),
-	// THIS SHIT, I DON'T NEED FUNCTION (FILE) { RETURN REGEX.MATCH(FILE) }
-	//   BECAUSE `UPDATE:` DOES A (LIST()).BIND(MATCH-CONTEXT), AUTOMATICALLY
-	update: list(/function\s+([a-z]+[ -~]*)\s*\(/gi),
+// cache a file of function
+// skip reloading the file if the mtime hasn't changed
+//   some little efficiency, I can't imagine a single 
+//   library being too big to load on startup.
+// CODE REVIEW, using a parameter to describe function
+//   names since we no longer worry about collisions?
+outdated: statFile(update).mtime.getTime(),
+// THIS SHIT, I DON'T NEED FUNCTION (FILE) { RETURN REGEX.MATCH(FILE) }
+//   BECAUSE `UPDATE:` DOES A (LIST()).BIND(MATCH-CONTEXT), AUTOMATICALLY
+update: list(/function\s+([a-z]+[ -~]*)\s*\(/gi),
 })
 
 ({
-	// cache a whole directory
-	outdated: statFile(update).mtime.getTime(),
-	update: cache(library, true),
+// cache a whole directory
+outdated: statFile(update).mtime.getTime(),
+update: cache(library, true),
 })
 
 ({
-	// cache a list of caches based on mtimes
-	outdated: newFileTime !== fileTimes[update],
-	update: append,
+// cache a list of caches based on mtimes
+outdated: newFileTime !== fileTimes[update],
+update: append,
 })
 
 ({
-	// cache all our library in compiled modules
-	outdated: script.length !== scriptBuffer.length,
-	update: vm.Script('', {
-		produceCachedData: true,
-		cachedData: scriptBuffer
-	}),
+// cache all our library in compiled modules
+outdated: script.length !== scriptBuffer.length,
+update: vm.Script('', {
+	produceCachedData: true,
+	cachedData: scriptBuffer
+}),
 })
 
 ({
-	// make seperate modules out of every function in memory for nicer error reporting
-	outdated: script.length !== scriptBuffer.length,
-	update: function () {
-		// TODO: copy this to module-maker
-		//let relativePath = path.relative(
-		//	path.resolve(path.join(__dirname, './repl')),
-		//	path.resolve(__dirname))
-		new Module(filepath, module)
-		Module._cache[filepath] = ctxGlobal.module
-	},
+// make seperate modules out of every function in memory for nicer error reporting
+outdated: script.length !== scriptBuffer.length,
+update: function () {
+	// TODO: copy this to module-maker
+	//let relativePath = path.relative(
+	//	path.resolve(path.join(__dirname, './repl')),
+	//	path.resolve(__dirname))
+	new Module(filepath, module)
+	Module._cache[filepath] = ctxGlobal.module
+},
 })
 
 // TODO: STORAGE(LVLWORLD DATA)
