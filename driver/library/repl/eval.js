@@ -55,6 +55,10 @@ evaluate: doEval,
 //   created in any language to replace with eval() that can be
 //   automatically executed with the same string / REPL bootstrap function below.
 
+// TODO: undoEval()
+// TODO: undo evil
+// Undo eval converts recognized patterns back into functional templates.
+
 
 let programThreads = []
 let programResponses = []
