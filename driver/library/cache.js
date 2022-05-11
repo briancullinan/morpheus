@@ -26,11 +26,18 @@
 //   MAKE MODULE.EXPORTS={}, AND INDEX.JS FILES IN QUINE.JS.
 // GETTING KIND OF BORED OF THIS. NEED A FUNCTION TO LIST FUNCTIONS.
 
-function init(cache) {}
-
 // a basic file cache looks something like
 // implied @Template is found on usage
-// @Add(@Cache,init)
+// add a cache attribute so any time I need to write 
+//   a script that looks up a directory, instead of writing
+//   fs.readdir... I write one line: `@Cache(directory)`
+//   and it returns to me a list of files from the directory
+//   that I would have looked up but it only researches the
+//   directories that have changed from the given root.
+// I can even still write readDir() in the code, but the
+//   attribute will replace it with it's "infused idempotent mtime
+//   technology" listed below.
+// @Add(@Cache,init) 
 function cache(files) {
 	for(let i = 0; i < files.length; i++) {
 		if(outdated(files[i])) {
@@ -98,6 +105,13 @@ update: function () {
 },
 })
 
+// TODO: add another level of complexity and give some helper functions
+//   these functions combine the auto-generated quines above into loops
+//   of files, i.e. contextual proofs of concept. integration tests.
+//   because these patterns make unit testing obsolete when I can
+//   just write one unit test for the whole system, and never rewrite a
+//   pattern like `dependency injection` or `middleware` or `cache` again.
+// TODO: STORAGE(RSYNC)
 // TODO: STORAGE(LVLWORLD DATA)
 // TODO: STORAGE(MAKE) 
 // DO THE SAME THING AS .D FILES FOR DEMONSTRATION ON NODE.JS
@@ -118,4 +132,22 @@ function update(file, cache) {
 	}
 } // ).bind(null, loadCache)
 
+function init(cache) {
+	
+}
+
 const CACHE_MARKER = '\n\n// DO NOT EDIT BELOW THIS LINE, AUTO-GENERATED\n\n'
+
+/*
+// lol, async output from @Quine
+function cache(botnet) {
+	for(let i = 0; i < botnet.length; i++) {
+		if(version < github.head) {
+			update(server)
+		}
+	}
+	return botnet
+}
+*/
+
+

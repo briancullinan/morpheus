@@ -1,34 +1,4 @@
-// inject repl service with utilities attached into any page
-
-// this adds only 1 level on complexity to messages
-//   it encodes responses as 
-/*
-return {
-	type: 'number',
-	number: 0,
-}
-*/
-// @REPL() // automatic type checker for `request`
-async function doExecute(request) {
-	try {
-		// CODE REVIEW, stacking pre-requisits?
-		if (!request.script || !doEval) {
-			throw new Error(!request.script
-					? 'No program!'
-					: 'REPL engine does not exist.')
-		}
-		let result = await doEval(request)
-		let response = onResult(result)
-		return response
-	} catch(e) {
-		return {
-			fail: e.message,
-			stack: e.stack.split(/\s*\n\s*/g),
-		}
-	}
-
-}
-
+// inject repl service with utilities attached into any webpage
 
 // I'm not going to try and run all of ace inside my custom evaluator
 // Runtime.evaluate is a real one, so that's a big sink
@@ -39,25 +9,46 @@ async function doExecute(request) {
 // with browser caching for offline content.
 // Lots of ways to run a process, abstraction makes it more reliable?
 
+// what does a basic repl service look like?
+// TODO: @REPL() // automatic type checker for `request`
+async function repl(request, response) {
+	try {
+		let result = await execute(request)
+		return response(result)
+	} catch (e) {
+		response(e)
+	}
+}
 
-// TODO: do an execute, start a timer that does a little dot
-//   for use in like browser or something
-//   wait for the response from the other end 
-//   but using the same endpoints here for both ends.
-//   client and server, check the runContext.threads
-//   and response with status message, try to pack all
-//   kernel communication into a single 50 LOC function.
+
+function execute() {
+	// TODO: do an execute, start a timer that does a little dot
+	//   for use in like browser or something
+	//   wait for the response from the other end 
+	//   but using the same endpoints here for both ends.
+	//   client and server, check the runContext.threads
+	//   and response with status message, try to pack all
+	//   kernel communication into a single 50 LOC function.
+
+}
 
 // this is the part I was getting all mixed up with 
 //   plugins/eval/accessors all because I couldn't think 
 //   about the abstraction during so much planning.
 
 // TODO: do everything else (i.e. onStatus()) using contextual attributes
-
-
 // usually performed on "receiving" end
+// this adds only 1 level on complexity to messages
+//   it encodes responses as 
+/*
+return {
+	type: 'number',
+	number: 0,
+}
+*/
+// TODO: make this even smaller, (prototype.constructor + '') ?
 // @REPL() // automatic type checker for `response`
-function onResult(response) {
+function encode(response) {
 	// TODO: automatically with @REPL()
 	/*
 	if(response && typeof response.fail != 'undefined') {
@@ -68,6 +59,12 @@ function onResult(response) {
 		return response[response.type]
 	}
 	*/
+	if(response && typeof response == 'object') {
+		return {
+			fail: response.message,
+			stack: response.stack.split(/\s*\n\s*/g),
+		}
+	}
 
 	// convert response to compatible output
 	let value = response
@@ -90,7 +87,7 @@ function onResult(response) {
 
 }
 
-// TODO: this is ugly
+// TODO: this is still ugly
 function doLibraryLookup(functionName) {
 	/*
 	let {
@@ -132,6 +129,9 @@ function onComment(accumulatedComments, _, comment) {
 	accumulatedComments.push(comment)
 }
 
+
+
+// TODO: generalize this and put acorn.* inside an environment quine
 function findFunctions(lib) {
 	// TODO: get comments with attribute API?
 	let comments = []

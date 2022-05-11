@@ -42,6 +42,13 @@ const PREAMBLE_LINES = BOOTSTRAP_EVAL
 //   onTranspile, doTranspile is make stack change, and reverse 
 //   stack change back to language.
 function doEval(runContext, evalStr) {
+	// CODE REVIEW, stacking pre-requisits?
+	// @REPL() // automatic type checker for `request`
+	if (!request.script || !doEval) {
+		throw new Error(!request.script
+				? 'No program!'
+				: 'REPL engine does not exist.')
+	}
 	Object.assign(runContext, {
 		bubbleReturn: [],
 		programCallstack: [],
