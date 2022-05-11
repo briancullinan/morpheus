@@ -100,6 +100,13 @@ evaluate: function IfStatement(node) {
 	}
 }
 })
+// TODO: ^^^ the rest of these like function() {for(transform all loops) {body}}
+//   should be found in their designated /repl/loops.js declarations file.
+//   ({}) // do transforms on sets with declarations that feed functional / test
+//   template functions. This is nice because I can come back later with our own
+//   parser and check what features are missing using a declared list and a declarted
+//   test.js function, that proves the test runner works too, 
+//   and probably does istanbul more accurately / without bugs.
 
 // adds an attribute declaratively, so I don't have to retest all attribute system branches every
 //   time an attribute is added, I actually had to dive into C#.Net engine code to figure out
