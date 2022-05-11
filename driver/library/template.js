@@ -43,7 +43,7 @@ function attribute(
 	name, node, params
 ) {
 	if(name == '@Function') {
-		attributes[name].push(eval.bind(null, node))
+		attributes[name].push(evaluate.bind(null, node))
 	} else 
 	if (name == '@Attribute') {
 		list.push(node.bind(null, params))
@@ -60,6 +60,7 @@ function attribute(
 // TODO: call attribute system above again to make onFunction events
 // TODO: call it again to make doNode events
 // ACORN DOES A COOL THING WITH FORMATTING PARAMETERS AND EXPANDING, COPY NAMING STYLE
+
 // @Template(@Function)
 ({
 Node: 'FunctionDeclaration',
@@ -68,16 +69,8 @@ Element: ''
 })
 
 
-// TODO: this could be delarative if I needed it for CallExpression below,
-//   attribute() needs to imply this automatically though with template()
-function IfStatement(node) {
-	// TODO: turn back into code template code, if needed
-	if(condition) {
-		return evaluate
-	}
-}
-
-// @Template
+// @Template // TODO: can this be combined with doAttributes? probably...
+/*
 function attribute(context, node) {
 	if(node.type == Object.keys(context)[0]) {
 		// TODO: return template(IfStatement, context) // 3 - lines of code instead of 30
@@ -90,14 +83,44 @@ function attribute(context, node) {
 		}
 	}
 }
+*/
 
 
-// adds an attribute declaratively, so I don't have to retest branches
+// ATTRIBUTE SYSTEM TEMPLATE-PARSER WRITTEN IN ATTRIBUTE-SYSTEM FORMAT
+
+// TODO: this could be delarative if I needed it for CallExpression below,
+//   attribute() needs to imply this automatically though with template()
+// @Template(attribute) ?? 
+({
+IfStatement: condition,
+evaluate: function IfStatement(node) {
+	// TODO: turn back into code template code, if needed
+	if(condition) {
+		return evaluate
+	}
+}
+})
+
+// adds an attribute declaratively, so I don't have to retest all attribute system branches every
+//   time an attribute is added, I actually had to dive into C#.Net engine code to figure out
+//   why my code was wrong inside a new attribute I wrote. That was painful, this is no more.
 // @Template(attribute) 
 ({
 CallExpression: node.name.match(/eval|doEval/i),
+// TODO: LOL, cool, 1 line of code in attrib.js to feed
+//  Object.keys[1] into base template before replacing 
+//    this template with this line, once the system is 
+//    started I'd never need @IfStatement, it would be
+//    implied by other templates using `if` directly.
+//    this is just a test/proof of concept for simplicity's
+//    sake. This component is completed. < 30 LOC, 2 functions, 
+//    2 declarations, mostly reading like a book.
+// TODO: @IfStatement
 evaluate: require('balanced').eval
 })
+
+
+// TODO: combine above 2 statements into 1 and replace @Template\nattribute()
 
 ({
 
