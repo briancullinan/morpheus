@@ -9,12 +9,33 @@ with contempt. It is when a person or community disagrees with
 the actions of some governing authority to the extent they
 are taking corrective measures into their own hands.
 
-The problem is, corrective measures front a counter-
-culturating could mean more countur to popular opinion.
+Rioting is an aggressive form protest without corrective action
+towards the counter-culture. i.e. "they" thing the riot is
+the corrective action to not being heard during protest. There 
+is no corrective action in the act of rioting itself. Therefore
+rioting is a form of protest, and not a form of dissent.
+
+I.E. The only social position where protesting is the corrective
+action for "not being heard" is the Supreme Court. Because, logically
+it is a Judge's job (no one else's) to consent or protest. Dissent 
+in the form of judgment is being heard in the protest 
+(i.e. the documented and artifacted outcome of the court hearing 
+is called `dissent`.) Rioting
+inside of the Supreme Court could have been the only legitimate
+form of `protest` due to the events of September 20, 2015, but that
+is not the outcome history deserved.
+
+The problem is, corrective measures from a counter-
+culturalist could deviate even more from popular opinion.
 
 TODO: give examples of how cambridge analytica manipulates 
 people by promoting companies or politics, then convincing
-you that you agree with them because other people do.
+you that you agree with them because other people you know 
+apparently do. i.e. Look at all the great things Johnson and
+Johnson is doing by overlooking a history of greed and
+negligence because they are paying for Facebook Advertising
+(come up with 10 more examples of things people disagree with
+like the Onion, except real news!).
 
 TODO: ask a user to sign in to Facebook to share their friends
 list over the API. Then generate controversial posts from

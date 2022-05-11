@@ -25,17 +25,32 @@ design. something like this for every sentence:
 
 */
 
+// TODO: can sass be detected by coloquial or slang qualifiers?
+// @[...adjectives](attitude) i.e. @Sad(sarcastic) versus 
+//   @Melancholic(hotdog, chicago) could return a list of all NYC
+//   hotdog stands with bad reviews where people thought they could 
+//   die if they don't eat something, and the food was unsatisfactory 
+//   anyways.
+// As opposed to the same scraping-program attributed with 
+//   @Melancholic(hotdog, chicago-style) which
+//   searches your default locale for chicago-style hotdogs 
+//   with melacholic reviews.  LOL
 
-// @Emotion(adjectives) // context passed automatically
-function translate(context, subject, verbs, nouns) {
+// programs now have feelings too
+// @Emotion(attitude, ...adjectives)
+function translate(
+  // context passed automatically
+  context, subject, verbs, nouns
+) {
   let callee = find(context, subject, ...verbs)
   // context.subject and context.verbs, context.sentence - everything broken up
   return callee(context, ...nouns)
-  // calling the function with the additional context of the
-  //   rendered sentence give the function the scope it needs
-  //   to make stack changes. so the wordy code can be used
-  //   to describe things like `convert framework to framework`.
 }
+// calling the function with the additional context of the
+//   rendered sentence give the function the scope it needs
+//   to make stack changes. so the wordy code can be used
+//   to describe things like `convert framework to framework`.
+
 // TODO: If converting a mostly desclarative framework like Github
 //     pages, index.yml, the framework conversion actually becomes
 //     `convert pages.yml to rest` because we already know what Github
@@ -69,18 +84,29 @@ simplifies the final language design.
   (loop all of, list all of, list everything in, 
     do, do while, for each, )
   (comments are ignored)
+```
 
 translates to:
+*/
 
-@Intention(loop)
-function translate(context, all, [do while, list ...], everything)
-@intention(comment)
+// @Intention(loop)
+function translate(context, subject = 'all', 
+  verbs = ['do while',  ...list], 
+  nouns = ['everything']) {
+  if(subject == 'all') {
+    // process next program stack with output from this one
+    // which could even be returning a new translation function
+    //   with these defaults being only a parameter of the next
+    //   context.
+  }
+}
+
+// @Intention(comment)
 function translate() {
   // ignore
 }
 
-
-```
+/*
 
 something like that would be a part of the compiler code, to test it
 we ask intent to transpiler back to other languages, except where

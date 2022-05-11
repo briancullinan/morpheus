@@ -109,14 +109,32 @@ const MATCH_ATTRIBUTE = /@(\w)\s*\(\s*([^,\)]*?)\s*(,\s*[^,\)]*?\s*)*\)/i
 // So, one function to read all attribute either
 //   by parse text or loading acorn?
 // ENTRY INTO ATTRIBUTE SYSTEM
-function doAttributes(runContext, abstractNode) {
+function doAttributes(abstractNode) {
 
 	// CODE REVIEW, automatic unit test generator?
 	// TODO: do using regex and plain text,
 	// TODO: also do using acorn. 
 	// i.e. first is for bootstrapping
 	//   latter is for runtime use
+	// TODO: if(typeof acorn == 'undefined') ? BOOTSTRAP?
+	if(typeof abstractNode == 'string') {
+		// LOL, USING A BOOTSTRAP TEMPLATING SYSTEM TO  
+		//   BOOTSTRAP LAMBDAS, IN ORDER TO BOOTSTRAP
+		//   AN ATTRIBUTE SYSTEM ONTO JS, 
+		//   TO MAKE 5-LINE NODE-GYP-STYLE 
+		//   ENTRIES INTO MORE RELIABLE SYSTEMS?
+		//   CODE POETRY. CODETRY.
+		// TODO: recover regex to list comments right above functions
+		//   pass into next fold
+		// TODO: use functional-comment attributes to detect
+		//   regex (var,let) desclarations to get list(cache) working
+		//   use regex to find // @Attribute\n({\n\n}) with a copied...
+		//   TODO: EDGE-CASE, balanced-brackes if preceeded by (parens)?
+		//      BAH! can't find equal curly brackets inside of strings
+		//      (TODO: does balanced-brackets not work within strings/templates?)
+		//      without the language lexer! Need more WASMs >:Z
 
+	} else
 
 	// CODE REVIEW, THIS IS A PRE-CURSOR TO LOADING
 	//   THE CURRENT NODE'S ATTRIBUTES LOAD THE ACTUAL
@@ -264,7 +282,7 @@ TODO: add @before, @after as POC
 // TODO: combine entire attribute feature into 2 functions just like doEval()
 
 
-function doNode(runContext, abstractNode) {
+function doNode(abstractNode) {
 	// TODO:  if abstractNode has attributes
 	// TODO: make this implicit using the look below?
 	// this would be a good place to put `static` loaders
@@ -293,7 +311,7 @@ if(typeof globalThis['on' + abstractNode.type + 'Attribute']) {
 	programCallstack.push({
 		type: 'Evaluate',
 		value: globalThis['on' + abstractNode.type+ 'Attribute']
-				.bind(null, runContext, abstractNode)
+				.bind(null, abstractNode)
 	})
 }
 }
