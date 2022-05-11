@@ -1,6 +1,7 @@
 // couple of things to get started
 
 // nice to make all file-systems I use case insensitive?
+// implied @XArgs attribute like printf
 function insensitive(...dirnames) {
 	let path = ''
 	for(let i = 0; i < dirnames.length; i++) {
@@ -51,9 +52,7 @@ function recursive(pathname, recursive) {
 }
 
 // virtual file system has a couple of path options?
-let VIRTUAL_PATHS = [
-	'.', getCwd(), __dirname, 
-]
+let VIRTUAL_PATHS = [ '.' , getCwd() , __dirname ]
 function fileExists(filename) {
 	for(let i = 0; i < VIRTUAL_PATHS.length; i++) {
 		let fullpath = path.join(VIRTUAL_PATHS[i], filename)

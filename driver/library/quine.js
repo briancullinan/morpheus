@@ -5,34 +5,6 @@
 // CODE REVIEW: I'VE COMBINED DEPENDENCY INJECTION FROM MY MAKEFILE
 //   WITH EXPRESS STYLE MIDDLEWARES FOR FEATURE SPECIFICS.
 
-// this is some nice distilling
-// BASIC TEMPLATE SYSTEM, find and replace tokens
-// Source: https://stackoverflow.com/questions/29182244/convert-a-string-to-a-template-string
-String.prototype.interpolate = function interpolateTemplate(params) {
-  const names = Object.keys(params);
-  const vals = Object.values(params);
-  return new Function(...names, `return \`${this}\`;`)(...vals);
-}
-
-
-// BASIC TEMPLATE SYSTEM, find and replace tokens
-function template(string, object) {
-	let params = Object.keys(object)
-	let values = Object.values(object)
-	for(let i = 0; i < params.length; i++) {
-		string =
-		(string + '').replace(
-				new RegExp(params[i], 'g'), values[i])
-	}
-	return string
-}
-
-if(typeof module != 'undefined') {
-	module.exports = {
-		template
-	}
-
-}
 
 // OKAY, THEORY, THE BASIS BEHIND ALL MUSTACHE / LATEX / RAZOR / SCSS
 //   TEMPLATING ENGINES IS THE ABILITY TO REPLACE STRINGS.

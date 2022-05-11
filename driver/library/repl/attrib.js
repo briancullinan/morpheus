@@ -1,24 +1,84 @@
+// OKAY THEORY
+//   A CPU INTERRUPT ADDS 1 VARIABLE
+//   1 VARIABLE MAKES 2 BY COUNTING
+//   A POSITION IN MEMORY INSTEAD OF
+//   COUNTING ONLY A NUMBER.
+//   2 VARIABLES MAKES INIFINITE VARIABLES
+//   BY COUNTING ANOTHER MEMORY POSITION
+//   USING THE FIRST MEMORY POSITION.
 
-// TODO: make this a DFA animation showing every node type
-//   in a long list and shifting between positions
-//   should go nicely with the vertical line highlighter.
+// MORE THEORY.
+//   UNLIMITED MEMORY POSITIONS LOADS A
+//   SINGLE PROGRAM STARTING POINT INTO
+//   A LIST. FUNCTIONS ADD 1 LEVEL OF COMPLEXITY.
+//   FUNCTION CALLS CREATE MINIATURE STACKS OF 
+//   PROGRAMS, HENCEFORTH, THE SHELL.
+//   THANKS TO ADA, WE HAVE OBJECT ORIENTED PROGRAMMING.
+//   OBJECTS ADD 1 MORE LEVEL OF COMPLEXITY TO SOFTWARE
+//   BY GROUPING FUNCTIONS TOGETHER LOGICALLY.
+
+// STILL THEORY...
+//   CPUs ARE COMPLEX. SOFTWARE IS COMPLEX.
+//   CLASSES / COMPONENTS / MODULES / NAMESPACES / DEPENDENCY INJECTION
+//   ALL ADD A HEIRARCHY OF COMPLEXITY TO PROGRAMS.
+//   ENTER, PRE-COMPILER #IFs. SO GREAT, BUT DECLARATIVE
+//   UNLESS USING SPECIAL EXTENSIONS. THE FACT THAT
+//   PRE-COMPILER STATEMENTS ARE DECLARATIVE RATHER
+//   THAN IMPERATIVE IS WHAT MAKES THEM SIMPLE ENOUGH
+//   TO PUT IN BETWEEN CODE AND UNDERSTAND.
+//   #IF DEFINED  // COMMENT ON WHY
+//      ... DO SYSTEM CODE 
+//   #ELSE 
+//      ... DO OTHER CODE
+//   #ENDIF
+//
+//   THIS LOOKS GREAT.
+
+// THIS ADDS A NICE LITTLE ABILITY TO ADD ENVIRONMENTAL
+//   CONTEXTUAL EXCEPTIONS IN CODE SUPPLEMENTED BY COMMENTS.
+//   THE ONLY THING HOLDING THIS CONCEPT BACK IS ASPECTS.
+// ASPECTS ARE LIKE COMPILER STATEMENTS THAT RUN AT
+//   COMPILE TIME OR RUNTIME AND INSTEAD OF BEING ONLY
+//   DECLARATIVE, THEY ARE ALSO FUNCTIONAL.
+// HERE'S REALLY THE KEY POINT ON ASPECT ORIENTED PROGRAMMING
+//   THE LEVEL OF COMPLEXITY THAT ASPECTS / ATTRIBUTES ADD
+//   ARE DECLARATIVE BECAUSE IT IS A LANGUAGE STATEMENT/FEATURE.
+//   INSTEAD OF COMPONENTS, CLASSES, AND DEPENDENCY INJECTION,
+//   THOSE ARE ALL FUNCTIONAL COMPLEXITIES ADDED AT THE "SOFTWARE"
+//   LEVEL AS OPPOSED TO "LANGUAGE" LEVEL. 
+// THEY ARE OVERLY COMPLEX BECAUSE PEOPLE TURN "COMPONENTS"
+//   INTO IMPLEMENTATION DETAILS. BUT BY USING ATTRIBUTES/ASPECTS
+//   THAT SAME COMPLEXITY IS TURNED INTO A DECLARATIVE LANGUAGE
+//   FEATURE, SO IT NEVER CHANGES BEHAVIOR. THE FACT THAT IT
+//   NEVER CHANGES BEHAVIOR MAKES IT FINITE, WHICH MAKES IT
+//   PROVABLE, WHICH MEANS YOU DON'T NEED TO WRITE UNIT-TESTS
+//   FOR USING @ATTRIBUTES. FUCK UNIT-TESTS. THAT'S WHAT THIS
+//   IS ALL ABOUT. NOT WRITING UNIT-TESTS.
+// THERE WILL BE NOTHING LEFT TO TEST BECAUSE EVERY PROGRAM
+//   WILL BE ONLY STATEMENTS AND IDEAS WITH NO FUNCTIONS OR
+//   FRAMEWORKS OR ENVIRONMENTS.
 
 // how the hell do I use attributes on the file that specifies how attributes work?
 //   this is like taking the integral of logic and then testing it's limits.
 // obviously
+// @Template
 async function evaluate(topOfStack) {
 	await topOfStack()
 }
 
 // but this is too simple, one more level of complexity and I 
 //   should specify all the outputs of my attribute evaluations
-@Add(@Node,doAttributes) // do attribute events, do @Before events
-@Add(@Node,doNode) // on response events, do after calls @After 
+
+// do attribute events, do @Before events
+// @Add(@Node,doAttributes)
+// on response events, do @After calls
+// @Add(@Node,doNode)
 `node`
 
-
+// ^^^ Need to connect those two things together in one function.
 // So, one function to read all attribute either by parse test or loading acorn?
 // ENTRY INTO ATTRIBUTE SYSTEM
+
 function doAttributes(runContext, abstractNode) {
 
 	// CODE REVIEW, THIS IS A PRE-CURSOR TO LOADING THE CURRENT NODE'S ATTRIBUTES
@@ -50,7 +110,6 @@ function doAttributes(runContext, abstractNode) {
 	if(typeof abstractNode.attributes != 'undefined') {
 		return // prevent recursion
 	}
-
 
 	abstractNode.attributes = []
 	for(let i = 0; 
@@ -95,8 +154,16 @@ function doAttributes(runContext, abstractNode) {
 		// push only abstractNode.attributes
 	}
 
-	
 }
+
+// TODO: make this a DFA animation showing every node type
+//   in a long list and shifting between positions
+//   should go nicely with the vertical line highlighter.
+
+({
+	
+
+})
 
 // ENTRY INTO ATTRIBUTE SYSTEM
 // pretty loose attribute parser, parses attribs with 1 or more params
@@ -126,7 +193,7 @@ using @function for example, but this runs the
 	push all (abstractNode.attributes) i.e. @auth/@public
 	push all (runContext.attributes['function']) - without @ 
 																	means run on node, not run on attribute loading
-	
+
 THIS ENSURES PROGRAMMATIC CONTROL OVER EVERY STEP USING CALLBACKS
 basically:
 		@runFunction() callbacks - once
@@ -141,6 +208,8 @@ basically:
 TODO: add @before, @after as POC
 
 */
+
+
 // TODO: write in a way we can add attribution to other things like MP3s
 // TODO: look up attribs in library to figure out
 //   what REPL functions to call for symbols, i.e.
