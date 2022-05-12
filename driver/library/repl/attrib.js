@@ -152,6 +152,7 @@ async function evaluate(topOfStack) {
 // ############ actual template code for attributes
 // ```
 
+// @Ignore
 // do attribute events, do @Before events
 // @Add(@Node,doAttributes)
 // on response events, do @After calls
@@ -169,31 +170,42 @@ async function evaluate(topOfStack) {
 // STEP 2: by connecting this declarative style
 // pretty loose attribute parser, parses attribs with 1 or more params
 //  like @Function(myCustomBootstrap,doBootstrap)
-const MATCH_ATTRIBUTE = /@(\w)\s*\(\s*([^,\)]*?)\s*(,\s*[^,\)]*?\s*)*\)/i
-
 
 // STEP 0: using this function to do STEP 1 - 4
 // So, one function to read all attribute either
 //   by parse text or loading acorn?
+
 // ENTRY INTO ATTRIBUTE SYSTEM
-function list(abstractNode) { 
-// ^^^ de-coupling attribute system from REPL object format. 
-// TODO: rewrite acorn Node exception made below
 
-	// CODE REVIEW, automatic unit test generator?
-	// TODO: do using regex and plain text,
-	// TODO: also do using acorn. 
-	// i.e. first is for bootstrapping
-	//   latter is for runtime use
-	// TODO: if(typeof acorn == 'undefined') ? BOOTSTRAP?
-	if(typeof abstractNode == 'string') {
-		// LOL, USING A BOOTSTRAP TEMPLATING SYSTEM TO  
-		//   BOOTSTRAP LAMBDAS, IN ORDER TO BOOTSTRAP
-		//   AN ATTRIBUTE SYSTEM ONTO JS, 
-		//   TO MAKE 5-LINE NODE-GYP-STYLE 
-		//   ENTRIES INTO MORE RELIABLE SYSTEMS?
-		//   CODE POETRY. CODETRY.
+// i.e. first is for bootstrapping
+//   latter is for runtime use
+// @Bootstrap
+// @Add(@Node,add)
+function add(attributes, nodeType, attribute, params) { 
+	// ^^^ de-coupling attribute system from REPL object format. 
 
+	// LOL, USING A BOOTSTRAP TEMPLATING SYSTEM TO  
+	//   BOOTSTRAP LAMBDAS, IN ORDER TO BOOTSTRAP
+	//   AN ATTRIBUTE SYSTEM ONTO JS, 
+	//   TO MAKE 5-LINE NODE-GYP-STYLE 
+	//   ENTRIES INTO MORE RELIABLE SYSTEMS?
+	//   CODE POETRY. CODETRY.
+	// CODE REVIEW, THIS IS A PRE-CURSOR TO LOADING
+	//   THE CURRENT NODE'S ATTRIBUTES LOAD THE ACTUAL
+	//   ATTRIBUTES FROM COMMENTS INTO THE NODE OBJECT
+	let caseInsensitive = attribute.toLocaleLowerCase()
+	if(typeof attributes[caseInsensitive] == 'undefined') {
+		attributes[caseInsensitive] = []
+	}
+	attributes[caseInsensitive].push(params)
+	return attributes
+}
+
+
+// return new code with attribute calls inserted into the code.
+// CODE REVIEW, like Function.prototype.apply but one less context
+function apply(attributes) {
+	if(typeof attribute == 'string') {
 		// TODO: I'm just going to rewrite all the RegExps here in sequence
 		//   to parse the above commands, even though I could write these 
 		//   into template.js then bootstrap the cache on our own file, then
@@ -204,20 +216,12 @@ function list(abstractNode) {
 		//   developers to stop writing vulnerabilities. This is the way. 
 		//   It's not a pie-the-sky. It just takes commitment to not writing
 		//   unit tests. LOL, invent a new language with a unit-test free side-effect.
-		const NAMED_FUNCTION = /function\s+([a-z]+[ -~]*)\s*\(/
 
 		// TODO: REGEXP -> template(functions)
 		// this level of abtraction is only to test our own system, the
 		//   rest can be written and standard javascript using whatever
 		//   level of attributes needed to keep the code small.
-		let functionName
-		while((functionName = (NAMED_FUNCTION).exec(abstractNode))) {
-			let commentScope = abstractNode.substring(
-					0, abstractNode.indexOf(functionName[0]))
-			let commentLines = (/(^[^\/]|\n\s*\n)(\/\/.*$)\s*function.*$/im)
-					.exec(commentScope)
-			console.log(commentLines)
-		}
+
 
 		// that we can use with the module loader in env.js like 
 		//modules.exports = template({ doEval: (function () { 
@@ -248,10 +252,9 @@ function list(abstractNode) {
 		// @Controller
 		//   for many frameworks, JSX-style file formats.
 		// even jupyter could be generalized:
-		// @Markdowon
+		// @Markdown
 		// @Codeblock
-		// @Results to guaruntee the JSON is always
-		//   generated in the same order
+		// @Results to guaruntee the JSON is alwayy generated in the same order
 		// which means as long as there are utility functions that
 		//   recognize that order from the function names or
 		//   declarative attributed object templates, the attributes
@@ -272,97 +275,104 @@ function list(abstractNode) {
 		//      (TODO: does balanced-brackets not work within strings/templates?)
 		//      without the language lexer! Need more WASMs >:Z
 
-	} else
+	} else 
+	// TODO: also do using acorn. 
+	if(typeof acorn != 'undefined') {
+				
+		// this runs 1 time to load attributes for the 
+		//   statement for the whole program
+		//   i.e. if a function is called multiple times
+		//   it does not load it's own attributes multiple 
+		//   times, only once. if attributes need to change
+		//   every time a function is called, an attribute
+		//   should be created that changes the list of
+		//   runContext.attributes. i.e. @Add(@Function, _changeAttribs)
 
-	// CODE REVIEW, THIS IS A PRE-CURSOR TO LOADING
-	//   THE CURRENT NODE'S ATTRIBUTES LOAD THE ACTUAL
-	//   ATTRIBUTES FROM COMMENTS INTO THE NODE OBJECT
-	if(typeof abstractNode.attributes != 'undefined') {
-	}
+		abstractNode.attributes = []
+		for(let i = 0; 
+			i < comments.length; 
+			++i) {
+			let match = MATCH_ATTRIBUTE.exec(
+					comments[abstractNode.loc.start][i])
 
-	// this runs 1 time to load attributes for the 
-	//   statement for the whole program
-	//   i.e. if a function is called multiple times
-	//   it does not load it's own attributes multiple 
-	//   times, only once. if attributes need to change
-	//   every time a function is called, an attribute
-	//   should be created that changes the list of
-	//   runContext.attributes. i.e. @Add(@Function, _changeAttribs)
-	/*
-	runContext.programCallstack.push({
-		type: 'Evaluate',
-		value: doNodeAttributes
-				.bind(null, runContext, abstractNode,
-						// for convenience
-						runContext.comments[abstractNode.loc.start])
-	})
-
-	if(typeof runContext.attributes == 'undefined') {
-		runContext.attributes = []
-		// TODO: do
-	}
-
-	if(typeof abstractNode.attributes != 'undefined') {
-		return // prevent recursion
-	}
-
-	abstractNode.attributes = []
-	for(let i = 0; 
-		i < comments.length; 
-		++i) {
-		let match = MATCH_ATTRIBUTE.exec(
-				comments[abstractNode.loc.start][i])
-
-		if(!match) { continue }
-		let attribName = match[1].toLocaleLowerCase()
-				.replace(/^@/, '')
-		// TODO: load attributes from comments into nodes
-		// on instructions
-		// actually to do the attribute thing
-		// TODO: @Node attribute also fires
-		//   doAttribute within the predicate frame
-		if(typeof runContext.attributes[attribName] == 'undefined') {
-			runContext.attributes[attribName] = []
-		}
-		runContext.attributes[attribName].push([
-			match[1], 
-			[match[2]].concat(match[3].split(',')
-				.map(function(attr) { return attr.trim() })),
-			[comments[abstractNode.loc.start][i]]
-				.concat(Array.from(match))
-		])
-	}
-
-	// TODO: add C# static Class loader feature here
-
-	// TODO: add / remove
-	for(let j = 0;
-		j < runContext.attributes[attribName].length;
-		j++) {
-
-		if( == 'add' || 'remove') {
-
-			// push onto runContext.attributes
-			continue
+			if(!match) { continue }
+			let attribName = match[1].toLocaleLowerCase()
+					.replace(/^@/, '')
+			// TODO: load attributes from comments into nodes
+			// on instructions
+			// actually to do the attribute thing
+			// TODO: @Node attribute also fires
+			//   doAttribute within the predicate frame
+			if(typeof runContext.attributes[attribName] == 'undefined') {
+				runContext.attributes[attribName] = []
+			}
+			runContext.attributes[attribName].push([
+				match[1], 
+				[match[2]].concat(match[3].split(',')
+					.map(function(attr) { return attr.trim() })),
+				[comments[abstractNode.loc.start][i]]
+					.concat(Array.from(match))
+			])
 		}
 
-		// push only abstractNode.attributes
+		/*
+		runContext.programCallstack.push({
+			type: 'Evaluate',
+			value: doNodeAttributes
+					.bind(null, runContext, abstractNode,
+							// for convenience
+							runContext.comments[abstractNode.loc.start])
+		})
+
+		if(typeof runContext.attributes == 'undefined') {
+			runContext.attributes = []
+			// TODO: do
+		}
+
+		if(typeof abstractNode.attributes != 'undefined') {
+			return // prevent recursion
+		}
+
+		// TODO: add C# static Class loader feature here
+
+		// TODO: add / remove
+		for(let j = 0;
+			j < runContext.attributes[attribName].length;
+			j++) {
+
+			if( == 'add' || 'remove') {
+
+				// push onto runContext.attributes
+				continue
+			}
+
+			// push only abstractNode.attributes
+		}
+		*/
+
 	}
-	*/
 
 }
 
-function apply(abstractNode) {
-	// return new code with attribute calls inserted into the code.
 
+function remove(attributes, nodeType, attribute, params) {
+	if(typeof attributes[caseInsensitive] == 'undefined') {
+		return
+	}
+	let attributeIndex = attributes[caseInsensitive]
+		.indexOf(params)
+	if(attributeIndex > -1) {
+		attributes[caseInsensitive].splice(attributeIndex, 1)
+	}
+	return attributes
 }
+
 
 
 
 // @Test
 ({
 	// TODO: match only the comments right before functions
-	topOfStack: list(/function\s*[^\()]*?\(/g),
 	// TODO: match all attributes in comments
 	topOfStack: MATCH_ATTRIBUTE.exec(comment), // TODO: only one @attr per line comment
 	// TODO: one more match to match any word with an @attr above it, to match objects

@@ -95,17 +95,15 @@ looks good.)
 * Optimal component format:
 
 
-
-
-// @Template
+// @Template - layout how component looks, should match UX
 function component() {
 	listOf
 	component
 	purposes
 }
 
-// @Declarations 
-// @Component(production)
+// @Declarations - give the component purpose
+// @Component(production) - component varies slightly depending on env
 ({
 purpose: doSomething
 })
@@ -115,7 +113,7 @@ purpose: doSomething
 purpose: doSomethingElse
 })
 
-// @Test
+// @Test - if component() is the input function, generate() is the ouput
 function generate(component) {
 	if(production) {
 
@@ -162,11 +160,6 @@ need to be by the environment based linking system.
 
 // TODO: move require and __library down below libraryLookup
 // TODO: alternate require from "webpack"
-// TODO: INTERESTING IDEA, REPLACE GLOBALTHIS WITH 
-//   PLACEHOLDER FUNCTIONS FOR EVERYTHING IN THE LIBRARY,
-//   THE FIRST TIME THE FUNCTION IS USED, BOOT UP A CLOUD
-//   SERVICE TO HOST IT, REPLACE THE CALL IN GLOBALTHIS WITH
-//   THE NEW `RENDERED` FUNCTION.
 
 /*
 let customRequire = wrapperQuine({
@@ -186,26 +179,59 @@ let customRequire = wrapperQuine({
 function load(env) {
 	if(env == 'native') {
 		require('./env.js')
-		let evalCode = readFile(findFile('./repl/eval.js'))
-		let bootstrapVoidZero = framework.toString()
-			// MORE THEORY ON THIS. WEIRD. WHEN JAVASCRIPT LOADS
-			//   IF THERE IS A FUNCTION() DECLARATION, AND THEN
-			//   SOME STATEMENTS BELOW IT WITH ERRORS, THE ENGINE
-			//   APPARENTLY ONLY EVALUATES DOWN TO THE POINT OF 
-			//   FINDING THE REFERENCE. THIS IS NOT WHAT I WOULD
-			//   EXPECT. I THOUGHT THE ENTIRE {} BLOCK-CONTEXT
-			//   WOULD BE EVALUATED FOR REFERENCE NAMES ON ENTRY,
-			//   I DON'T KNOW WHY I EXPECTED THIS. I GUESS IN C THERE
-			//   IS NO "GLOBAL" CONTEXT AT RUNTIME, ONLY STATIC WHICH
-			//   IS DETERMINATED AT COMPILE TIME? THAT WOULD EXPLAIN
-			//   WHY THIS WORKS:
-			//   `return funcName; function funcName() {}; skips code with errors`
-				.replace('bootstrap', `let realEval = globalThis.eval`)
-			// once eval() is bootstrapped, all other evaluations
-			//   from this point on can be handled by special functions.
-				.replace('load(env)', `return eval`)
-				.replace('init', evalCode)
-		globalThis.eval = eval('(' + bootstrapVoidZero + ')()')
+		let BOOTSTRAP = [
+			'./repl/eval.js',
+			'./repl/attrib.js',
+			'./template.js'
+			// TODO: generics, types
+		]
+		// TODO: load template system, so I don't have 
+		//   to write function () { MODULE_CODE } anymore
+		for(let i = 0; i < BOOTSTRAP.length; ++i) {
+			let foundFile = findFile(BOOTSTRAP[i])
+			let libCode = readFile(foundFile).toString('utf-8')
+			let exportCode = ''
+			switch(i) {
+				case 0:
+					exportCode = 'evaluateCode: evaluate, parseCode: parse'
+				case 1:
+					if(!exportCode) {
+						// TODO: scan for functions, then at the top:
+						let functions = []
+						let lines = parseCode(libCode, void 0, functions)
+						libCode = lines.join('\n')
+						exportCode = functions
+								.filter(function (f) { return f }).join(',')
+						console.log(libCode)
+					}
+				case 2:
+					if(typeof applyAttributes != 'undefined') {
+						libCode = applyAttributes(libCode, attributes)
+					}
+					// MORE THEORY ON THIS. WEIRD. WHEN JAVASCRIPT LOADS
+					//   IF THERE IS A FUNCTION() DECLARATION, AND THEN
+					//   SOME STATEMENTS BELOW IT WITH ERRORS, THE ENGINE
+					//   APPARENTLY ONLY EVALUATES DOWN TO THE POINT OF 
+					//   FINDING THE REFERENCE. THIS IS NOT WHAT I WOULD
+					//   EXPECT. I THOUGHT THE ENTIRE {} BLOCK-CONTEXT
+					//   WOULD BE EVALUATED FOR REFERENCE NAMES ON ENTRY,
+					//   I DON'T KNOW WHY I EXPECTED THIS. I GUESS IN C THERE
+					//   IS NO "GLOBAL" CONTEXT AT RUNTIME, ONLY STATIC WHICH
+					//   IS DETERMINATED AT COMPILE TIME? THAT WOULD EXPLAIN
+					//   WHY THIS WORKS:
+					//   `return funcName; function funcName() {}; skips code with errors`
+					// this format is just for getting the library
+					//   started and then for evironmental declarations
+					// once eval() is bootstrapped, all other evaluations
+					//   from this point on can be handled by special functions.
+					Object.assign(globalThis, eval(
+						`(function () {\n
+							return {${exportCode}};\n
+							${libCode}\n
+						})()`))
+			}
+		}
+
 		eval('emitCLI()')
 	} // TODO: else
 
@@ -213,22 +239,50 @@ function load(env) {
 
 
 // @Init
-const BOOTSTRAP_UNWINDER = 'unwind module scope'
-if(typeof process != 'undefined') {
-	load('native')
-	process.on('uncaughtException', doTryEval)
+function init() {
+return 	load('native')
+
+	const BOOTSTRAP_UNWINDER = 'unwind module scope'
+	process.once('uncaughtException', 
+	function nodeErrorHandler(ex) {
+		if(ex.message == BOOTSTRAP_UNWINDER) {
+			// we're fully inited!
+		} else
+		if(ex.message.includes('emitCLI')) {
+			// WE'RE LOADED!
+
+			// TODO: cache function names and call again
+			// TODO: INTERESTING IDEA, REPLACE GLOBALTHIS WITH 
+			//   PLACEHOLDER FUNCTIONS FOR EVERYTHING IN THE LIBRARY,
+			//   THE FIRST TIME THE FUNCTION IS USED, BOOT UP A CLOUD
+			//   SERVICE TO HOST IT, REPLACE THE CALL IN GLOBALTHIS WITH
+			//   THE NEW `RENDERED` FUNCTION.
+			// this would be cool because then I never have to
+			//   think about what file a function is in because
+			//   all the other functions will be automatically
+			//   injected within each component context.
+			// this is also cool because no matter where the code
+			//   ends up, I can always see the correct filename and
+			//   line number because modules have awareness of that
+			//   prior to being compiled individually.
+
+			throw ex
+		} else {
+
+		}
+	})
+
 }
-function doTryEval(ex) {
-	process.off('uncaughtException', doTryEval)
-	if(ex.message != BOOTSTRAP_UNWINDER) {
-		throw ex
-	}
-}
-// @Exit()
-throw new Error(BOOTSTRAP_UNWINDER) // bubble out
-return
+
 
 // TODO: this file is done, kind of poetic how this matches
+if(typeof process != 'undefined') {
+	init()
+}
+// @Exit()
+throw new Error(BOOTSTRAP_UNWINDER) 
+process.exit()
+// bubble out
 /*
 
 @Template

@@ -7,11 +7,84 @@
 // to test this concept, lets use it from the very beginning
 
 // TODO: parse our own file using the @Attribute system to load the REPL framework
-function eval(code) {
-	let attributes = []
-	let attributedCode = parse(code, attributes)
-	return realEval(attributedCode)
+let realEval = eval
+
+function evaluate(code) {
+	// CODE REVIEW, test for attribute system, it loads alternative names
+	//   instead of apply() like defined
+	if(typeof acorn == 'undefined') {
+		return realEval(code)
+	} else {
+		// TODO:
+	}
 }
+
+// TODO: this probably has to be unit tested
+// @Init
+function parse(code, attributes, functions) {
+	const MATCH_ATTRIBUTE = /@(\w*)\s*\(*\s*([^,\)\s]*)\s*(,\s*[^,\)\s]*\s*)*\)*/i
+	const NAMED_FUNCTION = /function\s+([a-z]+[ -~]*)\s*\(/
+	
+		// TODO: do using regex and plain text,
+	let lines = code.split(/\n/)
+	// simple attribute system for bootstrapping?
+	let codeLines = []
+	let ignoring = false
+	let commented = false
+	for(let i = 0; i < lines.length; i++) {
+		let attrMatch = MATCH_ATTRIBUTE.exec(lines[i])
+		if(attrMatch) {
+			if(attrMatch[1].toLocaleLowerCase() == 'ignore'
+				|| attrMatch[1].toLocaleLowerCase() == 'template') {
+				ignoring = true
+				continue
+			} else if(attributes) {
+				if(attrMatch[attrMatch.length-1]) {
+					attrMatch[attrMatch.length-1] =
+					attrMatch[attrMatch.length-1].split(',')
+						.map(function (p) { return p.trim() })
+						.slice(1)
+				}
+				attributes[i] = Array.from(attrMatch)
+			}
+		}
+		let line = lines[i].replace(/(^|\s+)\/\/.*$/, '').trim()
+		if(line.length > 0) {
+			if(ignoring) {
+				continue
+			} else
+			if(functions) {
+				let functionMatch = NAMED_FUNCTION.exec(lines[i])
+				if(functionMatch) {
+					functions[i] = functionMatch[1]
+				}
+			}
+
+			codeLines.push(line)
+		} else 
+		if (lines[i].trim().length == 0) {
+			ignoring = false
+		}
+	}
+	return codeLines
+
+
+	// I had kind of suspected acorn or something has provided a
+	//   `visitor`. this will make it easy to switch to ANTLR,
+	//   only replace binding function for callback. then focus
+	//   on mapping symbol names to pass into javascript parser
+	//   to reconstruct the correct AST from doing to opposite
+	//   of this attribute feature supplement we're doing to the
+	//   stack to generalize it in the first place. do the reverse
+	//   same as we have onEval, doEval, onMessage, sendMessage
+	//   onTranspile, doTranspile is make stack change, and reverse 
+	//   stack change back to language.
+
+	// TODO: replace parse context when REPL loads.
+	//   i.e. parse(node) override
+
+}
+
 
 // TODO:  
 ({
@@ -93,51 +166,6 @@ function () { ${BOOTSTRAP_CURSOR} })()`
 const PREAMBLE_LINES = BOOTSTRAP_EVAL
 		.split(BOOTSTRAP_CURSOR)[0]
 		.split('\n').length
-
-
-function parse(code, attributes) {
-	let lines = code.split(/\n/)
-	// simple attribute system for bootstrapping?
-	let codeLines = []
-	let ignoring = false
-	for(let i = 0; i < lines.length; i++) {
-		let attr = lines[i].indexOf('@')
-		if(attr > -1) {
-			if(lines[i].substring(attr+1).match(/ignore|template/i)) {
-				ignoring = true
-				continue
-			} else
-			if (lines[i].substring(attr+1).match(/[a-zA-Z0-9_]/)) {
-				if(attributes) { attributes[i] = lines[i] }
-			} 
-		}
-		let line = lines[i].replace(/(^|\s+)\/\/.*$/, '').trim()
-		if(line.length > 0) {
-			if(ignoring) {
-				continue
-			} else {
-				codeLines.push(line)
-			}
-		} else if (lines[i].trim().length == 0) {
-			ignoring = false
-		}
-	}
-	return codeLines.join('\n')
-
-}
-
-
-
-// I had kind of suspected acorn or something has provided a
-//   `visitor`. this will make it easy to switch to ANTLR,
-//   only replace binding function for callback. then focus
-//   on mapping symbol names to pass into javascript parser
-//   to reconstruct the correct AST from doing to opposite
-//   of this attribute feature supplement we're doing to the
-//   stack to generalize it in the first place. do the reverse
-//   same as we have onEval, doEval, onMessage, sendMessage
-//   onTranspile, doTranspile is make stack change, and reverse 
-//   stack change back to language.
 
 
 
