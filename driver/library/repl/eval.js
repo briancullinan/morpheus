@@ -6,9 +6,11 @@
 // every time I feel like I can make a vast improvement in style
 // to test this concept, lets use it from the very beginning
 
+// TODO: parse our own file using the @Attribute system to load the REPL framework
 function eval(code) {
-	console.log('eval: ', code)
-
+	let attributes = []
+	let attributedCode = parse(code, attributes)
+	return realEval(attributedCode)
 }
 
 // TODO:  
@@ -93,11 +95,10 @@ const PREAMBLE_LINES = BOOTSTRAP_EVAL
 		.split('\n').length
 
 
-function parse(code) {
-	let lines = attributeCode.split(/\n/)
+function parse(code, attributes) {
+	let lines = code.split(/\n/)
 	// simple attribute system for bootstrapping?
 	let codeLines = []
-	let attributes = []
 	let ignoring = false
 	for(let i = 0; i < lines.length; i++) {
 		let attr = lines[i].indexOf('@')
@@ -107,7 +108,7 @@ function parse(code) {
 				continue
 			} else
 			if (lines[i].substring(attr+1).match(/[a-zA-Z0-9_]/)) {
-				attributes[i] = lines[i]
+				if(attributes) { attributes[i] = lines[i] }
 			} 
 		}
 		let line = lines[i].replace(/(^|\s+)\/\/.*$/, '').trim()

@@ -14,14 +14,14 @@ functions and some declarative framework code.
 // @Template
 // @Framework(ideologies)
 // @Bootstrap()
-function framework(name) {
+function framework(env) {
 	bootstrap
 
 	load(env)
 
 	init
 }
-// should be able to load wordpress, ourselves, symphony projects, 
+// ^^^ should be able to load wordpress, ourselves, symphony projects, 
 //   old drupal projects, phpBB, deployment frameworks, etc.
 
 /*
@@ -159,13 +159,6 @@ need to be by the environment based linking system.
 
 */
 
-// TODO: parse our own file using the @Attribute system to load the REPL framework
-// @Load()
-function bootstrap() {
-	return eval
-	// skip this, function is declared
-	evalCode
-}
 
 // TODO: move require and __library down below libraryLookup
 // TODO: alternate require from "webpack"
@@ -189,45 +182,51 @@ let customRequire = wrapperQuine({
 //   all the bootstrap parts of a function, or
 //   return a template to replace middleware components
 
-// ^^^ should be able to load wordpress, ourselves, symphony projects, 
-//   old drupal projects, phpBB, deployment frameworks, etc.
+// @Load()
+function load(env) {
+	if(env == 'native') {
+		require('./env.js')
+		let evalCode = readFile(findFile('./repl/eval.js'))
+		let bootstrapVoidZero = framework.toString()
+			// MORE THEORY ON THIS. WEIRD. WHEN JAVASCRIPT LOADS
+			//   IF THERE IS A FUNCTION() DECLARATION, AND THEN
+			//   SOME STATEMENTS BELOW IT WITH ERRORS, THE ENGINE
+			//   APPARENTLY ONLY EVALUATES DOWN TO THE POINT OF 
+			//   FINDING THE REFERENCE. THIS IS NOT WHAT I WOULD
+			//   EXPECT. I THOUGHT THE ENTIRE {} BLOCK-CONTEXT
+			//   WOULD BE EVALUATED FOR REFERENCE NAMES ON ENTRY,
+			//   I DON'T KNOW WHY I EXPECTED THIS. I GUESS IN C THERE
+			//   IS NO "GLOBAL" CONTEXT AT RUNTIME, ONLY STATIC WHICH
+			//   IS DETERMINATED AT COMPILE TIME? THAT WOULD EXPLAIN
+			//   WHY THIS WORKS:
+			//   `return funcName; function funcName() {}; skips code with errors`
+				.replace('bootstrap', `let realEval = globalThis.eval`)
+			// once eval() is bootstrapped, all other evaluations
+			//   from this point on can be handled by special functions.
+				.replace('load(env)', `return eval`)
+				.replace('init', evalCode)
+		globalThis.eval = eval('(' + bootstrapVoidZero + ')()')
+		eval('emitCLI()')
+	} // TODO: else
 
-// TODO: BOOTSTRAP EVAL?
-// @Init()
-if(typeof require != 'undefined') {
-	require('./env.js')
-	let evalCode = readFile(findFile('./repl/eval.js'))
-	// TODO: template AGAIN?
-	// @Template
-	let evalBootstrap = '(' + bootstrap.toString()
-			.replace('evalCode', evalCode) + ')()'
-	globalThis.eval = eval(evalBootstrap)
-	eval('emitCLI()')
-	return
-	/*
-	const BOOTSTRAP_UNWINDER = 'bootstrap module system'
-
-	function doTryEval(ex) {
-		if(ex && ex.constructor == Error) {
-			if(ex.message == BOOTSTRAP_UNWINDER) {
-				eval('emitCLI()')
-			} else {
-				throw ex
-			}
-		} else {
-			return doEval(ex)
-		}
-	}
-
-	process.on('uncaughtException', doTryEval)
-	// process["on"]("unhandledRejection", abort);
-	throw new Error(BOOTSTRAP_UNWINDER) // bubble out
-	*/
-	return
 }
 
+
+// @Init
+const BOOTSTRAP_UNWINDER = 'unwind module scope'
+if(typeof process != 'undefined') {
+	load('native')
+	process.on('uncaughtException', doTryEval)
+}
+function doTryEval(ex) {
+	process.off('uncaughtException', doTryEval)
+	if(ex.message != BOOTSTRAP_UNWINDER) {
+		throw ex
+	}
+}
 // @Exit()
-//return
+throw new Error(BOOTSTRAP_UNWINDER) // bubble out
+return
 
 // TODO: this file is done, kind of poetic how this matches
 /*
