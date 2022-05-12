@@ -51,16 +51,6 @@ function recursive(pathname, recursive) {
 	return result
 }
 
-// virtual file system has a couple of path options?
-let VIRTUAL_PATHS = [ '.' , getCwd() , __dirname ]
-function fileExists(filename) {
-	for(let i = 0; i < VIRTUAL_PATHS.length; i++) {
-		let fullpath = path.join(VIRTUAL_PATHS[i], filename)
-		if(existsSync(fullpath)) {
-			foundFiles.push(fullpath)
-		}
-	}
-}
 
 // this is the kind of alien code that doesn't look pretty
 (function list(matches, regexp, string) {
@@ -72,20 +62,9 @@ function fileExists(filename) {
 // CODE REVIEW, pre-requisites after?
 }).bind(null, [], /* arguments[1], arguments[2] */)
 
-function init(node) {
-  if(typeof module != 'undefined') {
-    module.exports = node
-  }
-}
 
-/*
-TODO:
-function init(web) {
 
-}
-*/
-
-// also a utility loader
+// TODO: also a utility loader
 
 
 

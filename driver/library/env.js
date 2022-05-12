@@ -1,5 +1,18 @@
 
 
+// virtual file system has a couple of path options?
+function findFile(filename) {
+	const VIRTUAL_PATHS = [ 
+		'.' , getCwd() , __dirname
+		// TODO: add game dirs
+ 	]
+	for(let i = 0; i < VIRTUAL_PATHS.length; i++) {
+		let fullpath = VIRTUAL_PATHS[i] + '/' + filename
+		if(existsSync(fullpath)) {
+			return fullpath
+		}
+	}
+}
 // TODO: move to generalized version of sys_fs.js
 function virtualReadFile(filename) {
 	if(typeof FS.virtual[filename] == 'undefined') {
@@ -33,23 +46,27 @@ if(typeof FS != 'undefined') {
 		readDir: virtualReadDir,
 		readFile: virtualReadFile,
 		statFile: virtualFileStat,
+		findFile: findFile,
+		getCwd: getCwd,
+		//getArguments: getWebQuery,
 	})
 } else
 
 // CODE REVIEW, decent format for combining APIs between languages?
-if(typeof process != 'undefined') {
+if(typeof module != 'undefined') {
 	try { 
 		let { 
 			readdirSync, existsSync, readFileSync, statSync
 		} = require('fs') // stdioMiddleware
-		let {doAttributes} = require('./repl/attrib.js')
-		let { cwd: getCwd } = require('process')
+		let { cwd } = require('process')
 		module.exports = {
-			existsSync, getCwd,
-			readDir: readdirSync, // only adds recursive readdirSync
+			existsSync, 
+			getCwd: cwd,
+			readDir: readdirSync,
 			readFile: readFileSync,
 			statFile: statSync,
-			doAttributes: doAttributes,
+			findFile: findFile,
+			//getArguments: getNativeQuery,
 		}
 		Object.assign(globalThis, module.exports)
 	} catch (e) {

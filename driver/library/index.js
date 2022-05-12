@@ -163,13 +163,38 @@ need to be by the environment based linking system.
 // @Load()
 function bootstrap(framework) {
 	// TODO: move require and __library down below libraryLookup
-	doAttributes(readFile('./repl/attrib.js'))
-	if(typeof require != 'undefined') {
-		let libCache = cache(library)
-		for(let i = 0; i < libCache.length; i++) {
-			
+	let filename = require('path').relative(process.cwd(), 
+			findFile('./repl/attrib.js'))
+	let attributeCode = readFile(filename, 'utf-8')
+	let lines = attributeCode.split(/\n/)
+	// simple attribute system for bootstrapping?
+	let codeLines = []
+	let attributes = []
+	let ignoring = false
+	for(let i = 0; i < lines.length; i++) {
+		let attr = lines[i].indexOf('@')
+		if(attr > -1) {
+			if(lines[i].substring(attr+1).match(/ignore|template/i)) {
+				ignoring = true
+				continue
+			} else
+			if (lines[i].substring(attr+1).match(/[a-zA-Z0-9_]/)) {
+				attributes[i] = lines[i]
+			} 
 		}
-	} // TODO: alternate require from "webpack"
+		let line = lines[i].replace(/(^|\s+)\/\/.*$/, '').trim()
+		if(line.length > 0) {
+			if(ignoring) {
+				continue
+			} else {
+				codeLines.push(line)
+			}
+		} else if (lines[i].trim().length == 0) {
+			ignoring = false
+		}
+	}
+	console.log(codeLines)
+	// TODO: alternate require from "webpack"
 	// TODO: INTERESTING IDEA, REPLACE GLOBALTHIS WITH 
 	//   PLACEHOLDER FUNCTIONS FOR EVERYTHING IN THE LIBRARY,
 	//   THE FIRST TIME THE FUNCTION IS USED, BOOT UP A CLOUD
@@ -297,34 +322,6 @@ init: ['npm', framework] // boot itself in outer context
 
 // TODO: move to repl/env.js
 /*
-if(typeof module != 'undefined') {
-
-	// TODO: BOOTSTRAP?
-	if(typeof require != 'undefined') {
-		let path = require('path')
-		let relativePath = path.relative(
-			path.resolve(process.cwd()),
-			path.resolve(__dirname))
-
-		bootstrap(require, relativePath)
-	}
-
-	if(typeof process != 'undefined') {
-		// javascript has a global context, not every language has
-		//   this feature, might as well take advantage of it here
-		globalThis.acorn = require('acorn')
-		globalThis.acorn.walk = require('acorn-walk')
-		globalThis.acorn.loose = require('acorn-loose')
-		newRequire(__dirname, __dirname, __filename, './stacks/cli.js')
-		emitCLI()
-	}
-
-	module.exports = {
-		emitMakefile,
-	}
-
-}
-
 
 if (typeof WorkerGlobalScope !== 'undefined'
 		&& self instanceof WorkerGlobalScope ) {

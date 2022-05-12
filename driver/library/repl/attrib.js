@@ -22,7 +22,7 @@
 // Consequently, the structure/scaffolding for dependency
 //    injection can be abstracted out to declarations i.e:
 
-
+// @Ignore
 test1(func => { test; script });
 test2(func => {})
 // becomes something more like:
@@ -175,7 +175,7 @@ const MATCH_ATTRIBUTE = /@(\w)\s*\(\s*([^,\)]*?)\s*(,\s*[^,\)]*?\s*)*\)/i
 // So, one function to read all attribute either
 //   by parse text or loading acorn?
 // ENTRY INTO ATTRIBUTE SYSTEM
-function doAttributes(abstractNode) { 
+function list(abstractNode) { 
 // ^^^ de-coupling attribute system from REPL object format. 
 // TODO: rewrite acorn Node exception made below
 
@@ -349,6 +349,12 @@ function doAttributes(abstractNode) {
 	}
 	*/
 
+}
+
+
+function apply(abstractNode) {
+	// return new code with attribute calls inserted into the code.
+	
 }
 
 

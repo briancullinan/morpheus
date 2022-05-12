@@ -16,18 +16,6 @@ function onArg() {
 
 }
 
-function getArguments(args) {
-	if(typeof args == 'undefined') {
-		if(typeof process != 'undefined') {
-			args = getNativeQuery()
-		}
-		if(typeof window != 'undefined') {
-			args = getWebQuery
-		}
-	}
-	return args
-}
-
 function runArguments(args) {
 	let foundFiles = []
 	let runProgram = false
@@ -39,7 +27,7 @@ function runArguments(args) {
 					|| args[i].includes('quine')) {
 				runProgram = true
 			} else
-			if(fileExists(args[i])) {
+			if(findFile(args[i])) {
 				foundFiles.push(args[i])
 			} else
 			if(args[i] == '-e') {
