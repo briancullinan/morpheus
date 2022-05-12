@@ -6,6 +6,11 @@
 // every time I feel like I can make a vast improvement in style
 // to test this concept, lets use it from the very beginning
 
+function eval(code) {
+	console.log('eval: ', code)
+
+}
+
 // TODO:  
 ({
 CallExpression: 'evaluate',
@@ -87,6 +92,41 @@ const PREAMBLE_LINES = BOOTSTRAP_EVAL
 		.split(BOOTSTRAP_CURSOR)[0]
 		.split('\n').length
 
+
+function parse(code) {
+	let lines = attributeCode.split(/\n/)
+	// simple attribute system for bootstrapping?
+	let codeLines = []
+	let attributes = []
+	let ignoring = false
+	for(let i = 0; i < lines.length; i++) {
+		let attr = lines[i].indexOf('@')
+		if(attr > -1) {
+			if(lines[i].substring(attr+1).match(/ignore|template/i)) {
+				ignoring = true
+				continue
+			} else
+			if (lines[i].substring(attr+1).match(/[a-zA-Z0-9_]/)) {
+				attributes[i] = lines[i]
+			} 
+		}
+		let line = lines[i].replace(/(^|\s+)\/\/.*$/, '').trim()
+		if(line.length > 0) {
+			if(ignoring) {
+				continue
+			} else {
+				codeLines.push(line)
+			}
+		} else if (lines[i].trim().length == 0) {
+			ignoring = false
+		}
+	}
+	return codeLines.join('\n')
+
+}
+
+
+
 // I had kind of suspected acorn or something has provided a
 //   `visitor`. this will make it easy to switch to ANTLR,
 //   only replace binding function for callback. then focus
@@ -97,6 +137,7 @@ const PREAMBLE_LINES = BOOTSTRAP_EVAL
 //   same as we have onEval, doEval, onMessage, sendMessage
 //   onTranspile, doTranspile is make stack change, and reverse 
 //   stack change back to language.
+
 
 
 // TODO rewrite more declaratively, de-couple REPL

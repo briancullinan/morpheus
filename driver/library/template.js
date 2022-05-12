@@ -70,23 +70,6 @@ Element: ''
 })
 
 
-// @Template // TODO: can this be combined with doAttributes? probably...
-/*
-function attribute(context, node) {
-	if(node.type == Object.keys(context)[0]) {
-		// TODO: return template(IfStatement, context) // 3 - lines of code instead of 30
-		context.attributes[node.type] = function (node) {
-			// TODO: turn back into code template code, if needed
-			if(node.name.match(/eval|doEval/i)) {
-				return require('balanced').eval(
-						context.script.substring(node.start))
-			}
-		}
-	}
-}
-*/
-
-
 // ATTRIBUTE SYSTEM TEMPLATE-PARSER WRITTEN IN ATTRIBUTE-SYSTEM FORMAT
 
 // TODO: this could be delarative if I needed it for CallExpression below,

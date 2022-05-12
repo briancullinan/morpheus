@@ -161,71 +161,73 @@ need to be by the environment based linking system.
 
 // TODO: parse our own file using the @Attribute system to load the REPL framework
 // @Load()
-function bootstrap(framework) {
-	// TODO: move require and __library down below libraryLookup
-	let filename = require('path').relative(process.cwd(), 
-			findFile('./repl/attrib.js'))
-	let attributeCode = readFile(filename, 'utf-8')
-	let lines = attributeCode.split(/\n/)
-	// simple attribute system for bootstrapping?
-	let codeLines = []
-	let attributes = []
-	let ignoring = false
-	for(let i = 0; i < lines.length; i++) {
-		let attr = lines[i].indexOf('@')
-		if(attr > -1) {
-			if(lines[i].substring(attr+1).match(/ignore|template/i)) {
-				ignoring = true
-				continue
-			} else
-			if (lines[i].substring(attr+1).match(/[a-zA-Z0-9_]/)) {
-				attributes[i] = lines[i]
-			} 
-		}
-		let line = lines[i].replace(/(^|\s+)\/\/.*$/, '').trim()
-		if(line.length > 0) {
-			if(ignoring) {
-				continue
-			} else {
-				codeLines.push(line)
-			}
-		} else if (lines[i].trim().length == 0) {
-			ignoring = false
-		}
-	}
-	console.log(codeLines)
-	// TODO: alternate require from "webpack"
-	// TODO: INTERESTING IDEA, REPLACE GLOBALTHIS WITH 
-	//   PLACEHOLDER FUNCTIONS FOR EVERYTHING IN THE LIBRARY,
-	//   THE FIRST TIME THE FUNCTION IS USED, BOOT UP A CLOUD
-	//   SERVICE TO HOST IT, REPLACE THE CALL IN GLOBALTHIS WITH
-	//   THE NEW `RENDERED` FUNCTION.
-
-	let customRequire = wrapperQuine({
-		// provide a relative path to lib files in case
-		//   lib code wants to refer to itself
-		__library: library,
-		__dirname: libraryFile.replace(/\/[^\/]*?$/, ''),
-		__filename: libraryFile,
-	}, 'return a + b')
-
-	// TODO: keep returning templates until we can replace
-	//   all the bootstrap parts of a function, or
-	//   return a template to replace middleware components
-
+function bootstrap() {
+	return eval
+	// skip this, function is declared
+	evalCode
 }
+
+// TODO: move require and __library down below libraryLookup
+// TODO: alternate require from "webpack"
+// TODO: INTERESTING IDEA, REPLACE GLOBALTHIS WITH 
+//   PLACEHOLDER FUNCTIONS FOR EVERYTHING IN THE LIBRARY,
+//   THE FIRST TIME THE FUNCTION IS USED, BOOT UP A CLOUD
+//   SERVICE TO HOST IT, REPLACE THE CALL IN GLOBALTHIS WITH
+//   THE NEW `RENDERED` FUNCTION.
+
+/*
+let customRequire = wrapperQuine({
+	// provide a relative path to lib files in case
+	//   lib code wants to refer to itself
+	__library: library,
+	__dirname: libraryFile.replace(/\/[^\/]*?$/, ''),
+	__filename: libraryFile,
+}, 'return a + b')
+*/
+
+// TODO: keep returning templates until we can replace
+//   all the bootstrap parts of a function, or
+//   return a template to replace middleware components
+
 // ^^^ should be able to load wordpress, ourselves, symphony projects, 
 //   old drupal projects, phpBB, deployment frameworks, etc.
 
-// TODO: BOOTSTRAP?
+// TODO: BOOTSTRAP EVAL?
 // @Init()
 if(typeof require != 'undefined') {
 	require('./env.js')
-	bootstrap()
+	let evalCode = readFile(findFile('./repl/eval.js'))
+	// TODO: template AGAIN?
+	// @Template
+	let evalBootstrap = '(' + bootstrap.toString()
+			.replace('evalCode', evalCode) + ')()'
+	globalThis.eval = eval(evalBootstrap)
+	eval('emitCLI()')
+	return
+	/*
+	const BOOTSTRAP_UNWINDER = 'bootstrap module system'
+
+	function doTryEval(ex) {
+		if(ex && ex.constructor == Error) {
+			if(ex.message == BOOTSTRAP_UNWINDER) {
+				eval('emitCLI()')
+			} else {
+				throw ex
+			}
+		} else {
+			return doEval(ex)
+		}
+	}
+
+	process.on('uncaughtException', doTryEval)
+	// process["on"]("unhandledRejection", abort);
+	throw new Error(BOOTSTRAP_UNWINDER) // bubble out
+	*/
+	return
 }
 
 // @Exit()
-return
+//return
 
 // TODO: this file is done, kind of poetic how this matches
 /*

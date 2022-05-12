@@ -12,6 +12,7 @@
 //     learning a game Quake 3, i.e. brilliance, aka 
 //     mind reading, aka brain-to-brain communication)
 
+
 // TODO: adding all these silly comments so latter I can
 //   make a markdown declaration that automatically converts 
 //   science terms to wikipedia links and 1 declaration 
@@ -351,11 +352,11 @@ function list(abstractNode) {
 
 }
 
-
 function apply(abstractNode) {
 	// return new code with attribute calls inserted into the code.
-	
+
 }
+
 
 
 // @Test
