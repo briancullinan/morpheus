@@ -32,6 +32,7 @@ function template(string, object) {
 // TODO: side-effect, check matching object key names in a function or call
 //   a different function with matches, this is a @Template thing to do?
 
+// TODO: balanced() finds balanced {} or ()
 
 // ATTRIBUTE SYSTEM
 // a node template looks like this

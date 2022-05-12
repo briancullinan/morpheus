@@ -5,25 +5,34 @@
 // Cloud computing is 1 aspect of infrastructure design
 // // @Attributes are 1 aspect of Aspect orient programming
 //   (^^^ That allows me to add aspect oriented programming)
-//   (^^^ Lot's of languages have that, but then using that system
-//     to validate itself by making itself declarative is the dividing
-//     line that only I can accomplish from 3 decades of programming and
-//     learning a game Quake 3, i.e. brilliance, aka mind reading, aka brain-to-brain)
-// TODO: adding all these silly comments so latter I can make a markdown declaration
-//   that automatically converts science terms to wikipedia links and
-//   1 declaration that automatically converts // comments + function into 
-//   the jupyter notebook system with all @Attribute dependencies attached
-//   it's own declarative kernel system.
+//   (^^^ Lot's of languages have that, but then using 
+//     that system to validate itself by making itself 
+//     declarative is the dividing line that only I can
+//     accomplish from 3 decades of programming and
+//     learning a game Quake 3, i.e. brilliance, aka 
+//     mind reading, aka brain-to-brain communication)
 
-// Consequently, the structure/scaffolding for dependency injection
-//   can be abstracted out to declarations i.e:
-test1(func => { test; script }); test2(func => {})
+// TODO: adding all these silly comments so latter I can
+//   make a markdown declaration that automatically converts 
+//   science terms to wikipedia links and 1 declaration 
+//   that automatically converts // comments + function 
+//   into the jupyter notebook system with all @Attribute 
+//   dependencies attached it's own declarative kernel system.
+
+// Consequently, the structure/scaffolding for dependency
+//    injection can be abstracted out to declarations i.e:
+
+
+test1(func => { test; script });
+test2(func => {})
 // becomes something more like:
 ({
 	dev: 'test data',
 	test: 'test data',
 	stage: 'prod distilled'
 })
+
+
 // which generates all the functional branching at an API level
 //   much like a .yml config file, parsing that instead would also
 //   be declarative i.e. ({parseYml}) versus @Attribute({})/doAttributes in
@@ -161,14 +170,6 @@ async function evaluate(topOfStack) {
 //  like @Function(myCustomBootstrap,doBootstrap)
 const MATCH_ATTRIBUTE = /@(\w)\s*\(\s*([^,\)]*?)\s*(,\s*[^,\)]*?\s*)*\)/i
 
-({
-	// TODO: match only the comments right before functions
-	topOfStack: list(/\sfunction\s*[^\()]*?\(/g),
-	// TODO: match all attributes in comments
-	topOfStack: MATCH_ATTRIBUTE.exec(comment), // TODO: only one @attr per line comment
-	// TODO: one more match to match any word with an @attr above it, to match objects
-	//   variables, parameters, etc...
-})
 
 // STEP 0: using this function to do STEP 1 - 4
 // So, one function to read all attribute either
@@ -202,12 +203,20 @@ function doAttributes(abstractNode) {
 		//   developers to stop writing vulnerabilities. This is the way. 
 		//   It's not a pie-the-sky. It just takes commitment to not writing
 		//   unit tests. LOL, invent a new language with a unit-test free side-effect.
-		
+		const NAMED_FUNCTION = /function\s+([a-z]+[ -~]*)\s*\(/
+
 		// TODO: REGEXP -> template(functions)
 		// this level of abtraction is only to test our own system, the
 		//   rest can be written and standard javascript using whatever
 		//   level of attributes needed to keep the code small.
-		
+		let functionName
+		while((functionName = (NAMED_FUNCTION).exec(abstractNode))) {
+			let commentScope = abstractNode.substring(
+					0, abstractNode.indexOf(functionName[0]))
+			let commentLines = (/(^[^\/]|\n\s*\n)(\/\/.*$)\s*function.*$/im)
+					.exec(commentScope)
+			console.log(commentLines)
+		}
 
 		// that we can use with the module loader in env.js like 
 		//modules.exports = template({ doEval: (function () { 
@@ -231,7 +240,28 @@ function doAttributes(abstractNode) {
 		//     of complexity, 1 list of polyfills specified below. 1 in / 1 out 
 		//     function. This component follows all my new rules. Try < 30 lines of code.
 
-
+		// TODO: attributed implications come from files formats following
+		//   a specific predefined format, like:
+		// @Styles
+		// @HTML
+		// @Controller
+		//   for many frameworks, JSX-style file formats.
+		// even jupyter could be generalized:
+		// @Markdowon
+		// @Codeblock
+		// @Results to guaruntee the JSON is always
+		//   generated in the same order
+		// which means as long as there are utility functions that
+		//   recognize that order from the function names or
+		//   declarative attributed object templates, the attributes
+		//   can be ommitted entirely because the symbology of the
+		//   syntax follows a specific pattern.
+		// i.e.
+		// @Setup
+		// @DoTest
+		// @Results
+		// Why would I write do(it()) when it never worked without
+		//   it? it's redundant, just assume it's was there in the first place.
 
 		// TODO: use functional-comment attributes to detect
 		//   regex (var,let) desclarations to get list(cache) working
@@ -320,6 +350,17 @@ function doAttributes(abstractNode) {
 	*/
 
 }
+
+
+// @Test
+({
+	// TODO: match only the comments right before functions
+	topOfStack: list(/function\s*[^\()]*?\(/g),
+	// TODO: match all attributes in comments
+	topOfStack: MATCH_ATTRIBUTE.exec(comment), // TODO: only one @attr per line comment
+	// TODO: one more match to match any word with an @attr above it, to match objects
+	//   variables, parameters, etc...
+})
 
 // TODO: use attribute system on this list below to define
 //   and a template to replace function calls with calls

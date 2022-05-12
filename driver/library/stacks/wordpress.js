@@ -11,7 +11,9 @@ inject this entire codebase, REPL, library into a wordpress
 plugin in order to develop a wordpress plugin that covers
 all our outputs.
 
-
+TODO: obviously do the same thing in < 30 LoC for 
+Django, Symfony, Drupal, Sugar CRM, FORUMS, and a 
+dozen other popular CMS systems.
 
 
 */

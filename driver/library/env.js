@@ -42,12 +42,14 @@ if(typeof process != 'undefined') {
 		let { 
 			readdirSync, existsSync, readFileSync, statSync
 		} = require('fs') // stdioMiddleware
+		let {doAttributes} = require('./repl/attrib.js')
 		let { cwd: getCwd } = require('process')
 		module.exports = {
 			existsSync, getCwd,
 			readDir: readdirSync, // only adds recursive readdirSync
 			readFile: readFileSync,
 			statFile: statSync,
+			doAttributes: doAttributes,
 		}
 		Object.assign(globalThis, module.exports)
 	} catch (e) {

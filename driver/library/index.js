@@ -163,7 +163,7 @@ need to be by the environment based linking system.
 // @Load()
 function bootstrap(framework) {
 	// TODO: move require and __library down below libraryLookup
-	
+	doAttributes(readFile('./repl/attrib.js'))
 	if(typeof require != 'undefined') {
 		let libCache = cache(library)
 		for(let i = 0; i < libCache.length; i++) {
