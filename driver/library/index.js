@@ -213,10 +213,13 @@ function load(env) {
 					// CODE REVIEW, this is weird because I'm adding a template
 					//   system so that in the next step I can do the thing this
 					//   file is labelled to do - attributes.
-					params = [attributes]
-					contextRequirements = 'globalAttributes'
+					params = [context, attributes]
+					contextRequirements = 'globalContext , globalAttributes'
 					exportCode = 'attributeCode: attribute, '
-							+ 'addAttribute: add, removeAttribute: remove'
+							+ 'addAttribute: add, removeAttribute: remove,'
+							+ 'applyAttributes: apply' 
+					// ^^^ adding templates with attributes so I never 
+					//   have to write this kind of stuff again
 				}
 			// COMPLEXITY: 4 - +1 ^^^ for automatically renaming functions
 			//                 -1 for removing functional context - total 1
@@ -228,18 +231,19 @@ function load(env) {
 					params = [templates]
 					// TODO: should move this to initAttributes 
 					//   and call with @Bootstrap template for whole file
-					attributes['add'] = [addAttribute]
-					attributes['remove'] = [removeAttribute]
+					attributes['add'] = [context.addAttribute]
+					attributes['remove'] = [context.removeAttribute]
 					let lineAttribs = []
 					let lineFuncts = []
-					let codeLines = parseCode(libCode, lineAttribs, lineFuncts)
-					libCode = attributeCode(libCode, contextRequirements, 
-								lineAttribs, lineFuncts, codeLines)
+					let codeLines = context.parseCode(libCode, lineAttribs, lineFuncts)
+					contextRequirements = ['globalTemplates'] // TODO: from attribute, then automatically
+					let newModule = context.attributeCode(libCode, 
+							contextRequirements, lineAttribs, 
+							lineFuncts, codeLines)
 					// TODO: get these from the function above
-					contextRequirements = 'globalTemplates'
-					exportCode = 'templateString: template, '
-							+ 'attributeName: attribute'
-
+					contextRequirements = contextRequirements.join(' , ')
+					exportCode = lineFuncts.join(' , ')
+					Object.assign(globalThis, newModule) // next step cache will do this part automatically
 				}
 				// MORE THEORY ON THIS. WEIRD. WHEN JAVASCRIPT LOADS
 				//   IF THERE IS A FUNCTION() DECLARATION, AND THEN
@@ -257,7 +261,7 @@ function load(env) {
 				//   started and then for evironmental declarations
 				// once eval() is bootstrapped, all other evaluations
 				//   from this point on can be handled by special functions.
-				Object.assign(globalThis, eval(
+				Object.assign(context, eval(
 					`(function (${contextRequirements}) {\n
 						return {${exportCode}};\n
 						${libCode}\n})`).apply(this, params))
