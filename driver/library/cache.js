@@ -133,7 +133,7 @@ function update(file, cache) {
 } // ).bind(null, loadCache)
 
 function init(cache) {
-	
+	// TODO: load existing from disk based on cache descriptor
 }
 
 const CACHE_MARKER = '\n\n// DO NOT EDIT BELOW THIS LINE, AUTO-GENERATED\n\n'

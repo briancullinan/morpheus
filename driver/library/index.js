@@ -228,21 +228,25 @@ function load(env) {
 				if(i == 4) { // if(!exportCode) {
 					// TODO: connect @functiondeclaration because
 					//   template system is connected in the next step
-					params = [templates]
+					params = [context.applyAttributes, templates]
 					// TODO: should move this to initAttributes 
 					//   and call with @Bootstrap template for whole file
-					attributes['add'] = [context.addAttribute]
-					attributes['remove'] = [context.removeAttribute]
 					let lineAttribs = []
 					let lineFuncts = []
 					let codeLines = context.parseCode(libCode, lineAttribs, lineFuncts)
-					contextRequirements = ['globalTemplates'] // TODO: from attribute, then automatically
+					contextRequirements = ['applyAttributes', 'globalTemplates'] 
+					// TODO: from attribute, then automatically
 					let newModule = context.attributeCode(libCode, 
 							contextRequirements, lineAttribs, 
 							lineFuncts, codeLines)
 					// TODO: get these from the function above
-					contextRequirements = contextRequirements.join(' , ')
-					exportCode = lineFuncts.join(' , ')
+					contextRequirements = contextRequirements
+					.filter(function (prereq) { return prereq })
+					.join(' , ')
+					exportCode = lineFuncts
+					.filter(function (prereq) { return prereq })
+					.join(' , ')
+					console.log(exportCode)
 					Object.assign(globalThis, newModule) // next step cache will do this part automatically
 				}
 				// MORE THEORY ON THIS. WEIRD. WHEN JAVASCRIPT LOADS
@@ -265,6 +269,7 @@ function load(env) {
 					`(function (${contextRequirements}) {\n
 						return {${exportCode}};\n
 						${libCode}\n})`).apply(this, params))
+				console.log(context)
 				// ^^^ Can't skip that until step 5 when the template
 				//   system is booted, no more bootstrapping, ever.
 		case 5:
@@ -272,17 +277,13 @@ function load(env) {
 			//                 -1 for removing module environment contexts - total 1
 			// TODO: now that templates are working the cache system
 			//   can be loaded and functions wrapped with an abstracted environment
-
+			
 			// TODO: need cache system to use on templates as well
 			//   then we can finish initTemplates() in this step
 			//   i.e. matching file templates to @Bootstrap to
 			//   automatically can initFilename if it exists without
 			//   the need to use @Attributes. i.e. The Framework.
 
-			// TODO: give our code files flow, i.e. PWAs like React and M$
-			//   are basically just file templates in /stacks/, mock everyone?
-
-			// context = wrap()
 			break
 		case 6:
 			// COMPLEXITY: 6 - +1 ^^^ for automatically loading modules
@@ -291,6 +292,14 @@ function load(env) {
 			//   there are no static declarations, only templates and objects
 			// TODO: now that cache system is loaded, modules can 
 			//   be automatically imported
+
+			// TODO: give our code files flow, i.e. PWAs like React and M$
+			//   are basically just file templates in /stacks/, mock everyone?
+
+			// context = wrap()
+			Object.assign(context, context.evaluateCode(wrapperQuine(
+			
+			)))
 			break
 		}
 	} // TODO: else

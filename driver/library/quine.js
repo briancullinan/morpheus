@@ -49,11 +49,13 @@ eval(function wrapperTemplate(functionBody) {
 })(__dirname, __filename, etc)
 */
 function wrap(context) {
-
+	return function (functionBody) {
+		return evaluateCode(wrapper(context, functionBody))
+	}
 }
 
 // TODO: move into index.js, imply with @Attributes
-function wrapperQuine(object, functionBody) {
+function wrapper(quine, functionBody) {
 
 	// here is the code that generates this silly script
 	// ALL THIS WORK JUST SO I NEVER HAVE TO WRITE JAVASCRIPT INSIDE A STRING AGAIN

@@ -202,49 +202,74 @@ function add(nodeType, attribute, params) {
 	return globalAttributes
 }
 
+
 function apply(attributes, functionName) {
-	if(!func.attributed) {
-		// actually run @adds
+	if(functionName.attributed) {
+		throw new Error('Cannot apply attributes to the same symbol twice.')
+		// TODO: replace our own context reference with the evaled function call below
+	}
 
-		// CODE REVIEW, this is getting deep, this should
-		//   never happen in the new design. PHP was the same way.
-		for(let j = 0; j < attributes.length; ++j) {
-			let caseInsensitive = accumulatedAttributes[j][1]
-					.toLocaleLowerCase()
-			if(typeof globalAttributes[caseInsensitive] == 'undefined') {
-				continue
-			}
+	// actually run @adds
 
-			for(let k = 0; k < globalAttributes[caseInsensitive].length; ++k) {
-				//let replaceNames = new RegExp(`function\\s+${functions[i]}\\s*`, 'gi')
-				let attributeFunction = globalAttributes[caseInsensitive][k]
-				if(typeof attributeFunction == 'string') {
-					attributeFunction = globalContext[attributeFunction]
-				}
-				console.log(attributeFunction)
-				// OUTPUT: add(["FunctionDeclaration","add",["@Template",["template"]]])
-				// DON'T DO: code = code.replace(replaceNames, 
-				//	`${attributeFunction}(${JSON.stringify(params)});function ${functions[i]}`)
-				
-				// TODO: add attribute function to requirements, 
-				//   rename in this context and attach parameters.
+	// CODE REVIEW, this is getting deep, this should
+	//   never happen in the new design. PHP was the same way.
+	for(let j = 0; j < attributes.length; ++j) {
+		let caseInsensitive = attributes[j][1]
+				.toLocaleLowerCase()
+		if(typeof globalAttributes[caseInsensitive] == 'undefined') {
+			continue
+		}
+
+		for(let k = 0; k < globalAttributes[caseInsensitive].length; ++k) {
+			//let replaceNames = new RegExp(`function\\s+${functions[i]}\\s*`, 'gi')
+			let attributeFunction = globalAttributes[caseInsensitive][k]
+			if(typeof attributeFunction == 'string') {
+				attributeFunction = globalContext[attributeFunction]
 			}
+			console.log(attributeFunction)
+			// OUTPUT: add(["FunctionDeclaration","add",["@Template",["template"]]])
+			// DON'T DO: code = code.replace(replaceNames, 
+			//	`${attributeFunction}(${JSON.stringify(params)});function ${functions[i]}`)
+			
+			// TODO: add attribute function to requirements, 
+			//   rename in this context and attach parameters.
 		}
 	}
-	globalContext[attributeFunction] = (function (params) {
-		// do function (aka !@function) attributes, custom added and used attributes
 
-		return func(...params)
-	})
-	return globalContext[attributeFunction](Array.from(arguments).slice(2))
+	if(!functionName || typeof functionName == 'string') {
+		if(!functionName || 
+			typeof globalContext[functionName] == 'undefined') {
+			throw new Error('Function not defined: ' + functionName)
+		}
+		functionName = globalContext[functionName]
+	}
+
+	// TODO: for Objects, return a manufactured object every time it is 
+	//   called from globalContext
+	return (function (functionName, ...params) {
+		// do function (ie not !@function) attributes, custom added and used attributes
+		debugger
+		return functionName(...params)
+	}).bind(attributes, functionName)
+	//(functionName, ...Array.from(arguments).slice(2))
 }
+
 // return new code with attribute calls inserted into the code.
 // CODE REVIEW, like Function.prototype.apply but one less context
 // @Service
+// CODE REVIEW: TODO: this doesn't work but it should? 
+// Maybe if I copied parseCode( then it could be 
+// ```function attribute(function, attributes)```
+// @Add(@FunctionDeclaration,attribute)
 function attribute(code, requirements, attributes, functions, lines) {
 	if(typeof code != 'string') {
 		throw new Error('Not implemented!')
 	}
+	if(globalAttributes.length == 0) {
+		globalAttributes['add'] = [add]
+		globalAttributes['remove'] = [remove]
+	}
+	let moduleExports = {}
 	// TODO: I'm just going to rewrite all the RegExps here in sequence
 	//   to parse the above commands, even though I could write these 
 	//   into template.js then bootstrap the cache on our own file, then
@@ -271,17 +296,23 @@ function attribute(code, requirements, attributes, functions, lines) {
 			// TODO: template(template, {'@attribs': 'callfunc()'})
 			//   can't use template-replacement on itself 
 			//   because that is what we are bootstrapping
-			globalContext[functions[i]] = apply.bind(accumulatedAttributes,
-				functions[i] /* from eval? lookup? */)
+			//moduleExports[functions[i]] = 
 			let firstParameterMatch = new RegExp(
-				`function\\s+${functions[i]}\\s*\\(([\w^\)]+)`, 'gi')
+				`function\\s+${functions[i]}\\s*\\(([\\w]*)`, 'gi')
 				.exec(lines[i])
 			// CODE REVIEW, camelCase?
+			console.log(accumulatedAttributes)
 			if(firstParameterMatch) {
 				let firstParameter = functions[i]+''
-					+firstParameterMatch[1][1].toLocaleUpperCase()
+					+firstParameterMatch[1][0].toLocaleUpperCase()
 					+firstParameterMatch[1].substring(1)
-				globalContext[firstParameter] = globalContext[functions[i]]
+				moduleExports[firstParameter] = moduleExports[functions[i]]
+				// TODO: add new function names detected to functions
+				//   for aliases(param) -> aliasParam so the parent
+				//   function can distinguish it as a template.
+				functions.push(
+					`${firstParameter}: applyAttributes(${JSON
+						.stringify(accumulatedAttributes)}, ${functions[i]})`)
 			}
 	
 			// ahh, finally some relief, the attribute functions
@@ -295,7 +326,6 @@ function attribute(code, requirements, attributes, functions, lines) {
 				}
 				// this is why I'm clever
 				for(let k = 0; k < globalAttributes[caseInsensitive].length; ++k) {
-					//let replaceNames = new RegExp(`function\\s+${functions[i]}\\s*`, 'gi')
 					let attributeFunction = globalAttributes[caseInsensitive][k]
 					if(typeof attributeFunction == 'function') {
 						attributeFunction = attributeFunction.name
@@ -303,11 +333,6 @@ function attribute(code, requirements, attributes, functions, lines) {
 					requirements.push(attributeFunction)
 				}
 			}
-
-			// TODO: add new function names detected to functions
-			//   for aliases(param) -> aliasParam so the parent
-			//   function can distinguish it as a template.
-			// functions.push(alias of functions[i])
 			accumulatedAttributes = []
 		} else
 		if(attributes[i]) {
@@ -319,7 +344,7 @@ function attribute(code, requirements, attributes, functions, lines) {
 		}
 	}
 
-	return globalContext
+	return moduleExports
 	// that we can use with the module loader in env.js like 
 	//modules.exports = template({ doEval: (function () { 
 	//   if(doAttributes) doCodeComplete(); eval(); onNode() }).toString() 

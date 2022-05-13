@@ -2,12 +2,12 @@
 // this is some nice distilling
 // BASIC TEMPLATE SYSTEM, find and replace tokens
 // Source: https://stackoverflow.com/questions/29182244/convert-a-string-to-a-template-string
-String.prototype.interpolate = function interpolate(template) {
+function interpolate(template) {
 	const names = Object.keys(params);
 	const vals = Object.values(params);
 	return new Function(...names, `return \`${this}\`;`)(...vals);
 }
-
+String.prototype.interpolate = interpolate
 
 // BASIC TEMPLATE SYSTEM, find and replace tokens
 // @Quine
