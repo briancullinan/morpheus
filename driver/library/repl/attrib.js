@@ -205,7 +205,7 @@ function add(nodeType, attribute, params) {
 // return new code with attribute calls inserted into the code.
 // CODE REVIEW, like Function.prototype.apply but one less context
 // @Service
-function attribute(code, attributes, functions, lines) {
+function attribute(code, requirements, attributes, functions, lines) {
 	if(typeof code != 'string') {
 		throw new Error('Not implemented!')
 	}
@@ -219,7 +219,6 @@ function attribute(code, attributes, functions, lines) {
 	//   developers to stop writing vulnerabilities. This is the way. 
 	//   It's not a pie-the-sky. It just takes commitment to not writing
 	//   unit tests. LOL, invent a new language with a unit-test free side-effect.
-
 	// TODO: REGEXP -> template(functions)
 	// this level of abtraction is only to test our own system, the
 	//   rest can be written and standard javascript using whatever
@@ -231,22 +230,38 @@ function attribute(code, attributes, functions, lines) {
 			// TODO: totally messing this up, need to check 
 			//   attributes[] near functions[i] and replace 
 			//   those in code with globalAttributes calls
-			//code.replace(RegExp('function\s+' + functions[i]
-			//		+ '\s*', 'gi'), Object.keys(globalAttributes)
-			//		+ '()' + 'function ' 
-			//		+ functions[i])
+			//
 
 			// TODO: template(template, {'@attribs': 'callfunc()'})
 			//   can't use template-replacement on itself 
 			//   because that is what we are bootstrapping
 			console.log(accumulatedAttributes)
-
+			// CODE REVIEW, this is getting deep, this should
+			//   never happen in the new design. PHP was the same way.
+			for(let j = 0; j < accumulatedAttributes.length; ++j) {
+				let caseInsensitive = accumulatedAttributes[j][1]
+						.toLocaleLowerCase()
+				if(typeof globalAttributes[caseInsensitive] == 'undefined') {
+					continue
+				}
+				console.log(globalAttributes[caseInsensitive])
+				for(let k = 0; k < globalAttributes[caseInsensitive].length; ++k) {
+					code = code.replace(RegExp('function\s+' + functions[i]
+					+ '\s*', 'gi'), k + '()' + 'function ' + functions[i])
+					// TODO: add attribute function to requirements, rename in this
+					//   context and attach parameters.
+				}
+			}
+			// TODO: add new function names detected to functions
+			//   for aliases(param) -> aliasParam so the parent
+			//   function can distinguish it as a template.
 			accumulatedAttributes = []
 		} else
 		if(attributes[i]) {
 			accumulatedAttributes.push(attributes[i])
 		} else
 		if(!lines[i]) {
+			//console.log('discard:' , accumulatedAttributes)
 			accumulatedAttributes = []
 		}
 	}

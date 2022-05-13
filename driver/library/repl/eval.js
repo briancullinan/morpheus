@@ -175,7 +175,7 @@ const PREAMBLE_LINES = BOOTSTRAP_EVAL
 /*
 
 function doEval(runContext, evalStr) {
-	// CODE REVIEW, stacking pre-requisits?
+	// CODE REVIEW, stacking pre-requisits? - SOLVED attribute requirements
 	// @REPL() // automatic type checker for `request`
 	if (!request.script || !doEval) {
 		throw new Error(!request.script

@@ -12,6 +12,7 @@ function findFile(filename) {
 			return fullpath
 		}
 	}
+	throw new Error(`Could not find: "${filename}".`)
 }
 // TODO: move to generalized version of sys_fs.js
 function virtualReadFile(filename) {

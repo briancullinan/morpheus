@@ -199,39 +199,47 @@ function load(env) {
 		let foundFile = findFile(BOOTSTRAP[i])
 		let libCode = readFile(foundFile).toString('utf-8')
 		let params = []
-		let contextVariables = ''
+		let contextRequirements = ''
 		let exportCode = ''
 		switch(i) {
 			// COMPLEXITY: 2 - reusing eval is +1 complexity - total 2
 			case 2:
 				params = [eval]
-				contextVariables = 'realEval'
+				contextRequirements = 'realEval'
 				exportCode = 'evaluateCode: evaluate, parseCode: parse'
 			// COMPLEXITY: 3 - adding aspects -1 complexity - total 1
 			case 3:
 				if(!exportCode) {
+					// CODE REVIEW, this is weird because I'm adding a template
+					//   system so that in the next step I can do the thing this
+					//   file is labelled to do - attributes.
 					params = [attributes]
-					contextVariables = 'globalAttributes'
+					contextRequirements = 'globalAttributes'
 					exportCode = 'attributeCode: attribute, '
 							+ 'addAttribute: add, removeAttribute: remove'
 				}
-			// COMPLEXITY: 4 - +1 ^ for automatically renaming functions
+			// COMPLEXITY: 4 - +1 ^^^ for automatically renaming functions
 			//                 -1 for removing functional context - total 1
 			//                    and adding "format templates", i.e. @Template\n@template(env)\n@Test
 			case 4:
-				if(i == 4) {
+				if(i == 4) { // if(!exportCode) {
 					// TODO: connect @functiondeclaration because
 					//   template system is connected in the next step
 					params = [templates]
-					attributes['@add'] = [addAttribute]
-					attributes['@remove'] = [removeAttribute]
-					contextVariables = 'globalTemplates'
-					exportCode = 'templateString: template, '
-							+ 'attributeName: attribute'
+					// TODO: should move this to initAttributes 
+					//   and call with @Bootstrap template for whole file
+					attributes['add'] = [addAttribute]
+					attributes['remove'] = [removeAttribute]
 					let lineAttribs = []
 					let lineFuncts = []
 					let codeLines = parseCode(libCode, lineAttribs, lineFuncts)
-					libCode = attributeCode(libCode, lineAttribs, lineFuncts, codeLines)
+					libCode = attributeCode(libCode, contextRequirements, 
+								lineAttribs, lineFuncts, codeLines)
+					// TODO: get these from the function above
+					contextRequirements = 'globalTemplates'
+					exportCode = 'templateString: template, '
+							+ 'attributeName: attribute'
+
 				}
 				// MORE THEORY ON THIS. WEIRD. WHEN JAVASCRIPT LOADS
 				//   IF THERE IS A FUNCTION() DECLARATION, AND THEN
@@ -250,19 +258,30 @@ function load(env) {
 				// once eval() is bootstrapped, all other evaluations
 				//   from this point on can be handled by special functions.
 				Object.assign(globalThis, eval(
-					`(function (${contextVariables}) {\n
+					`(function (${contextRequirements}) {\n
 						return {${exportCode}};\n
 						${libCode}\n})`).apply(this, params))
+				// ^^^ Can't skip that until step 5 when the template
+				//   system is booted, no more bootstrapping, ever.
 		case 5:
-			// COMPLEXITY: 5 - +1 ^ for automatically importing library
+			// COMPLEXITY: 5 - +1 ^^^ for automatically importing library
 			//                 -1 for removing module environment contexts - total 1
 			// TODO: now that templates are working the cache system
 			//   can be loaded and functions wrapped with an abstracted environment
 
+			// TODO: need cache system to use on templates as well
+			//   then we can finish initTemplates() in this step
+			//   i.e. matching file templates to @Bootstrap to
+			//   automatically can initFilename if it exists without
+			//   the need to use @Attributes. i.e. The Framework.
+
+			// TODO: give our code files flow, i.e. PWAs like React and M$
+			//   are basically just file templates in /stacks/, mock everyone?
+
 			// context = wrap()
 			break
 		case 6:
-			// COMPLEXITY: 6 - +1 ^ for automatically loading modules
+			// COMPLEXITY: 6 - +1 ^^^ for automatically loading modules
 			//                 -1 for using quine instead of build system? - total 1
 			// TODO: make a complexity checker that makes sure
 			//   there are no static declarations, only templates and objects
@@ -272,7 +291,7 @@ function load(env) {
 		}
 	} // TODO: else
 
-	// HOW MANY CONTEXTS DOES IT TAKE TO GET TO THE CENTER OF A PROGRAM?
+	// HOW MANY CONTEXTS DOES IT TAKE TO GET TO THE CENTER OF A PROGRAM? 6
 	/*
 	```
 	namespace {

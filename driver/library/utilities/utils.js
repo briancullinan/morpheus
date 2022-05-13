@@ -53,14 +53,15 @@ function recursive(pathname, recursive) {
 
 
 // this is the kind of alien code that doesn't look pretty
-(function list(matches, regexp, string) {
+function list(matches, regexp, string) {
 	while(matches.push((regexp
 			.exec(string) || []).pop())
 					&& matches[matches.length-1]) 
 					{ /* nothing more to do */ }
 	return matches.slice(0, -1)
-// CODE REVIEW, pre-requisites after?
-}).bind(null, [], /* arguments[1], arguments[2] */)
+}
+// CODE REVIEW, pre-requisites after? - SOLVED with attributed requirements
+//).bind(null, [], /* arguments[1], arguments[2] */)
 
 
 
