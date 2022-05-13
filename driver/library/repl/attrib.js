@@ -180,8 +180,8 @@ async function evaluate(topOfStack) {
 // i.e. first is for bootstrapping
 //   latter is for runtime use
 // @Bootstrap
-// @Add(@Node,add)
-function add(attributes, nodeType, attribute, params) { 
+// @Add(@Add,add)
+function add(nodeType, attribute, params) { 
 	// ^^^ de-coupling attribute system from REPL object format. 
 
 	// LOL, USING A BOOTSTRAP TEMPLATING SYSTEM TO  
@@ -194,18 +194,21 @@ function add(attributes, nodeType, attribute, params) {
 	//   THE CURRENT NODE'S ATTRIBUTES LOAD THE ACTUAL
 	//   ATTRIBUTES FROM COMMENTS INTO THE NODE OBJECT
 	let caseInsensitive = attribute.toLocaleLowerCase()
-	if(typeof attributes[caseInsensitive] == 'undefined') {
-		attributes[caseInsensitive] = []
+	if(typeof globalAttributes[caseInsensitive] == 'undefined') {
+		globalAttributes[caseInsensitive] = []
 	}
-	attributes[caseInsensitive].push(params)
-	return attributes
+	globalAttributes[caseInsensitive].push(params)
+	return globalAttributes
 }
 
 
 // return new code with attribute calls inserted into the code.
 // CODE REVIEW, like Function.prototype.apply but one less context
-function apply(attributes) {
-	if(typeof attribute == 'string') {
+function attribute(code) {
+	console.log(globalAttributes)
+	// [ '@add': [ [Function: add] ], '@remove': [ [Function: remove] ] ]
+
+	if(typeof code == 'string') {
 		// TODO: I'm just going to rewrite all the RegExps here in sequence
 		//   to parse the above commands, even though I could write these 
 		//   into template.js then bootstrap the cache on our own file, then
@@ -354,7 +357,7 @@ function apply(attributes) {
 
 }
 
-
+// @Add(@Remove,remove)
 function remove(attributes, nodeType, attribute, params) {
 	if(typeof attributes[caseInsensitive] == 'undefined') {
 		return

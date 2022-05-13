@@ -7,9 +7,9 @@
 // to test this concept, lets use it from the very beginning
 
 // TODO: parse our own file using the @Attribute system to load the REPL framework
-let realEval = eval
 
 function evaluate(code) {
+	console.log('eval:', code)
 	// CODE REVIEW, test for attribute system, it loads alternative names
 	//   instead of apply() like defined
 	if(typeof acorn == 'undefined') {

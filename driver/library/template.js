@@ -39,19 +39,16 @@ function template(string, object) {
 // @Template
 // @Add(@Function,template)
 // @Attribute
-function attribute(
-	/* @Cache */ list, 
-	name, node, params
-) {
+function attribute(name, node, params) {
 	if(name == '@Function') {
-		attributes[name].push(evaluate.bind(null, node))
+		attributes[name].push(template.bind(null, node))
 	} else 
 	if (name == '@Attribute') {
-		list.push(node.bind(null, params))
+		globalTemplates.push(node.bind(null, params))
 	} else 
 	if (name == '@Object') {
 		// @Cache
-		params[0](list[i], node)
+		params[0](globalTemplates[i], node)
 	} else {
 		throw new Error('Not implemented!')
 	}

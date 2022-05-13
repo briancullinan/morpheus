@@ -177,13 +177,17 @@ let customRequire = wrapperQuine({
 
 // @Load()
 function load(env) {
+	let attributes = []
+	let realEval = globalThis.eval
+	let params = [realEval]
+	let contextVariables = 'realEval'
 	if(env == 'native') {
 		require('./env.js')
 		let BOOTSTRAP = [
 			'./repl/eval.js',
 			'./repl/attrib.js',
 			'./template.js'
-			// TODO: generics, types
+			// TODO: generics, types, cache.js
 		]
 		// TODO: load template system, so I don't have 
 		//   to write function () { MODULE_CODE } anymore
@@ -196,17 +200,21 @@ function load(env) {
 					exportCode = 'evaluateCode: evaluate, parseCode: parse'
 				case 1:
 					if(!exportCode) {
-						// TODO: scan for functions, then at the top:
-						let functions = []
-						let lines = parseCode(libCode, void 0, functions)
-						libCode = lines.join('\n')
-						exportCode = functions
-								.filter(function (f) { return f }).join(',')
-						console.log(libCode)
+						params = [attributes]
+						contextVariables = 'globalAttributes'
+						exportCode = 'attributeCode: attribute, '
+								+ 'addAttribute: add, removeAttribute: remove'
 					}
 				case 2:
-					if(typeof applyAttributes != 'undefined') {
-						libCode = applyAttributes(libCode, attributes)
+					if(i == 2) {
+						// TODO: connect @functiondeclaration because
+						//   template system is connected in the next step
+						attributes['@add'] = [addAttribute]
+						attributes['@remove'] = [removeAttribute]
+						contextVariables = 'globalTemplates'
+						exportCode = 'templateString: template, '
+								+ 'attributeName: attribute'
+						attributeCode(libCode, attributes)
 					}
 					// MORE THEORY ON THIS. WEIRD. WHEN JAVASCRIPT LOADS
 					//   IF THERE IS A FUNCTION() DECLARATION, AND THEN
@@ -225,10 +233,9 @@ function load(env) {
 					// once eval() is bootstrapped, all other evaluations
 					//   from this point on can be handled by special functions.
 					Object.assign(globalThis, eval(
-						`(function () {\n
+						`(function (${contextVariables}) {\n
 							return {${exportCode}};\n
-							${libCode}\n
-						})()`))
+							${libCode}\n})`).apply(this, params))
 			}
 		}
 
