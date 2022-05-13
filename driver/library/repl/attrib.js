@@ -204,10 +204,7 @@ function add(nodeType, attribute, params) {
 
 // return new code with attribute calls inserted into the code.
 // CODE REVIEW, like Function.prototype.apply but one less context
-function attribute(code) {
-	console.log(globalAttributes)
-	// [ '@add': [ [Function: add] ], '@remove': [ [Function: remove] ] ]
-
+function attribute(code, lines, functions) {
 	if(typeof code == 'string') {
 		// TODO: I'm just going to rewrite all the RegExps here in sequence
 		//   to parse the above commands, even though I could write these 
@@ -224,7 +221,14 @@ function attribute(code) {
 		// this level of abtraction is only to test our own system, the
 		//   rest can be written and standard javascript using whatever
 		//   level of attributes needed to keep the code small.
-
+		console.log(lines)
+		console.log(globalAttributes)
+		// [ '@add': [ [Function: add] ], '@remove': [ [Function: remove] ] ]
+		for(let i = 0; i < functions.length; i++) {
+			if(!functions[i]) continue
+			console.log(functions[i])
+		}
+	
 
 		// that we can use with the module loader in env.js like 
 		//modules.exports = template({ doEval: (function () { 

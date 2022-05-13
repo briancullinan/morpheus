@@ -36,7 +36,6 @@ function template(string, object) {
 
 // ATTRIBUTE SYSTEM
 // a node template looks like this
-// @Template
 // @Add(@Function,template)
 // @Attribute
 function attribute(name, node, params) {

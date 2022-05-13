@@ -29,7 +29,7 @@ function basicFunction(templateParams) {
 // Then, to import functions from other places and create `module`
 //   they wrap the module in a function that give the code path
 //   and filename context.
-function wrapperTemplate() {
+function moduleContext() {
 	return (function (templateParams) {
 		functionBody
 	})
@@ -48,6 +48,11 @@ eval(function wrapperTemplate(functionBody) {
 	}"
 })(__dirname, __filename, etc)
 */
+function wrap(context) {
+
+}
+
+// TODO: move into index.js, imply with @Attributes
 function wrapperQuine(object, functionBody) {
 
 	// here is the code that generates this silly script

@@ -177,70 +177,135 @@ let customRequire = wrapperQuine({
 
 // @Load()
 function load(env) {
+
+	// COMPLEXITY: 1 - bootstrapping a framework counts as 1 complexity
+	require('./env.js')
+	let BOOTSTRAP = [
+		void 0, // env.js
+		void 0, // './index.js',
+		'./repl/eval.js',
+		'./repl/attrib.js',
+		'./template.js',
+		'./cache.js',
+		'./quine.js',
+		// TODO: generics, types, cache.js
+	]
 	let attributes = []
-	let realEval = globalThis.eval
-	let params = [realEval]
-	let contextVariables = 'realEval'
-	if(env == 'native') {
-		require('./env.js')
-		let BOOTSTRAP = [
-			'./repl/eval.js',
-			'./repl/attrib.js',
-			'./template.js'
-			// TODO: generics, types, cache.js
-		]
-		// TODO: load template system, so I don't have 
-		//   to write function () { MODULE_CODE } anymore
-		for(let i = 0; i < BOOTSTRAP.length; ++i) {
-			let foundFile = findFile(BOOTSTRAP[i])
-			let libCode = readFile(foundFile).toString('utf-8')
-			let exportCode = ''
-			switch(i) {
-				case 0:
-					exportCode = 'evaluateCode: evaluate, parseCode: parse'
-				case 1:
-					if(!exportCode) {
-						params = [attributes]
-						contextVariables = 'globalAttributes'
-						exportCode = 'attributeCode: attribute, '
-								+ 'addAttribute: add, removeAttribute: remove'
-					}
-				case 2:
-					if(i == 2) {
-						// TODO: connect @functiondeclaration because
-						//   template system is connected in the next step
-						attributes['@add'] = [addAttribute]
-						attributes['@remove'] = [removeAttribute]
-						contextVariables = 'globalTemplates'
-						exportCode = 'templateString: template, '
-								+ 'attributeName: attribute'
-						attributeCode(libCode, attributes)
-					}
-					// MORE THEORY ON THIS. WEIRD. WHEN JAVASCRIPT LOADS
-					//   IF THERE IS A FUNCTION() DECLARATION, AND THEN
-					//   SOME STATEMENTS BELOW IT WITH ERRORS, THE ENGINE
-					//   APPARENTLY ONLY EVALUATES DOWN TO THE POINT OF 
-					//   FINDING THE REFERENCE. THIS IS NOT WHAT I WOULD
-					//   EXPECT. I THOUGHT THE ENTIRE {} BLOCK-CONTEXT
-					//   WOULD BE EVALUATED FOR REFERENCE NAMES ON ENTRY,
-					//   I DON'T KNOW WHY I EXPECTED THIS. I GUESS IN C THERE
-					//   IS NO "GLOBAL" CONTEXT AT RUNTIME, ONLY STATIC WHICH
-					//   IS DETERMINATED AT COMPILE TIME? THAT WOULD EXPLAIN
-					//   WHY THIS WORKS:
-					//   `return funcName; function funcName() {}; skips code with errors`
-					// this format is just for getting the library
-					//   started and then for evironmental declarations
-					// once eval() is bootstrapped, all other evaluations
-					//   from this point on can be handled by special functions.
-					Object.assign(globalThis, eval(
-						`(function (${contextVariables}) {\n
-							return {${exportCode}};\n
-							${libCode}\n})`).apply(this, params))
+	let templates = []
+	let context = {}
+	// TODO: load template system, so I don't have 
+	//   to write function () { MODULE_CODE } anymore
+	for(let i = 2; i < BOOTSTRAP.length; ++i) {
+		let foundFile = findFile(BOOTSTRAP[i])
+		let libCode = readFile(foundFile).toString('utf-8')
+		let params = []
+		let contextVariables = ''
+		let exportCode = ''
+		switch(i) {
+			// COMPLEXITY: 2 - reusing eval is +1 complexity - total 2
+			case 2:
+				params = [eval]
+				contextVariables = 'realEval'
+				exportCode = 'evaluateCode: evaluate, parseCode: parse'
+			// COMPLEXITY: 3 - adding aspects -1 complexity - total 1
+			case 3:
+				if(!exportCode) {
+					params = [attributes]
+					contextVariables = 'globalAttributes'
+					exportCode = 'attributeCode: attribute, '
+							+ 'addAttribute: add, removeAttribute: remove'
+				}
+			// COMPLEXITY: 4 - +1 ^ for automatically renaming functions
+			//                 -1 for removing functional context - total 1
+			//                    and adding "format templates", i.e. @Template\n@template(env)\n@Test
+			case 4:
+				if(i == 4) {
+					// TODO: connect @functiondeclaration because
+					//   template system is connected in the next step
+					params = [templates]
+					attributes['@add'] = [addAttribute]
+					attributes['@remove'] = [removeAttribute]
+					contextVariables = 'globalTemplates'
+					exportCode = 'templateString: template, '
+							+ 'attributeName: attribute'
+					let lineAttribs = []
+					let lineFuncts = []
+					parseCode(libCode, lineAttribs, lineFuncts)
+					attributeCode(libCode, lineAttribs, lineFuncts)
+				}
+				// MORE THEORY ON THIS. WEIRD. WHEN JAVASCRIPT LOADS
+				//   IF THERE IS A FUNCTION() DECLARATION, AND THEN
+				//   SOME STATEMENTS BELOW IT WITH ERRORS, THE ENGINE
+				//   APPARENTLY ONLY EVALUATES DOWN TO THE POINT OF 
+				//   FINDING THE REFERENCE. THIS IS NOT WHAT I WOULD
+				//   EXPECT. I THOUGHT THE ENTIRE {} BLOCK-CONTEXT
+				//   WOULD BE EVALUATED FOR REFERENCE NAMES ON ENTRY,
+				//   I DON'T KNOW WHY I EXPECTED THIS. I GUESS IN C THERE
+				//   IS NO "GLOBAL" CONTEXT AT RUNTIME, ONLY STATIC WHICH
+				//   IS DETERMINATED AT COMPILE TIME? THAT WOULD EXPLAIN
+				//   WHY THIS WORKS:
+				//   `return funcName; function funcName() {}; skips code with errors`
+				// this format is just for getting the library
+				//   started and then for evironmental declarations
+				// once eval() is bootstrapped, all other evaluations
+				//   from this point on can be handled by special functions.
+				Object.assign(globalThis, eval(
+					`(function (${contextVariables}) {\n
+						return {${exportCode}};\n
+						${libCode}\n})`).apply(this, params))
+		case 5:
+			// COMPLEXITY: 5 - +1 ^ for automatically importing library
+			//                 -1 for removing module environment contexts - total 1
+			// TODO: now that templates are working the cache system
+			//   can be loaded and functions wrapped with an abstracted environment
+
+			// context = wrap()
+			break
+		case 6:
+			// COMPLEXITY: 6 - +1 ^ for automatically loading modules
+			//                 -1 for using quine instead of build system? - total 1
+			// TODO: make a complexity checker that makes sure
+			//   there are no static declarations, only templates and objects
+			// TODO: now that cache system is loaded, modules can 
+			//   be automatically imported
+			break
+		}
+	} // TODO: else
+
+	// HOW MANY CONTEXTS DOES IT TAKE TO GET TO THE CENTER OF A PROGRAM?
+	/*
+	```
+	namespace {
+		class {
+			// space for complexity
+			function {
+				// complexity we force devs to test
+				if() {
+				}
 			}
 		}
+		// space for complexity
+	}
+	```
 
+	OR!
+
+	```
+	// complexity filtered by checker
+	({
+	property: environmental.impact()
+	})
+	// no room for complexity
+	```
+
+	*/
+
+	if(env == 'native') {
+		Object.assign(globalThis, context)
 		eval('emitCLI()')
-	} // TODO: else
+		//console.log(quine(module)) // aka do Makefile / webpack
+		// TODO: output documentation
+	}
 
 }
 
