@@ -60,7 +60,9 @@ function parse(code, attributes, functions) {
 				}
 			}
 
-			codeLines.push(line)
+			if(line.length > 0) {
+				codeLines[i] = line
+			}
 		} else 
 		if (lines[i].trim().length == 0) {
 			ignoring = false

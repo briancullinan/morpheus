@@ -204,87 +204,107 @@ function add(nodeType, attribute, params) {
 
 // return new code with attribute calls inserted into the code.
 // CODE REVIEW, like Function.prototype.apply but one less context
-function attribute(code, lines, functions) {
-	if(typeof code == 'string') {
-		// TODO: I'm just going to rewrite all the RegExps here in sequence
-		//   to parse the above commands, even though I could write these 
-		//   into template.js then bootstrap the cache on our own file, then
-		//   use our own template system to parse our own @Attribute system I 
-		//   linked to above which would prove it's own unit test. This part
-		//   needs a unit test. I'm not going to write one. I refuse to learn.
-		// A high-ranking security officer from Credit Karma told me he wants
-		//   developers to stop writing vulnerabilities. This is the way. 
-		//   It's not a pie-the-sky. It just takes commitment to not writing
-		//   unit tests. LOL, invent a new language with a unit-test free side-effect.
+function attribute(code, attributes, functions, lines) {
+	if(typeof code != 'string') {
+		throw new Error('Not implemented!')
+	}
+	// TODO: I'm just going to rewrite all the RegExps here in sequence
+	//   to parse the above commands, even though I could write these 
+	//   into template.js then bootstrap the cache on our own file, then
+	//   use our own template system to parse our own @Attribute system I 
+	//   linked to above which would prove it's own unit test. This part
+	//   needs a unit test. I'm not going to write one. I refuse to learn.
+	// A high-ranking security officer from Credit Karma told me he wants
+	//   developers to stop writing vulnerabilities. This is the way. 
+	//   It's not a pie-the-sky. It just takes commitment to not writing
+	//   unit tests. LOL, invent a new language with a unit-test free side-effect.
 
-		// TODO: REGEXP -> template(functions)
-		// this level of abtraction is only to test our own system, the
-		//   rest can be written and standard javascript using whatever
-		//   level of attributes needed to keep the code small.
-		console.log(lines)
-		console.log(globalAttributes)
-		// [ '@add': [ [Function: add] ], '@remove': [ [Function: remove] ] ]
-		for(let i = 0; i < functions.length; i++) {
-			if(!functions[i]) continue
-			console.log(functions[i])
+	// TODO: REGEXP -> template(functions)
+	// this level of abtraction is only to test our own system, the
+	//   rest can be written and standard javascript using whatever
+	//   level of attributes needed to keep the code small.
+	let accumulatedAttributes = []
+	// [ '@add': [ [Function: add] ], '@remove': [ [Function: remove] ] ]
+	for(let i = 0; i < lines.length; i++) {
+		if(functions[i]) {
+			// TODO: totally messing this up, need to check 
+			//   attributes[] near functions[i] and replace 
+			//   those in code with globalAttributes calls
+			//code.replace(RegExp('function\s+' + functions[i]
+			//		+ '\s*', 'gi'), Object.keys(globalAttributes)
+			//		+ '()' + 'function ' 
+			//		+ functions[i])
+
+			// TODO: template(template, {'@attribs': 'callfunc()'})
+			//   can't use template-replacement on itself 
+			//   because that is what we are bootstrapping
+			console.log(accumulatedAttributes)
+			
+			accumulatedAttributes = []
+		} else
+		if(attributes[i]) {
+			accumulatedAttributes.push(attributes[i])
+		} else
+		if(!lines[i]) {
+			accumulatedAttributes = []
 		}
-	
+	}
 
-		// that we can use with the module loader in env.js like 
-		//modules.exports = template({ doEval: (function () { 
-		//   if(doAttributes) doCodeComplete(); eval(); onNode() }).toString() 
-		//}) // that calls our attribute list instead, based on the next context
-		//   outwards, in REPL it would be more attributes and queuing, and in
-		//   env.js, eval(template()) called directly. In code-complete
-		//   checker for lines / call expressions the doCodeComplete is added
-		//   and records the symbols that we hit in each call branch.
+	return code
+	// that we can use with the module loader in env.js like 
+	//modules.exports = template({ doEval: (function () { 
+	//   if(doAttributes) doCodeComplete(); eval(); onNode() }).toString() 
+	//}) // that calls our attribute list instead, based on the next context
+	//   outwards, in REPL it would be more attributes and queuing, and in
+	//   env.js, eval(template()) called directly. In code-complete
+	//   checker for lines / call expressions the doCodeComplete is added
+	//   and records the symbols that we hit in each call branch.
 
-		// TODO: recover regex to list comments right above functions
-		//   pass into next fold
+	// TODO: recover regex to list comments right above functions
+	//   pass into next fold
 
-		// TODO RETURN:
-		// TODO: need to return a list of evaluations that returns a list of
-		//   functions for every attribute, in string/eval() mode each function
-		//   can be called directly to get the effects of the attribute system.
-	  //   TODO: but in REPL mode, another template would be applied to every
-		//     eval() to call doNode() functions that affect the REPL stack
-		//     structure instead. 100% responsibility isolation with 1 more level 
-		//     of complexity, 1 list of polyfills specified below. 1 in / 1 out 
-		//     function. This component follows all my new rules. Try < 30 lines of code.
+	// TODO RETURN:
+	// TODO: need to return a list of evaluations that returns a list of
+	//   functions for every attribute, in string/eval() mode each function
+	//   can be called directly to get the effects of the attribute system.
+	//   TODO: but in REPL mode, another template would be applied to every
+	//     eval() to call doNode() functions that affect the REPL stack
+	//     structure instead. 100% responsibility isolation with 1 more level 
+	//     of complexity, 1 list of polyfills specified below. 1 in / 1 out 
+	//     function. This component follows all my new rules. Try < 30 lines of code.
 
-		// TODO: attributed implications come from files formats following
-		//   a specific predefined format, like:
-		// @Styles
-		// @HTML
-		// @Controller
-		//   for many frameworks, JSX-style file formats.
-		// even jupyter could be generalized:
-		// @Markdown
-		// @Codeblock
-		// @Results to guaruntee the JSON is alwayy generated in the same order
-		// which means as long as there are utility functions that
-		//   recognize that order from the function names or
-		//   declarative attributed object templates, the attributes
-		//   can be ommitted entirely because the symbology of the
-		//   syntax follows a specific pattern.
-		// i.e.
-		// @Setup
-		// @DoTest
-		// @Results
-		// Why would I write do(it()) when it never worked without
-		//   it? it's redundant, just assume it's was there in the first place.
+	// TODO: attributed implications come from files formats following
+	//   a specific predefined format, like:
+	// @Styles
+	// @HTML
+	// @Controller
+	//   for many frameworks, JSX-style file formats.
+	// even jupyter could be generalized:
+	// @Markdown
+	// @Codeblock
+	// @Results to guaruntee the JSON is alwayy generated in the same order
+	// which means as long as there are utility functions that
+	//   recognize that order from the function names or
+	//   declarative attributed object templates, the attributes
+	//   can be ommitted entirely because the symbology of the
+	//   syntax follows a specific pattern.
+	// i.e.
+	// @Setup
+	// @DoTest
+	// @Results
+	// Why would I write do(it()) when it never worked without
+	//   it? it's redundant, just assume it's was there in the first place.
 
-		// TODO: use functional-comment attributes to detect
-		//   regex (var,let) desclarations to get list(cache) working
-		//   use regex to find // @Attribute\n({\n\n}) with a copied...
-		//   TODO: EDGE-CASE, balanced-brackes if preceeded by (parens)?
-		//      BAH! can't find equal curly brackets inside of strings
-		//      (TODO: does balanced-brackets not work within strings/templates?)
-		//      without the language lexer! Need more WASMs >:Z
+	// TODO: use functional-comment attributes to detect
+	//   regex (var,let) desclarations to get list(cache) working
+	//   use regex to find // @Attribute\n({\n\n}) with a copied...
+	//   TODO: EDGE-CASE, balanced-brackes if preceeded by (parens)?
+	//      BAH! can't find equal curly brackets inside of strings
+	//      (TODO: does balanced-brackets not work within strings/templates?)
+	//      without the language lexer! Need more WASMs >:Z
 
-	} else 
 	// TODO: also do using acorn. 
-	if(typeof acorn != 'undefined') {
+	//if(typeof acorn != 'undefined') {
 				
 		// this runs 1 time to load attributes for the 
 		//   statement for the whole program
@@ -295,6 +315,7 @@ function attribute(code, lines, functions) {
 		//   should be created that changes the list of
 		//   runContext.attributes. i.e. @Add(@Function, _changeAttribs)
 
+		/*
 		abstractNode.attributes = []
 		for(let i = 0; 
 			i < comments.length; 
@@ -322,7 +343,6 @@ function attribute(code, lines, functions) {
 			])
 		}
 
-		/*
 		runContext.programCallstack.push({
 			type: 'Evaluate',
 			value: doNodeAttributes
@@ -357,7 +377,7 @@ function attribute(code, lines, functions) {
 		}
 		*/
 
-	}
+	//}
 
 }
 

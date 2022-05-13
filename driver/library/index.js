@@ -230,8 +230,8 @@ function load(env) {
 							+ 'attributeName: attribute'
 					let lineAttribs = []
 					let lineFuncts = []
-					parseCode(libCode, lineAttribs, lineFuncts)
-					attributeCode(libCode, lineAttribs, lineFuncts)
+					let codeLines = parseCode(libCode, lineAttribs, lineFuncts)
+					libCode = attributeCode(libCode, lineAttribs, lineFuncts, codeLines)
 				}
 				// MORE THEORY ON THIS. WEIRD. WHEN JAVASCRIPT LOADS
 				//   IF THERE IS A FUNCTION() DECLARATION, AND THEN
