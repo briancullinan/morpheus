@@ -37,7 +37,7 @@ function template(string, object) {
 // ATTRIBUTE SYSTEM
 // a node template looks like this
 // @Add(@Function,template)
-// @Attribute
+// @Template
 function attribute(name, node, params) {
 	if(name == '@Function') {
 		attributes[name].push(template.bind(null, node))
@@ -51,6 +51,22 @@ function attribute(name, node, params) {
 	} else {
 		throw new Error('Not implemented!')
 	}
+}
+
+
+// TODO: i.e. comments, markdown, attributes (circular)
+// @Template
+function accumulate(list, item) {
+	if(condition === true) {
+		store = list
+		discard(list)
+		return
+	} else 
+	if(condition === false) {
+		discard(list)
+		return
+	}
+	list.push(item)
 }
 
 // TODO: call the above attribute system above once to make @Attribute events

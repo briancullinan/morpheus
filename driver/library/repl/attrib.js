@@ -204,6 +204,7 @@ function add(nodeType, attribute, params) {
 
 // return new code with attribute calls inserted into the code.
 // CODE REVIEW, like Function.prototype.apply but one less context
+// @Service
 function attribute(code, attributes, functions, lines) {
 	if(typeof code != 'string') {
 		throw new Error('Not implemented!')
@@ -239,7 +240,7 @@ function attribute(code, attributes, functions, lines) {
 			//   can't use template-replacement on itself 
 			//   because that is what we are bootstrapping
 			console.log(accumulatedAttributes)
-			
+
 			accumulatedAttributes = []
 		} else
 		if(attributes[i]) {
