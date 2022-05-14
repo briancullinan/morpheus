@@ -53,22 +53,6 @@ function attribute(name, node, params) {
 	}
 }
 
-
-// TODO: i.e. comments, markdown, attributes (circular)
-// @Template
-function accumulate(list, item) {
-	if(condition === true) {
-		store = list
-		discard(list)
-		return
-	} else 
-	if(condition === false) {
-		discard(list)
-		return
-	}
-	list.push(item)
-}
-
 // TODO: call the above attribute system above once to make @Attribute events
 // TODO: call attribute system above again to make onFunction events
 // TODO: call it again to make doNode events

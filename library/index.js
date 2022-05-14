@@ -285,12 +285,13 @@ function load(env, framework) {
 if(typeof process != 'undefined') {
 	// TODO: move back to index before including framework.js
 	require('./env.js')
-	const {bootstrap} = require('./stacks/framework.js')
-	let framework = bootstrap(globalThis)
+	require('./utilities/parse.js')
+	//const {bootstrap} = require('./stacks/framework.js')
+	//let framework = bootstrap(globalThis)
 	// TODO: load template system, so I don't have 
 	//   to write function () { MODULE_CODE } anymore
 	// @Exit() for JS to C conversion
-	load('native', framework)
+	//load('native', framework)
 }
 
 // TODO: this file is done, kind of poetic how this matches

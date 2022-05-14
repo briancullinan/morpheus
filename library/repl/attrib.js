@@ -288,38 +288,40 @@ function attribute(code, requirements, attributes, functions, lines) {
 	// this level of abtraction is only to test our own system, the
 	//   rest can be written and standard javascript using whatever
 	//   level of attributes needed to keep the code small.
+
+	// TODO: template(template, {'@attribs': 'callfunc()'})
+	//   can't use template-replacement on itself 
+	//   because that is what we are bootstrapping
+	//moduleExports[functions[i]] = 
+
+	// ahh, finally some relief, the attribute functions
+	//   control the requirements, so I can list pre-reqs
+	//   as @Add(@Function,prereqControlFunction)
+	for(let j = 0; j < accumulatedAttributes.length; ++j) {
+		let caseInsensitive = accumulatedAttributes[j][1]
+				.toLocaleLowerCase()
+		if(typeof globalAttributes[caseInsensitive] == 'undefined') {
+			continue
+		}
+		// this is why I'm clever
+		for(let k = 0; k < globalAttributes[caseInsensitive].length; ++k) {
+			let attributeFunction = globalAttributes[caseInsensitive][k]
+			if(typeof attributeFunction == 'function') {
+				attributeFunction = attributeFunction.name
+			}
+			requirements.push(attributeFunction)
+		}
+	}
+	// TODO: totally messing this up, need to check 
+	//   attributes[] near functions[i] and replace 
+	//   those in code with globalAttributes calls
+	//
+
 	let accumulatedAttributes = []
 	// [ '@add': [ [Function: add] ], '@remove': [ [Function: remove] ] ]
 	for(let i = 0; i < lines.length; i++) {
 		if(functions[i]) {
-			// TODO: totally messing this up, need to check 
-			//   attributes[] near functions[i] and replace 
-			//   those in code with globalAttributes calls
-			//
-
-			// TODO: template(template, {'@attribs': 'callfunc()'})
-			//   can't use template-replacement on itself 
-			//   because that is what we are bootstrapping
-			//moduleExports[functions[i]] = 
-
-			// ahh, finally some relief, the attribute functions
-			//   control the requirements, so I can list pre-reqs
-			//   as @Add(@Function,prereqControlFunction)
-			for(let j = 0; j < accumulatedAttributes.length; ++j) {
-				let caseInsensitive = accumulatedAttributes[j][1]
-						.toLocaleLowerCase()
-				if(typeof globalAttributes[caseInsensitive] == 'undefined') {
-					continue
-				}
-				// this is why I'm clever
-				for(let k = 0; k < globalAttributes[caseInsensitive].length; ++k) {
-					let attributeFunction = globalAttributes[caseInsensitive][k]
-					if(typeof attributeFunction == 'function') {
-						attributeFunction = attributeFunction.name
-					}
-					requirements.push(attributeFunction)
-				}
-			}
+			
 			accumulatedAttributes = []
 		} else
 		if(attributes[i]) {
