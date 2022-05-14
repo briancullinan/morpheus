@@ -167,16 +167,19 @@ function load(env, framework) {
 	//   and call with @Bootstrap template for whole file
 	//   weird to think about how to call a new function 
 	//   before it's declared? remove the break; above?
-	
+	attributeCode(framework.globalCache['./repl/attrib.js'])
+	//attributeCode(framework.globalCache['./template.js'])
+	//templateQuine(framework.globalCache['./cache.js'])
 	// TODO: start by rescanning our own attrib.js
 	//   system to help with future attributing, 
 	//   (i.e. add @add, @before, etc)
-	console.log(framework.globalCache['./repl/attrib.js'])
+	console.log(framework)
 	// TODO: ^^^ bind `framework.globalCache` to cache.js template, 
 	//   then bind directories to another cache for 
 	//   use with watchFiles() or temporary storage.
 	// TODO: scan all files for template functions and cache
-	//   seperately.
+	//   seperately. then automatically create modules when 
+	//   called based on init-object, naming scheme, and env.
 	return 
 	// TODO: when adding the entire library to Quine attributes should be
 	//   applied by the outer-most context passing the functions in
