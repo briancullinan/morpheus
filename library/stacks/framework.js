@@ -24,15 +24,6 @@ let BOOTSTRAP = [
 	// TODO: generics, types, cache.js
 ]
 
-// To import functions from other places and create `module`
-//   they wrap the module in a function that give the code path
-//   and filename context.
-function wrap() {
-	return (function (templateParams) {
-		functionBody
-	})
-}
-
 // but I'm going to modify this a little to accept parameters
 function extractFunctions(context, libCode, functions, aliases) {
 	let exportCode = functions
