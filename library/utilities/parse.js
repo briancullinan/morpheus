@@ -36,6 +36,7 @@ directly or if we copy a big HTML tree structure to
 look up, patterns.js should be able to "flatten" it
 and we'll need to visually verify the CSS can be flattened too.
 Something like:
+// @Ignore
 ({
 flatten: htmlTree(),
 coallesce: wkhtml2pdfVerify(tree, css)
@@ -58,11 +59,18 @@ hit a list structure.
 
 CODE REVIEW interesting using a combination of simpler
 algorithms to solve a problem instead of jumping directly
-to linear-regression, monte carlo, and cloud-based annealing.
+to linear-regression, monte carlo, and cloud-based quantum-annealing.
 
 */
 
+// Try to capture the whole line in between syntax
+const FUNCNAME = /([a-z]+[a-z-_]*)/
+const WORDINESS = /[\s\S]*?\w[\s\S]*?/
+// TODO: parse our own file and return;
+//   a true quine parser, everything we need to
+//   that the template and attribute systems.
 const INITOBJ = /\n\(\{\n[\s\S]*?\n\}\)\n/g
+
 // exit before hitting weird object code
 if(typeof module != 'undefined') {
 	// TODO: parse our own weird file, and append this list
@@ -72,11 +80,13 @@ if(typeof module != 'undefined') {
 		// conditionTemplate etc object, accumulate
 	}
 	let parser = readFile(__filename).toString('utf-8')
-	let init
-	 // parse only our object inits
+	let initCode = parser.replace(INITOBJ, '')
+	 // parse our own object inits
+	let globalObjects = []
 	while((init = INITOBJ.exec(parser))) {
-		console.log(init[0])
+		parser = parser.replace(init[0], '')
 	}
+	// TODO: load accumulate and template.js
 	
 console.log()
 
@@ -85,65 +95,7 @@ console.log()
 	return module.exports
 }
 
-// all the quake 3 parse code looks the same
-// @Template
-function parse(data) {
-	if(!data) {
-		return
-	}
-	if(loop(condition)) {
-		body
-	}
-	return data
-}
 
-
-
-// To import functions from other places and create 
-//   `module` the Module wraps the new module in a 
-//   function that gives the code path and filename 
-//   context.
-// @Template
-function wrap() {
-	return function (params) {
-		body
-	}
-}
-
-// in order to parse our own code files
-//   we need a few quines 
-// @Template
-function condition() {
-	if(test1) {
-		ifThen
-	} else 
-	if (test2) {
-		elseIf
-	} else {
-		Else
-	}
-}
-
-function object(init) {
-	({
-		property: init,
-		property2: init2,
-	})
-}
-
-// TODO: i.e. comments, markdown, attributes (circular)
-// @Template
-function accumulate(list, item) {
-	if(shouldStore) {
-		store = list.splice(0)
-		return
-	} else 
-	if(shouldDiscard) {
-		list.splice(0)
-		return
-	}
-	list.push(item)
-}
 // TODO: balanced doesn't work on regexp?
 // that makes it repeatable
 // CODE REVIEW, interesting, if I make a regexp parser
@@ -178,33 +130,59 @@ function accumulate(list, item) {
 // TODO: replace parse context when REPL loads.
 //   i.e. parse(node) override
 
-
-// Try to capture the whole line in between syntax
-const COMMENT = /(^|\s+)\/\/(.*)$/
-const FUNCNAME = /([a-z]+[a-z-_]*)/
-const WORDINESS = /[\s\S]*?\w[\s\S]*?/
-// TODO: parse our own file and return;
-//   a true quine parser, everything we need to
-//   that the template and attribute systems.
 // this is so parse will load without error
 // CODE REVIEW, don't need `g` because 1 per line?
+// @Nodes
 ({
-functiondeclaration: (/function\s+[FUNCNAME][\s\n\r]*\(/),
 attributes: (/@(\w*)\s*\(*\s*([^,\)\s]*)\s*(,\s*[^,\)\s]*\s*)*\)*/i),
-comments: COMMENT,
+functiondeclaration: new RegExp(`function\s+${FUNCNAME}[\s\n\r]*\(`),
+comments: /(^|\s+)\/\/(.*)$/,
 // does this work on other's code?
-objectexpression: (/\(\{\n([WORDINESS]\s*\:\s*[WORDINESS])+\n\}\)/),
-logicalexpression: (/\([WORDINESS](&&|\|\|)[WORDINESS]\)/),
-variabledeclaration: (/(^|\n|\s+)(let|var|const)[WORDINESS](\n|;)/),
+objectexpression: new RegExp(`\(\{\n(${WORDINESS}\s*\:\s*${WORDINESS})+\n\}\)`),
+logicalexpression: new RegExp(`\(${WORDINESS}(&&|\|\|)${WORDINESS}\)`),
+variabledeclaration: new RegExp(`(^|\n|\s+)(let|var|const)${WORDINESS}(\n|;)`),
 // TODO: unary
-booleanexpression: (/\([WORDINESS](==|!=|>|<|>=|<=|===|!==)[WORDINESS]\)/),
+booleanexpression: new RegExp(`\(${WORDINESS}(==|!=|>|<|>=|<=|===|!==)${WORDINESS}\)`),
 // TODO: identifier
-identifier: (/((['"])[WORDINESS]\2)/)
+identifier: new RegExp(`((['"])${WORDINESS}\2)`),
+assignmentexpression: new RegExp(`(${WORDINESS})\s=\s(${WORDINESS})`),
 })
 
-// TODO: now that I have all by syntax types I can put them
-//   into arrays with the same names then continue checking
-//   with the parser.
+// all the quake 3 parse code looks the same
+// Which is actually a template of @Accumulate with
+//   `for`s and a different condition?
+
+// THEORY IF I CAN PARSE THIS IN LESS THAN 30 LINES
+//   OF CODE, THEN I WILL HAVE A WORKING PARSER CAPABLE
+//   OF PARSING ALL OF THE TEMPLATES OUT OF THIS FILE
+//   WHICH MEANS IT CAN PARSE ALL THE TEMPLATES IN THE
+//   LIBRARY AND APPLY ATTRIBUTES ACCORDINGLY, NEED
+//   TO END UP WITH CALL TO EMITCLI()
+// DEPENDENCY FREE, I.E. JS ONLY TO LOAD, NO ACORN.
+//   THAT WAY ACORN CAN BE A PLUGIN TO THE SYSTEM LIKE
+//   ANTLR.
+
+// Template(parseContext)
+// Parse(nodes)
+// @Loop(for) - everything else is implied
+({
+lines: code.toString('utf-8').split(','),
+body: 
+// @Loop(for)
+({
+keys: Object.keys(nodes),
+body:
+// @Loop(reduce)
+({
+// @Condition
+result: (result[keys[j]][i] = values[j].exec(lines[i])) // side-effect null
+})
+})
+})
+
+
+// ############### MESSING AROUND WITH POSSIBLE PARSER ABILITIES.
+
 
 // a basic @File template looks like 
 // @Template
@@ -216,10 +194,19 @@ templates: typeof functiondeclaration[i] != 'undefined',
 declarations: typeof objectexpression[i] != 'undefined',
 })
 
+
+function object({params: {init, init2}}) {
+return ({
+property: init,
+property2: init2,
+})
+}
+
 // TODO: totally messing this up, need to check 
 //   attributes[] near functions[i] and replace 
 //   those in code with globalAttributes calls
 //   using the accumulate() template.
+
 
 // @Accumulate(attributes)
 ({
@@ -227,16 +214,88 @@ shouldStore: functions[i],
 shouldDiscard: !lines[i],
 // throw away attributes if empty lines are hit
 // must be list right above functions or objects
-list: 'attributes',
-store: attributes[i] 
+list: attributes,
+store: transform(attributes[i])
 // store it back in the list but at the position of the function
 // TODO: possible side effect /* @Attrib */ function on the same line
 })
 
-function parse(attribute) {
-	if(attribute[attribute.length-1]) {
-		attribute[attribute.length-1] = attribute[attribute.length-1]
-		// clean up extra params matched by attribute
-		.split(',').map(function (p) { return p.trim() }).slice(1)
+
+function transform(attribute) {
+	return attribute.split(',')
+	.map(function (p) { return p.trim() })
+	.slice(1)
+}
+
+
+// @Template
+function loop(context) {
+	// @Iterator
+	{
+		// @Body
+	}
+	// @Suffix
+}
+
+
+// hmm, if I replace these with template strings and somehow parse
+//  expectations I can possibly turn this into something like
+// @Loop
+({
+	// where the keys of condition are automatically expended from the object
+loops: ['for', void 0, 'while', void 0, 'do', 'while'],
+// at least one has to be supplied?
+conditions: [
+	['init', 'test', 'update'], void 0,
+	['test'], void 0, // branches
+	void 0, ['test'],
+],
+// ^^^ then that kind of stuff I can map directly to ANTLR
+//   for generalization
+})
+
+
+// TODO: now that I have all by syntax types I can put them
+//   into arrays with the same names then continue checking
+//   with the parser.
+
+// in order to parse our own code files
+//   we need a few quines 
+// @Template
+function condition() {
+	if(test1) {
+		ifThen
+	} else 
+	if (test2) {
+		elseIf
+	} else {
+		Else
 	}
 }
+
+
+// To import functions from other places and create 
+//   `module` the Module wraps the new module in a 
+//   function that gives the code path and filename 
+//   context.
+// @Template
+function wrap() {
+	return function (params) {
+		body
+	}
+}
+
+
+// TODO: i.e. comments, markdown, attributes (circular)
+// @Add(@Accumulate,accumulate) -- implied by line below?
+// @Template(accumulate)
+// @Loop(for)
+// @Body
+({
+test1: shouldStore,
+ifThen: store = list.splice(0),
+test2: shouldDiscard,
+elseIf: list.splice(0),
+Else: list.push(item)
+})
+
