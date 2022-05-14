@@ -36,10 +36,10 @@ directly or if we copy a big HTML tree structure to
 look up, patterns.js should be able to "flatten" it
 and we'll need to visually verify the CSS can be flattened too.
 Something like:
-// @Ignore
+// @Template(wrapperQuine)
 ({
-flatten: htmlTree(),
-coallesce: wkhtml2pdfVerify(tree, css)
+params: Object.keys(nodes).join(', '),
+body: (code).toString()
 })
 
 Where every branch of the HTML tree is flattened, and
@@ -64,8 +64,8 @@ to linear-regression, monte carlo, and cloud-based quantum-annealing.
 */
 
 // Try to capture the whole line in between syntax
-const FUNCNAME = /([a-z]+[a-z-_]*)/
-const WORDINESS = /[\s\S]*?\w[\s\S]*?/
+const FUNCNAME = '([a-z]+[a-z-_]*)'
+const WORDINESS = '[\\s\\S]*?\\w[\\s\\S]*?'
 // TODO: parse our own file and return;
 //   a true quine parser, everything we need to
 //   that the template and attribute systems.
@@ -73,20 +73,44 @@ const INITOBJ = /\n\(\{\n[\s\S]*?\n\}\)\n/g
 
 // exit before hitting weird object code
 if(typeof module != 'undefined') {
-	// TODO: parse our own weird file, and append this list
-	let myModule = {
-		parseCode: parse,
-		wrapTemplate: wrap,
-		// conditionTemplate etc object, accumulate
-	}
 	let parser = readFile(__filename).toString('utf-8')
-	let initCode = parser.replace(INITOBJ, '')
+	let code = parser.replace(INITOBJ, '')
 	 // parse our own object inits
 	let globalObjects = []
 	while((init = INITOBJ.exec(parser))) {
-		parser = parser.replace(init[0], '')
+		globalObjects.push(init[0])
 	}
+	let context = globalObjects[0]
+	let wrapperQuine = eval(template(
+		'(' + (function (wrap) {
+			return template(context, body) 
+		}).toString() + ')', {
+			body: context.trim(),
+			wrap: 'context, nodes, code',
+		}))
+	let parseCode = eval(globalObjects[1])
+	console.log(wrapperQuine.toString())
+	console.log('\n\n\n\n')
+	console.log(wrapperQuine(wrap, parseCode, globalObjects[2]))
+	//console.log(parseCode)
+	//let nodes = eval(globalObjects[1])
+	//let parserCode = template('(' 
+	//		+ wrap.toString() + ')()', nodes)
+	console.log(parserCode)
+	let parseNode = function () {
+		console.log(parserCode)
+	}
+
+	let result = eval(parserCode)
+	console.log(result(void 0, code).toString())
+
 	// TODO: load accumulate and template.js
+	// TODO: parse our own weird file, and append this list
+	let myModule = {
+		parseCode,
+		// wrapTemplate: wrap,
+		// conditionTemplate etc object, accumulate
+	}
 	
 console.log()
 
@@ -127,25 +151,37 @@ console.log()
 //   onTranspile, doTranspile is make stack change, and reverse 
 //   stack change back to language.
 
+// BASIC TEMPLATE SYSTEM, find and replace tokens
+// @Quine
+// @Add(@Template,template) automatically create templates out of anything marked with @Template
+function template(string, object) {
+	let params = Object.keys(object)
+	let values = Object.values(object)
+	for(let i = 0; i < params.length; i++) {
+		string = (string + '').replace(
+				new RegExp(params[i], 'g'), values[i])
+	}
+	return string
+}
+
 // TODO: replace parse context when REPL loads.
 //   i.e. parse(node) override
-
 // this is so parse will load without error
 // CODE REVIEW, don't need `g` because 1 per line?
 // @Nodes
 ({
 attributes: (/@(\w*)\s*\(*\s*([^,\)\s]*)\s*(,\s*[^,\)\s]*\s*)*\)*/i),
-functiondeclaration: new RegExp(`function\s+${FUNCNAME}[\s\n\r]*\(`),
+functiondeclaration: new RegExp(`function\\s+${FUNCNAME}[\\s\\n\\r]*\\(`),
 comments: /(^|\s+)\/\/(.*)$/,
 // does this work on other's code?
-objectexpression: new RegExp(`\(\{\n(${WORDINESS}\s*\:\s*${WORDINESS})+\n\}\)`),
-logicalexpression: new RegExp(`\(${WORDINESS}(&&|\|\|)${WORDINESS}\)`),
-variabledeclaration: new RegExp(`(^|\n|\s+)(let|var|const)${WORDINESS}(\n|;)`),
+objectexpression: new RegExp(`\\(\\{\\n(${WORDINESS}\\s*:\\s*${WORDINESS})+\\n\\}\\)`),
+logicalexpression: new RegExp(`\\(${WORDINESS}(&&|\\|\\|)${WORDINESS}\\)`),
+variabledeclaration: new RegExp(`(^|\\n|\\s+)(let|var|const)${WORDINESS}(\\n|;)`),
 // TODO: unary
-booleanexpression: new RegExp(`\(${WORDINESS}(==|!=|>|<|>=|<=|===|!==)${WORDINESS}\)`),
+booleanexpression: new RegExp(`\\(${WORDINESS}(==|!=|>|<|>=|<=|===|!==)${WORDINESS}\\)`),
 // TODO: identifier
-identifier: new RegExp(`((['"])${WORDINESS}\2)`),
-assignmentexpression: new RegExp(`(${WORDINESS})\s=\s(${WORDINESS})`),
+identifier: new RegExp(`((['"])${WORDINESS}\\2)`),
+assignmentexpression: new RegExp(`(${WORDINESS})\\s=\\s(${WORDINESS})`),
 })
 
 // all the quake 3 parse code looks the same
@@ -162,22 +198,26 @@ assignmentexpression: new RegExp(`(${WORDINESS})\s=\s(${WORDINESS})`),
 //   THAT WAY ACORN CAN BE A PLUGIN TO THE SYSTEM LIKE
 //   ANTLR.
 
-// Template(parseContext)
 // Parse(nodes)
 // @Loop(for) - everything else is implied
 ({
 lines: code.toString('utf-8').split(','),
-body: 
+body: lines.forEach(parseNodes), // CODE REVIEW, interesting, refering back to itself for context?
+})
+
 // @Loop(for)
 ({
+// TODO: there is a way to decouple this from 
+//   nodejs Object, but that seems a little extreme
+values: Object.values(nodes),
 keys: Object.keys(nodes),
-body:
+body: keys.forEach(parseNodes),
+})
+
 // @Loop(reduce)
-({
 // @Condition
+({
 result: (result[keys[j]][i] = values[j].exec(lines[i])) // side-effect null
-})
-})
 })
 
 
@@ -280,9 +320,9 @@ function condition() {
 //   context.
 // @Template
 function wrap() {
-	return function (params) {
+	return (function (params) {
 		body
-	}
+	})
 }
 
 

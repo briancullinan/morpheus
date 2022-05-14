@@ -9,20 +9,6 @@ function interpolate(template) {
 }
 String.prototype.interpolate = interpolate
 
-// BASIC TEMPLATE SYSTEM, find and replace tokens
-// @Quine
-// @Add(@Template,template) automatically create templates out of anything marked with @Template
-function template(string, object) {
-	let params = Object.keys(object)
-	let values = Object.values(object)
-	for(let i = 0; i < params.length; i++) {
-		string =
-		(string + '').replace(
-				new RegExp(params[i], 'g'), values[i])
-	}
-	return string
-}
-
 
 // this should allow me to make code like this
 // TODO: wind this whole template naming into caching 
