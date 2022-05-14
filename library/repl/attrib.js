@@ -1,4 +1,7 @@
 // NAME OF ATTRIBUTE SYSTEM: PASTA
+//   TODO: add attributes to type system of acorn / ANTRL / ACE9 highlighter 
+//   so that the attribute system can attribute other languages with type
+//    / generics / attributes, etc features.
 // Dependency injection is 1 aspect of of Aspect oriented programming
 // Pre-compiler #defines are 1 aspect of AOP
 // Middleware is 1 type of AOP design
@@ -181,7 +184,7 @@ async function evaluate(topOfStack) {
 //   latter is for runtime use
 // @Bootstrap
 // @Add(@Add,add)
-function add(nodeType, attribute, params) {
+function add(attribute, params) {
 	console.log('add:', attribute)
 	// ^^^ de-coupling attribute system from REPL object format. 
 
@@ -265,6 +268,7 @@ function attribute(code, requirements, attributes, functions, lines) {
 	if(typeof code != 'string') {
 		throw new Error('Not implemented!')
 	}
+	debugger
 	if(globalAttributes.length == 0) {
 		globalAttributes['add'] = [add]
 		globalAttributes['remove'] = [remove]
@@ -297,24 +301,7 @@ function attribute(code, requirements, attributes, functions, lines) {
 			//   can't use template-replacement on itself 
 			//   because that is what we are bootstrapping
 			//moduleExports[functions[i]] = 
-			let firstParameterMatch = new RegExp(
-				`function\\s+${functions[i]}\\s*\\(([\\w]*)`, 'gi')
-				.exec(lines[i])
-			// CODE REVIEW, camelCase?
-			console.log(accumulatedAttributes)
-			if(firstParameterMatch) {
-				let firstParameter = functions[i]+''
-					+firstParameterMatch[1][0].toLocaleUpperCase()
-					+firstParameterMatch[1].substring(1)
-				moduleExports[firstParameter] = moduleExports[functions[i]]
-				// TODO: add new function names detected to functions
-				//   for aliases(param) -> aliasParam so the parent
-				//   function can distinguish it as a template.
-				functions.push(
-					`${firstParameter}: applyAttributes(${JSON
-						.stringify(accumulatedAttributes)}, ${functions[i]})`)
-			}
-	
+
 			// ahh, finally some relief, the attribute functions
 			//   control the requirements, so I can list pre-reqs
 			//   as @Add(@Function,prereqControlFunction)
@@ -476,7 +463,7 @@ function attribute(code, requirements, attributes, functions, lines) {
 }
 
 // @Add(@Remove,remove)
-function remove(attributes, nodeType, attribute, params) {
+function remove(attribute, nodeType, attribute, params) {
 	if(typeof attributes[caseInsensitive] == 'undefined') {
 		return
 	}
@@ -600,7 +587,7 @@ TODO: add @before, @after as POC
 
 // TODO: combine entire attribute feature into 2 functions just like doEval()
 
-
+/*
 function doNode(abstractNode) {
 	// TODO:  if abstractNode has attributes
 	// TODO: make this implicit using the look below?
@@ -634,6 +621,8 @@ if(typeof globalThis['on' + abstractNode.type + 'Attribute']) {
 	})
 }
 }
+*/
+
 
 // #################### BOTTOM_HALF
 

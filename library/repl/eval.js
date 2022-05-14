@@ -9,7 +9,7 @@
 // TODO: parse our own file using the @Attribute system to load the REPL framework
 
 function evaluate(code) {
-	console.log('eval:', code)
+	//console.log('eval:', code)
 	// CODE REVIEW, test for attribute system, it loads alternative names
 	//   instead of apply() like defined
 	if(typeof acorn == 'undefined') {
@@ -21,13 +21,16 @@ function evaluate(code) {
 
 // TODO: this probably has to be unit tested
 // @Init
-function parse(code, attributes, functions) {
+function parse(code) {
 	const MATCH_ATTRIBUTE = /@(\w*)\s*\(*\s*([^,\)\s]*)\s*(,\s*[^,\)\s]*\s*)*\)*/i
 	const NAMED_FUNCTION = /function\s+([a-z]+[ -~]*)\s*\(/
 	
 		// TODO: do using regex and plain text,
 	let lines = code.split(/\n/)
 	// simple attribute system for bootstrapping?
+	let aliases = []
+	let attributes = []
+	let functions = []
 	let codeLines = []
 	let ignoring = false
 	let commented = false
@@ -52,12 +55,12 @@ function parse(code, attributes, functions) {
 		if(line.length > 0) {
 			if(ignoring) {
 				continue
-			} else
-			if(functions) {
-				let functionMatch = NAMED_FUNCTION.exec(lines[i])
-				if(functionMatch) {
-					functions[i] = functionMatch[1]
-				}
+			}
+		
+			let functionMatch = NAMED_FUNCTION.exec(lines[i])
+			if(functionMatch) {
+				functions[i] = functionMatch[1]
+				aliases[i] = alias(functionMatch[1], lines[i])
 			}
 
 			if(line.length > 0) {
@@ -68,7 +71,12 @@ function parse(code, attributes, functions) {
 			ignoring = false
 		}
 	}
-	return codeLines
+	return {
+		aliases,
+		functions,
+		attributes,
+		lines: codeLines
+	}
 
 
 	// I had kind of suspected acorn or something has provided a
@@ -85,6 +93,19 @@ function parse(code, attributes, functions) {
 	// TODO: replace parse context when REPL loads.
 	//   i.e. parse(node) override
 
+}
+
+function alias(functionName, line) {
+	let firstParameterMatch = new RegExp(
+		`function\\s+${functionName}\\s*\\(([\\w]*)`, 'gi')
+		.exec(line)
+	// CODE REVIEW, camelCase?
+	if(firstParameterMatch) {
+		let firstParameter = functionName+''
+			+firstParameterMatch[1][0].toLocaleUpperCase()
+			+firstParameterMatch[1].substring(1)
+		return firstParameter
+	}
 }
 
 

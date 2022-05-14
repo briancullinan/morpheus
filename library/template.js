@@ -36,8 +36,8 @@ function template(string, object) {
 
 // ATTRIBUTE SYSTEM
 // a node template looks like this
-// @Add(@Function,template)
 // @Template
+// @Add(@Function,attribute)
 function attribute(name, node, params) {
 	if(name == '@Function') {
 		attributes[name].push(template.bind(null, node))

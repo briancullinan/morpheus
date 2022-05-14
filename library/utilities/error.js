@@ -32,3 +32,4 @@ function nodeErrorHandler(ex) {
 
   }
 })
+throw new Error(BOOTSTRAP_UNWINDER) 

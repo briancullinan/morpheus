@@ -20,41 +20,18 @@
 //   ZERO UPDATES, SO IT SELF-HOSTS ITSELF INSTEAD OF THE PREVIOUS
 //   VERSION.
 
-// The basic layout of a function is like this
-function basicFunction(templateParams) {
-	functionBody
-}
-
-// I didn't decide on this, ECMA did.
-// Then, to import functions from other places and create `module`
-//   they wrap the module in a function that give the code path
-//   and filename context.
-function moduleContext() {
-	return (function (templateParams) {
-		functionBody
-	})
-}
-
-// That is pretty cool because then if you have a function
-//   like doWeb(), or doServer(), you can wrap the environment
-//   variables like process, fs, path, in this function to
-//   run the same exact code in a different context.
 
 // DONE! how I want wrapperQuine({}) to work
 /*
+// @Ignore
 eval(function wrapperTemplate(functionBody) {
 	return "function (__dirname, __filename, etc) {
 		functionBody
 	}"
 })(__dirname, __filename, etc)
 */
-function wrap(context) {
-	return function (functionBody) {
-		return evaluateCode(wrapper(context, functionBody))
-	}
-}
-
 // TODO: move into index.js, imply with @Attributes
+
 function wrapper(quine, functionBody) {
 
 	// here is the code that generates this silly script
@@ -62,35 +39,42 @@ function wrapper(quine, functionBody) {
 	// Here, object -> template function, template -> object
 	//   function -> string, string -> object something like that
 	let baseTemplate = template(
-		'(' + wrapperTemplate.toString() + ')', {
-			templateParams: Object.keys(object).join(', '),
+		'(' + wrap.toString() + ')', {
+			templateParams: Object.keys(quine).join(', '),
 			functionBody: functionBody.toString()
 		})
+	return '(' + eval(baseTemplate)().toString() + ')'
+}
+
+function quine(template, context) {
 		
 	// TODO: this kind of feels more like an functionQuine thing to do.
 	//		.bind.apply(preparedFunction, [this]
 	//				.concat())
 	//   perhaps it can be distilled even furthur by functionQuine()
-	let bindTemplate = template(
-		'(' + eval(baseTemplate)().toString() 
-				+ ').bind(null, templateValues)', {
-			// automatically fold parameters from a template into
-			//   object names
-			templateValues: '[' + Object.values(object)
-					.map(convertFunctions).join(',\n\t') + ']'
-		})
-	return bindTemplate
+	let boundTemplate = evaluateCode('('
+		+ eval(template)().toString() + ')')
+		.apply(null, Object.values(context))
+	return boundTemplate
 }
 
-function convertFunctions(v) {
-	return typeof v == 'function' 
-			? v.toString() : JSON.stringify(v + '')
+// @Ignore
+function evalQuine() {
+	// TODO: recursively replace eval() with doEval() polyfill
+}
+
+function stringify(object) {
+	return typeof object == 'function' 
+			? (object.name /*object.toString().includes('native code') 
+				? object.name : object.toString()*/ )
+			: JSON.stringify(object + '')
 }
 
 // this is fairly meaningless code, but it proves a single concept
 //   that less code can be used to generate more code.
 // basically, all this code does is make a few changes to make
 //   more code embeddable like such
+// @Ignore
 (function wrapperOutput(__dirname , __filename , __library) {
 	return a + b
 }).bind(null, [
@@ -112,6 +96,7 @@ function convertFunctions(v) {
 
 
 // IT'S A WRAPPER TEMPLATE CREATOR
+// @Ignore
 function templateQuine(templateString) {
 	// TODO: same as `wrapperQuine` quine but replacing template
 	// TODO: this should generate a function that takes a string 
@@ -152,6 +137,7 @@ if (meetsPermissions(module)) return jsloader.apply(this, arguments);
 // THIS IS BASICALLY ALL WEBPACK / require() DOES.
 // TODO: the functionQuine does 1 pass rotation on return types
 //   i.e. function -> string, string -> function
+// @Ignore
 function functionQuine(entryFunction) {
 	if(typeof entryFunction == 'function') {
 		return entryFunction.toString()
@@ -174,9 +160,6 @@ function functionQuine(entryFunction) {
 //   does jupyter support encryption?
 // SELF EXTRACTOR LIKE BUSYBOX
 
-function evalQuine() {
-	// TODO: recursively replace eval() with doEval() polyfill
-}
 
 // TODO: MUSTACHE STYLE
 
@@ -209,11 +192,13 @@ i.e. templateQuine(middlewareTemplate, {
 		response: sendMessage,
 }) 
 */
+// @Ignore
 function middlewareTemplate(request, response) {
 
 	// TODO: connect REPL node visitor to do template ${var} 
 	//   replacements anywhere in the code, coming full circle
 
+	// @Ignore
 	function doRequest() {
 		if(condition) {
 			return request()
@@ -221,6 +206,7 @@ function middlewareTemplate(request, response) {
 		return request()
 	}
 
+	// @Ignore
 	function doResponse() {
 		if(condition) {
 			return response()
@@ -237,16 +223,13 @@ function middlewareTemplate(request, response) {
 
 }
 
-function fileQuine() {
-	// TODO: convert Makefile / make.js reliance into this function for 
-	//   combining files into the output
-}
+// TODO: fileQuine
+// TODO: convert Makefile / make.js reliance into this function for 
+//   combining files into the output
 
-function replQuine() {
-	// TODO: recursively convert back and forth to `{type:}`
-	//   objects and finalized objects i.e. `{error.fail} -> throw error`
-
-}
+// TODO: replQuine
+// TODO: recursively convert back and forth to `{type:}`
+//   objects and finalized objects i.e. `{error.fail} -> throw error`
 
 
 
@@ -259,52 +242,47 @@ function replQuine() {
 //   IF I DO THIS FROM LIBRARY/ THEN IT'S RECURSIVE.
 
 
-function emitPlugin() {
-	// MAKE PLUGIN
-}
+// TODO: emitPlugin
+// MAKE PLUGIN
 
-function emitWeb() {
-	// MAKE PLUGIN
-}
+// TODO: emitWeb
+// MAKE PLUGIN
 
-function emitService() {
-	// MAKE PLUGIN
-}
 
-function emitBuild() {
-	// MAKE PLUGIN
-}
+// TODO: emitService
+// MAKE PLUGIN
 
-function emitEmitters() {
-	/*
-	*/
 
-	const MIDDLEWARE_FRONTEND = [
-		'onFrontend',
-		'emitDownload',
-		'domMessageResponseMiddleware',
-	].concat(MIDDLEWARE_DEPENDENCIES)
-	
+// TODO: emitBuild
+// MAKE PLUGIN
 
-}
+
+// TODO: emitEmitters
+({
+quine: [
+	'onFrontend',
+	'emitDownload',
+	'domMessageResponseMiddleware',
+]
+})
 
 // https://github.com/briancullinan/c2make-babel-transpiler
-function emitMakefile() {
-	// okay, cmake, certainly I can make an index.html file with
-	//   less than 100 LOC? if I'm going to cmake, why not use
-	//   gulp? or maybe i'll switch to the beloved automake?
-	//   maybe I can link my whole project together from seperate
-	//   NPM modules. bored of babel, sick of looking a JavaScript
-	//   and having 6 other steps to use the code. I need one
-	//   function to consume it all, so I can build all the parts
-	//   in their most naturally accepted form (i.e. source-fork)
-	//   and not have to append the structure of the program.
-	//   TODO: Optimally, how can I manage my appended workflow, 
-	//   on top of Q3e directly.
-	//   TODO: without adding complexity I should code and learn about
-	//   cool 3D on Discord in the same window.
+// TODO: emitMakefile
 
-}
+// okay, cmake, certainly I can make an index.html file with
+//   less than 100 LOC? if I'm going to cmake, why not use
+//   gulp? or maybe i'll switch to the beloved automake?
+//   maybe I can link my whole project together from seperate
+//   NPM modules. bored of babel, sick of looking a JavaScript
+//   and having 6 other steps to use the code. I need one
+//   function to consume it all, so I can build all the parts
+//   in their most naturally accepted form (i.e. source-fork)
+//   and not have to append the structure of the program.
+//   TODO: Optimally, how can I manage my appended workflow, 
+//   on top of Q3e directly.
+//   TODO: without adding complexity I should code and learn about
+//   cool 3D on Discord in the same window.
+
 
 // TODO: single entry point for Makefile into the quine system, output
 //   programs own output in various configurations to get it to run

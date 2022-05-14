@@ -177,132 +177,47 @@ let customRequire = wrapperQuine({
 
 // @Load()
 function load(env) {
+	
+		// TODO: connect @functiondeclaration because
+		//   template system is connected in the next step
+		// TODO: should move this to initAttributes 
+		//   and call with @Bootstrap template for whole file
+		//   weird to think about how to call a new function 
+		//   before it's declared? remove the break; above?
 
-	// COMPLEXITY: 1 - bootstrapping a framework counts as 1 complexity
-	require('./env.js')
-	let BOOTSTRAP = [
-		void 0, // env.js
-		void 0, // './index.js',
-		'./repl/eval.js',
-		'./repl/attrib.js',
-		'./template.js',
-		'./cache.js',
-		'./quine.js',
-		// TODO: generics, types, cache.js
-	]
-	let attributes = []
-	let templates = []
-	let context = {}
-	// TODO: load template system, so I don't have 
-	//   to write function () { MODULE_CODE } anymore
-	for(let i = 2; i < BOOTSTRAP.length; ++i) {
-		let foundFile = findFile(BOOTSTRAP[i])
-		let libCode = readFile(foundFile).toString('utf-8')
-		let params = []
-		let contextRequirements = ''
-		let exportCode = ''
-		switch(i) {
-			// COMPLEXITY: 2 - reusing eval is +1 complexity - total 2
-			case 2:
-				params = [eval]
-				contextRequirements = 'realEval'
-				exportCode = 'evaluateCode: evaluate, parseCode: parse'
-			// COMPLEXITY: 3 - adding aspects -1 complexity - total 1
-			case 3:
-				if(!exportCode) {
-					// CODE REVIEW, this is weird because I'm adding a template
-					//   system so that in the next step I can do the thing this
-					//   file is labelled to do - attributes.
-					params = [context, attributes]
-					contextRequirements = 'globalContext , globalAttributes'
-					exportCode = 'attributeCode: attribute, '
-							+ 'addAttribute: add, removeAttribute: remove,'
-							+ 'applyAttributes: apply' 
-					// ^^^ adding templates with attributes so I never 
-					//   have to write this kind of stuff again
-				}
-			// COMPLEXITY: 4 - +1 ^^^ for automatically renaming functions
-			//                 -1 for removing functional context - total 1
-			//                    and adding "format templates", i.e. @Template\n@template(env)\n@Test
-			case 4:
-				if(i == 4) { // if(!exportCode) {
-					// TODO: connect @functiondeclaration because
-					//   template system is connected in the next step
-					params = [context.applyAttributes, templates]
-					// TODO: should move this to initAttributes 
-					//   and call with @Bootstrap template for whole file
-					let lineAttribs = []
-					let lineFuncts = []
-					let codeLines = context.parseCode(libCode, lineAttribs, lineFuncts)
-					contextRequirements = ['applyAttributes', 'globalTemplates'] 
-					// TODO: from attribute, then automatically
-					let newModule = context.attributeCode(libCode, 
-							contextRequirements, lineAttribs, 
-							lineFuncts, codeLines)
-					// TODO: get these from the function above
-					contextRequirements = contextRequirements
-					.filter(function (prereq) { return prereq })
-					.join(' , ')
-					exportCode = lineFuncts
-					.filter(function (prereq) { return prereq })
-					.join(' , ')
-					console.log(exportCode)
-					Object.assign(globalThis, newModule) // next step cache will do this part automatically
-				}
-				// MORE THEORY ON THIS. WEIRD. WHEN JAVASCRIPT LOADS
-				//   IF THERE IS A FUNCTION() DECLARATION, AND THEN
-				//   SOME STATEMENTS BELOW IT WITH ERRORS, THE ENGINE
-				//   APPARENTLY ONLY EVALUATES DOWN TO THE POINT OF 
-				//   FINDING THE REFERENCE. THIS IS NOT WHAT I WOULD
-				//   EXPECT. I THOUGHT THE ENTIRE {} BLOCK-CONTEXT
-				//   WOULD BE EVALUATED FOR REFERENCE NAMES ON ENTRY,
-				//   I DON'T KNOW WHY I EXPECTED THIS. I GUESS IN C THERE
-				//   IS NO "GLOBAL" CONTEXT AT RUNTIME, ONLY STATIC WHICH
-				//   IS DETERMINATED AT COMPILE TIME? THAT WOULD EXPLAIN
-				//   WHY THIS WORKS:
-				//   `return funcName; function funcName() {}; skips code with errors`
-				// this format is just for getting the library
-				//   started and then for evironmental declarations
-				// once eval() is bootstrapped, all other evaluations
-				//   from this point on can be handled by special functions.
-				Object.assign(context, eval(
-					`(function (${contextRequirements}) {\n
-						return {${exportCode}};\n
-						${libCode}\n})`).apply(this, params))
-				console.log(context)
-				// ^^^ Can't skip that until step 5 when the template
-				//   system is booted, no more bootstrapping, ever.
-		case 5:
-			// COMPLEXITY: 5 - +1 ^^^ for automatically importing library
-			//                 -1 for removing module environment contexts - total 1
-			// TODO: now that templates are working the cache system
-			//   can be loaded and functions wrapped with an abstracted environment
-			
-			// TODO: need cache system to use on templates as well
-			//   then we can finish initTemplates() in this step
-			//   i.e. matching file templates to @Bootstrap to
-			//   automatically can initFilename if it exists without
-			//   the need to use @Attributes. i.e. The Framework.
+		// COMPLEXITY: #6 - +1 ^^^ for automatically loading modules
+		//                  -1 for using quine instead of build system? - total 1
 
-			break
-		case 6:
-			// COMPLEXITY: 6 - +1 ^^^ for automatically loading modules
-			//                 -1 for using quine instead of build system? - total 1
-			// TODO: make a complexity checker that makes sure
-			//   there are no static declarations, only templates and objects
-			// TODO: now that cache system is loaded, modules can 
-			//   be automatically imported
+		// TODO: now that templates are working the cache system
+		//   can be loaded and functions wrapped with an abstracted environment
+		
+		// TODO: need cache system to use on templates as well
+		//   then we can finish initTemplates() in this step
+		//   i.e. matching file templates to @Bootstrap to
+		//   automatically can initFilename if it exists without
+		//   the need to use @Attributes. i.e. The Framework.
+		
+		// TODO: wrap the wrapper in it's own executable function
+		//function wrap(context) {
+		//	return function (functionBody) {
+		//		return evaluateCode(wrapper(context, functionBody))
+		//	}
+		//}
+		// TODO: make a complexity checker that makes sure
+		//   there are no static declarations, only templates and objects
+		// TODO: now that cache system is loaded, modules can 
+		//   be automatically imported
+		let newModule = context.attributeCode(libCode)
+		Object.assign(context, newModule)
+		// ^^^ assign own aliasFunction names to context for later use?
 
-			// TODO: give our code files flow, i.e. PWAs like React and M$
-			//   are basically just file templates in /stacks/, mock everyone?
+		// TODO: give our code files flow, i.e. PWAs like React and M$
+		//   are basically just file templates in /stacks/, mock everyone?
 
-			// context = wrap()
-			Object.assign(context, context.evaluateCode(wrapperQuine(
-			
-			)))
-			break
-		}
-	} // TODO: else
+		// context = wrap()
+		//Object.assign(context, context.evaluateCode(wrapperQuine(
+		
+		//)))
 
 	// HOW MANY CONTEXTS DOES IT TAKE TO GET TO THE CENTER OF A PROGRAM? 6
 	/*
@@ -332,20 +247,48 @@ function load(env) {
 	```
 
 	*/
-
+/*
+	let oldEvaluate = context.evaluateCode
+		context.newEvaluate = function newEvaluate(libCode) {
+			let { aliases, functions } = context
+					.parseCode(libCode)
+			let newModule = oldEvaluate(context
+					.wrapperQuine(context, libCode))
+			Object.assign(context, newModule)
+			console.log(newModule())
+			return newModule
+		}
+		context.evaluateCode = context.newEvaluate
+		// BOOTSTRAP OUR OWN ATTRIBUTE SYSTEM ONTO ITSELF
+		context.evaluateCode(libCode)
+		Object.assign(globalThis, context)
+		// next step, cache, will do this part automatically
+		// ^^^ Can't skip that until step 5 when the template
+		//   system is booted, no more bootstrapping, ever.
+	}
+	
 	if(env == 'native') {
 		Object.assign(globalThis, context)
 		eval('emitCLI()')
 		//console.log(quine(module)) // aka do Makefile / webpack
 		// TODO: output documentation
 	}
+	*/
 
 }
 
 
 // @Init
 if(typeof process != 'undefined') {
-	load('native')
+	// TODO: move back to index before including framework.js
+	require('./env.js')
+	const {bootstrap} = require('./stacks/framework.js')
+	bootstrap(globalThis)
+	// TODO: load template system, so I don't have 
+	//   to write function () { MODULE_CODE } anymore
+	console.log(globalThis)
+
+	//load('native')
 }
 
 // TODO: this file is done, kind of poetic how this matches
@@ -362,7 +305,6 @@ exit // part of init() context from platform env.js
 */
 
 // @Exit()
-throw new Error(BOOTSTRAP_UNWINDER) 
 process.exit()
 // bubble out
 
