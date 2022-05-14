@@ -60,10 +60,11 @@ function extractFunctions(context, libCode, functions, aliases) {
 	
 	return wrap.toString()
 		// keeping single parameter for context
-		.replace('templateParams', '{' + Object.keys(context)
-		.concat(aliases)
-		.filter(function (f) { return f })
-		.join(' , ') + '}')
+		.replace('templateParams', '{' 
+		+ Object.keys(context).concat(aliases)
+		.filter(function (f, i, arr) { 
+				return f && arr.indexOf(f) == arr 
+		}).join(' , ') + '}')
 		// adding templates with attributes so I never 
 		//   have to write this kind of stuff again
 		// WITH THE ADDED SIDE-EFFECT THAT ASSIGNMENT ISN'T ORDER 
@@ -88,7 +89,7 @@ function bootstrap(context) {
 		let libCode = readFile(foundFile).toString('utf-8')
 		let extractionCode
 		if(typeof context.parseCode != 'undefined') {
-			let { aliases, functions } = parameterizeModule(context)
+			let { aliases, functions } = alias(context, libCode)
 			extractionCode = extractFunctions(context, 
 					libCode, functions, aliases)
 		} else {
@@ -109,7 +110,7 @@ if(typeof module != 'undefined') {
 	}
 }
 
-function parameterizeModule(context, libCode) {
+function alias(context, libCode) {
 	// CODE REVIEW, this is weird because I'm adding a template
 	//   system so that in the next step I can do the thing this
 	//   file is labelled to do - attributes.

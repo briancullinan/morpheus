@@ -588,6 +588,7 @@ TODO: add @before, @after as POC
 // TODO: combine entire attribute feature into 2 functions just like doEval()
 
 /*
+// @Ignore
 function doNode(abstractNode) {
 	// TODO:  if abstractNode has attributes
 	// TODO: make this implicit using the look below?
