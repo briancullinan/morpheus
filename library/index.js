@@ -158,66 +158,93 @@ need to be by the environment based linking system.
 */
 
 
-// TODO: move require and __library down below libraryLookup
-// TODO: alternate require from "webpack"
-
-/*
-let customRequire = wrapperQuine({
-	// provide a relative path to lib files in case
-	//   lib code wants to refer to itself
-	__library: library,
-	__dirname: libraryFile.replace(/\/[^\/]*?$/, ''),
-	__filename: libraryFile,
-}, 'return a + b')
-*/
-
-// TODO: keep returning templates until we can replace
-//   all the bootstrap parts of a function, or
-//   return a template to replace middleware components
-
 // @Load()
-function load(env) {
+function load(env, framework) {
 	
-		// TODO: connect @functiondeclaration because
-		//   template system is connected in the next step
-		// TODO: should move this to initAttributes 
-		//   and call with @Bootstrap template for whole file
-		//   weird to think about how to call a new function 
-		//   before it's declared? remove the break; above?
+	// TODO: connect @functiondeclaration because
+	//   template system is connected in the next step
+	// TODO: should move this to initAttributes 
+	//   and call with @Bootstrap template for whole file
+	//   weird to think about how to call a new function 
+	//   before it's declared? remove the break; above?
+	
+	// TODO: start by rescanning our own attrib.js
+	//   system to help with future attributing, 
+	//   (i.e. add @add, @before, etc)
+	console.log(framework.globalCache['./repl/attrib.js'])
+	// TODO: ^^^ bind `framework.globalCache` to cache.js template, 
+	//   then bind directories to another cache for 
+	//   use with watchFiles() or temporary storage.
+	// TODO: scan all files for template functions and cache
+	//   seperately.
+	return 
+	// TODO: when adding the entire library to Quine attributes should be
+	//   applied by the outer-most context passing the functions in
+	//   that way the entire library is guaranteed to run with the attribute
+	//   system installed on every function. 
+	// (even internally when I get the require() linker working)
 
-		// COMPLEXITY: #6 - +1 ^^^ for automatically loading modules
-		//                  -1 for using quine instead of build system? - total 1
+	let oldEvaluate = framework.evaluateCode
+	framework.newEvaluate = function newEvaluate(libCode) {
+		let { aliases, functions } = framework
+				.parseCode(libCode)
+		let newModule = oldEvaluate(framework
+				.wrapperQuine(framework, libCode)) // TODO: apply attributes when Quining
+		Object.assign(framework, newModule)
+		console.log(newModule())
+		return newModule
+	}
+	framework.evaluateCode = framework.newEvaluate
+	// BOOTSTRAP OUR OWN ATTRIBUTE SYSTEM ONTO ITSELF
+	//framework.evaluateCode(libCode)
+	console.log(framework)
+	// next step, cache, will do this part automatically
+	// ^^^ Can't skip that until step 5 when the template
+	//   system is booted, no more bootstrapping, ever.
 
-		// TODO: now that templates are working the cache system
-		//   can be loaded and functions wrapped with an abstracted environment
-		
-		// TODO: need cache system to use on templates as well
-		//   then we can finish initTemplates() in this step
-		//   i.e. matching file templates to @Bootstrap to
-		//   automatically can initFilename if it exists without
-		//   the need to use @Attributes. i.e. The Framework.
-		
-		// TODO: wrap the wrapper in it's own executable function
-		//function wrap(context) {
-		//	return function (functionBody) {
-		//		return evaluateCode(wrapper(context, functionBody))
-		//	}
-		//}
-		// TODO: make a complexity checker that makes sure
-		//   there are no static declarations, only templates and objects
-		// TODO: now that cache system is loaded, modules can 
-		//   be automatically imported
-		let newModule = context.attributeCode(libCode)
-		Object.assign(context, newModule)
-		// ^^^ assign own aliasFunction names to context for later use?
 
-		// TODO: give our code files flow, i.e. PWAs like React and M$
-		//   are basically just file templates in /stacks/, mock everyone?
+	if(env == 'native') {
+		Object.assign(globalThis, framework)
+		eval('emitCLI()')
+		//console.log(quine(module)) // aka do Makefile / webpack
+		// TODO: output documentation
+		// TODO move to bottom of emitCLI()
+		//   I can't because emitCLI() isn't loaded
+		// @Exit()
+		process.exit()
+	}
 
-		// context = wrap()
-		//Object.assign(context, context.evaluateCode(wrapperQuine(
-		
-		//)))
+	// COMPLEXITY: #6 - +1 ^^^ for automatically loading modules
+	//                  -1 for using quine instead of build system? - total 1
+
+	// TODO: now that templates are working the cache system
+	//   can be loaded and functions wrapped with an abstracted environment
+	
+	// TODO: need cache system to use on templates as well
+	//   then we can finish initTemplates() in this step
+	//   i.e. matching file templates to @Bootstrap to
+	//   automatically can initFilename if it exists without
+	//   the need to use @Attributes. i.e. The Framework.
+	
+	// TODO: wrap the wrapper in it's own executable function
+	//function wrap(context) {
+	//	return function (functionBody) {
+	//		return evaluateCode(wrapper(context, functionBody))
+	//	}
+	//}
+	// TODO: make a complexity checker that makes sure
+	//   there are no static declarations, only templates and objects
+	// TODO: now that cache system is loaded, modules can 
+	//   be automatically imported
+	// ^^^ assign own aliasFunction names to context for later use?
+
+	// TODO: give our code files flow, i.e. PWAs like React and M$
+	//   are basically just file templates in /stacks/, mock everyone?
+
+	// context = wrap()
+	//Object.assign(context, context.evaluateCode(wrapperQuine(
+	
+	//)))
 
 	// HOW MANY CONTEXTS DOES IT TAKE TO GET TO THE CENTER OF A PROGRAM? 6
 	/*
@@ -247,33 +274,6 @@ function load(env) {
 	```
 
 	*/
-/*
-	let oldEvaluate = context.evaluateCode
-		context.newEvaluate = function newEvaluate(libCode) {
-			let { aliases, functions } = context
-					.parseCode(libCode)
-			let newModule = oldEvaluate(context
-					.wrapperQuine(context, libCode))
-			Object.assign(context, newModule)
-			console.log(newModule())
-			return newModule
-		}
-		context.evaluateCode = context.newEvaluate
-		// BOOTSTRAP OUR OWN ATTRIBUTE SYSTEM ONTO ITSELF
-		context.evaluateCode(libCode)
-		Object.assign(globalThis, context)
-		// next step, cache, will do this part automatically
-		// ^^^ Can't skip that until step 5 when the template
-		//   system is booted, no more bootstrapping, ever.
-	}
-	
-	if(env == 'native') {
-		Object.assign(globalThis, context)
-		eval('emitCLI()')
-		//console.log(quine(module)) // aka do Makefile / webpack
-		// TODO: output documentation
-	}
-	*/
 
 }
 
@@ -283,12 +283,11 @@ if(typeof process != 'undefined') {
 	// TODO: move back to index before including framework.js
 	require('./env.js')
 	const {bootstrap} = require('./stacks/framework.js')
-	bootstrap(globalThis)
+	let framework = bootstrap(globalThis)
 	// TODO: load template system, so I don't have 
 	//   to write function () { MODULE_CODE } anymore
-	console.log(globalThis)
-
-	//load('native')
+	// @Exit() for JS to C conversion
+	load('native', framework)
 }
 
 // TODO: this file is done, kind of poetic how this matches
@@ -303,11 +302,18 @@ if(typeof process != 'undefined') {
 exit // part of init() context from platform env.js
 
 */
+return // bubble out to not hit new templates below
 
-// @Exit()
-process.exit()
-// bubble out
 
+// to put that another way:
+({
+bootstrap: require('./stacks/framework.js'),
+load: load('native', framework),
+init: emitCLI()
+})
+
+// would do the same thing using the new framework instead of 
+//   all this bootstrapping code we needed to get started.
 
 // TODO: It might be nice if I could just arbitrarily include code
 //   in my page without like having to write <script src="" />

@@ -125,8 +125,8 @@ help: eval-commands ## print help docs in Makefile
 // BUT WE DON'T HAVE AWK SO USE REPL INSTEAD
 function doHelp() {
 	// TODO: source arguments from code
-	if(typeof doLibraryLookup != 'undefined') {
-		let lib = doLibraryLookup()
+	if(typeof findFunction != 'undefined') {
+		let lib = findFunction()
 		let blockCount = 0
 	}
 

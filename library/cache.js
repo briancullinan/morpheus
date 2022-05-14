@@ -140,6 +140,7 @@ const CACHE_MARKER = '\n\n// DO NOT EDIT BELOW THIS LINE, AUTO-GENERATED\n\n'
 
 /*
 // lol, async output from @Quine
+// @Ignore
 function cache(botnet) {
 	for(let i = 0; i < botnet.length; i++) {
 		if(version < github.head) {

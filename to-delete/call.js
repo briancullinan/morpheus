@@ -249,7 +249,7 @@ async function runCall(AST, runContext) {
 		//   cloud build so needs to be generic through accessors.
 		if (!calleeFunc
 			&& runContext.bubbleFile != 'library/repl.js'
-			&& (lib = doLibraryLookup(functionName))
+			&& (lib = findDefinition(functionName))
 		) {
 			calleeFunc = await onAccessor(lib)
 		}

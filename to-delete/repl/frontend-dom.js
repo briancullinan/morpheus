@@ -25,9 +25,9 @@ function doStatus(request) {
 		}
 		if(typeof ACE.libraryFunctions[previousFunction] != 'undefined') {
 		} else {
-			ACE.libraryFunctions[previousFunction] = doLibraryLookup(previousFunction)
+			ACE.libraryFunctions[previousFunction] = findDefinition(previousFunction)
 		}
-		// in-case null means we already searched doLibraryLookup
+		// in-case null means we already searched findDefinition
 		// FOR CODE REVIEWS, HOW TO MEASURE PERFORMANCE GAINS BY NOT
 		//   REPEATING TASKS JUST FROM LOOKING AT CODE WITH LITTLE UNDERSTANDING?
 		if(ACE.libraryFunctions[previousFunction]) {
@@ -52,33 +52,6 @@ function doStatus(request) {
 
 }
 
-
-function doLibraryLookup(functionName) {
-	let libraryFiles = Object.keys(FS.virtual)
-		.filter(function (p) { return p.includes('/library/') })
-	for(let i = 0; i < libraryFiles.length; i++) {
-		let libraryCode = Array.from(FS.virtual[libraryFiles[i]].contents)
-			.map(function (c) { return String.fromCharCode(c) })
-			.join('')
-		// TODO: make these tokens instead of function for cross language support
-		if(libraryCode.includes('function ' + functionName)) {
-			return {
-				library: libraryCode,
-				name: libraryFiles[i],
-				// TODO: a hash value?
-			}
-		} else {
-			let currentSession = window.ace.getValue()
-			if (currentSession.includes('function ' + functionName)) {
-				return {
-					library: currentSession,
-					name: '<eval>',
-					// TODO: a hash value?
-				}
-			}
-		}
-	}
-}
 
 
 function onFrontend(request, reply) {

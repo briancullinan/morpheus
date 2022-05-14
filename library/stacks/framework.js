@@ -84,23 +84,38 @@ function extractFunctions(context, libCode, functions, aliases) {
 
 function bootstrap(context) {
 	debugger
+	// TODO: use BOOTSTRAP from context.framework or 
+	//   injection or something? so we can bootstrap 
+	//   our own templated library files and provide 
+	//   ({
+	//    }) definitions as different environments
+	if(typeof context.globalCache == 'undefined') {
+		context.globalCache = {}
+	}
 	for(let i = 0; i < BOOTSTRAP.length; ++i) {
 		let foundFile = findFile(BOOTSTRAP[i])
-		let libCode = readFile(foundFile).toString('utf-8')
+		// TODO: store libCode in something that our own
+		//   project.js/cache.js can recognize so we don't
+		//   need to keep reloading the file from now on.
+		// How about, just like Module, except it's called:
+		context.globalCache[BOOTSTRAP[i]] = readFile(foundFile).toString('utf-8')
 		let extractionCode
 		if(typeof context.parseCode != 'undefined') {
-			let { aliases, functions } = alias(context, libCode)
+			let { aliases, functions } = alias(context,
+					context.globalCache[BOOTSTRAP[i]])
 			extractionCode = extractFunctions(context, 
-					libCode, functions, aliases)
+					context.globalCache[BOOTSTRAP[i]], functions, aliases)
 		} else {
 			extractionCode = extractFunctions(context, 
-					libCode, ['evaluate', 'parse'], 
+					context.globalCache[BOOTSTRAP[i]], 
+					['evaluate', 'parse'], 
 					['evaluateCode', 'parseCode'])
 		}
-		let result = eval('(' + extractionCode + ')')()(context)
-		console.log(result)
-		Object.assign(context, result)
+		let newModule = eval('(' + extractionCode + ')')()(context)
+		//console.log(newModule)
+		Object.assign(context, newModule)
 	}
+	return context
 }
 
 if(typeof module != 'undefined') {

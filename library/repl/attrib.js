@@ -575,7 +575,7 @@ TODO: add @before, @after as POC
 // TODO: lookup function in global
 // TODO: lookup function in library
 // TODO: weird, how to collapse and make @Identifier lookups
-//   also use the same doLibraryLookup call here? is this
+//   also use the same findFunction call here? is this
 //   art abstract enough for everyone? lol
 // TODO: only 1 time, convenience for loading more attributes
 

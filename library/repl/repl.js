@@ -88,7 +88,7 @@ function encode(response) {
 }
 
 // TODO: this is still ugly
-function doLibraryLookup(functionName) {
+function findFunction(functionName) {
 	/*
 	let {
 		readDir,
