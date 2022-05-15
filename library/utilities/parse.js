@@ -36,10 +36,10 @@ directly or if we copy a big HTML tree structure to
 look up, patterns.js should be able to "flatten" it
 and we'll need to visually verify the CSS can be flattened too.
 Something like:
-// @Template(wrapperQuine)
+// @Parse(nodes)
 ({
-params: Object.keys(nodes).join(', '),
-body: (code).toString()
+params: Object.keys(context).join(', '),
+body: (code).trim().toString()
 })
 
 Where every branch of the HTML tree is flattened, and
@@ -78,31 +78,67 @@ if(typeof module != 'undefined') {
 	 // parse our own object inits
 	let globalObjects = []
 	while((init = INITOBJ.exec(parser))) {
-		globalObjects.push(init[0])
-	}
-	let context = globalObjects[0]
-	let wrapperQuine = eval(template(
-		'(' + (function (wrap) {
-			return template(context, body) 
-		}).toString() + ')', {
-			body: context.trim(),
-			wrap: 'context, nodes, code',
-		}))
-	let parseCode = eval(globalObjects[1])
-	console.log(wrapperQuine.toString())
-	console.log('\n\n\n\n')
-	console.log(wrapperQuine(wrap, parseCode, globalObjects[2]))
-	//console.log(parseCode)
-	//let nodes = eval(globalObjects[1])
-	//let parserCode = template('(' 
-	//		+ wrap.toString() + ')()', nodes)
-	console.log(parserCode)
-	let parseNode = function () {
-		console.log(parserCode)
+		globalObjects.push(init[0].trim())
 	}
 
-	let result = eval(parserCode)
-	console.log(result(void 0, code).toString())
+	// TODO: goal is to automatically generally the stuff not commented
+	// Missing also function body(result) => next
+	// Missing also for(i) and for(j) from @Loop(for)
+
+	//lines: code.toString('utf-8').split(','),
+	//body: lines.forEach(parseNodes),
+
+	let parseCode = (function parse(code) {
+		return (function ({lines, body}) {
+			return body({
+				lines: lines(code),
+			})
+		})(context)
+	})
+
+	//values: Object.values(nodes),
+	//keys: Object.keys(nodes),
+	//body: keys.forEach(parseLines),
+
+	let parseNodes = (function ({nodes}) {
+		return body({
+			values: values(nodes),
+			keys: keys(nodes),
+		})
+	})
+
+	//result: (result[keys[j]][i] = values[j].exec(lines[i])) // side-effect null
+	let parseLines = (function ({keys, values}) {
+		return result(keys, values)
+	})
+
+
+
+
+	/* 
+OUTPUT:
+
+function (context, nodes, code) {
+	return template(context, ({
+		params: Object.keys(nodes).join(', '),
+		body: (code).toString()
+	})) 
+}
+
+function wrap() {
+	return (
+		function (attributes, functiondeclaration, 
+			comments, objectexpression, logicalexpression, 
+			variabledeclaration, booleanexpression, identifier, 
+			assignmentexpression
+		) {
+		({
+			lines: code.toString('utf-8').split(','),
+			body: lines.forEach(parseNodes), // CODE REVIEW, interesting, refering back to itself for context?
+		})
+	})
+}
+ */
 
 	// TODO: load accumulate and template.js
 	// TODO: parse our own weird file, and append this list
@@ -119,6 +155,12 @@ console.log()
 	return module.exports
 }
 
+function wrap(context) {
+	let newTemplate = eval('(' + template(code, body) + ')')
+	console.log(newTemplate + '')
+	return newTemplate
+		.bind(JSON.stringify(Object.values(context)))
+}
 
 // TODO: balanced doesn't work on regexp?
 // that makes it repeatable
@@ -182,6 +224,7 @@ booleanexpression: new RegExp(`\\(${WORDINESS}(==|!=|>|<|>=|<=|===|!==)${WORDINE
 // TODO: identifier
 identifier: new RegExp(`((['"])${WORDINESS}\\2)`),
 assignmentexpression: new RegExp(`(${WORDINESS})\\s=\\s(${WORDINESS})`),
+params: 'params'
 })
 
 // all the quake 3 parse code looks the same
@@ -198,12 +241,13 @@ assignmentexpression: new RegExp(`(${WORDINESS})\\s=\\s(${WORDINESS})`),
 //   THAT WAY ACORN CAN BE A PLUGIN TO THE SYSTEM LIKE
 //   ANTLR.
 
-// Parse(nodes)
+// Parse(code)
 // @Loop(for) - everything else is implied
 ({
 lines: code.toString('utf-8').split(','),
-body: lines.forEach(parseNodes), // CODE REVIEW, interesting, refering back to itself for context?
+body: lines.forEach(parseNodes),
 })
+// CODE REVIEW, interesting, refering back to itself for context?
 
 // @Loop(for)
 ({
@@ -318,12 +362,6 @@ function condition() {
 //   `module` the Module wraps the new module in a 
 //   function that gives the code path and filename 
 //   context.
-// @Template
-function wrap() {
-	return (function (params) {
-		body
-	})
-}
 
 
 // TODO: i.e. comments, markdown, attributes (circular)
