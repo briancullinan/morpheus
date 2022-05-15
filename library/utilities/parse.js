@@ -84,23 +84,23 @@ if(typeof module != 'undefined') {
 	// TODO: goal is to automatically generally the stuff not commented
 	// Missing also function body(result) => next
 	// Missing also for(i) and for(j) from @Loop(for)
+	// TODO: this will look really cool if I replace all the branches
+	//   with () => (),(), and no function names
 
+	// @Loop(parseNodes)
 	//lines: code.toString('utf-8').split(','),
-	//body: lines.forEach(parseNodes),
 
-	let parseCode = (function parse(code) {
-		return (function ({lines, body}) {
-			return body({
-				lines: lines(code),
-			})
-		})(context)
+	let parseCode = (function ({lines, body}, code) {
+		return body({
+			lines: lines(code),
+		})
 	})
 
 	//values: Object.values(nodes),
+	// @Loop(parseLines)
 	//keys: Object.keys(nodes),
-	//body: keys.forEach(parseLines),
 
-	let parseNodes = (function ({nodes}) {
+	let parseNodes = (function ({values, keys, body}, nodes) {
 		return body({
 			values: values(nodes),
 			keys: keys(nodes),
@@ -108,7 +108,7 @@ if(typeof module != 'undefined') {
 	})
 
 	//result: (result[keys[j]][i] = values[j].exec(lines[i])) // side-effect null
-	let parseLines = (function ({keys, values}) {
+	let parseLines = (function ({result}, keys, values) {
 		return result(keys, values)
 	})
 
@@ -155,12 +155,6 @@ console.log()
 	return module.exports
 }
 
-function wrap(context) {
-	let newTemplate = eval('(' + template(code, body) + ')')
-	console.log(newTemplate + '')
-	return newTemplate
-		.bind(JSON.stringify(Object.values(context)))
-}
 
 // TODO: balanced doesn't work on regexp?
 // that makes it repeatable
@@ -242,23 +236,23 @@ params: 'params'
 //   ANTLR.
 
 // Parse(code)
-// @Loop(for) - everything else is implied
 ({
+// @Loop(parseNodes)
 lines: code.toString('utf-8').split(','),
-body: lines.forEach(parseNodes),
 })
 // CODE REVIEW, interesting, refering back to itself for context?
 
-// @Loop(for)
+// Parse(nodes)
 ({
 // TODO: there is a way to decouple this from 
 //   nodejs Object, but that seems a little extreme
 values: Object.values(nodes),
+// @Loop(parseLines)
 keys: Object.keys(nodes),
-body: keys.forEach(parseNodes),
 })
 
-// @Loop(reduce)
+// TODO: code review, a dependency tree like Makefile but for parameters?
+// Parse(lines, values, keys)
 // @Condition
 ({
 result: (result[keys[j]][i] = values[j].exec(lines[i])) // side-effect null
